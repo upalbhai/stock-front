@@ -13,7 +13,7 @@ import { useOnlineStatus } from "@/hooks/use-online";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, impersonating, exitImpersonation } = useAuth();
   const isAuthRoute = pathname.startsWith("/login");
   const isOnline = useOnlineStatus();
 
@@ -24,6 +24,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth>
       <div className="min-h-screen">
+        {impersonating && (
+          <div className="bg-danger text-white py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-4 animate-fade">
+            <span>⚠️ Impersonation active: Viewing session as {user?.name}. All actions are audited.</span>
+            <Button size="xs" variant="outline" className="border-white text-white hover:bg-white hover:text-danger rounded-xl px-3 py-1 font-bold shadow-sm"
+              onClick={exitImpersonation}>
+              Exit Session
+            </Button>
+          </div>
+        )}
         <header className="sticky top-0 z-40 border-b border-border/60 bg-surface/85 backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
             <div className="flex items-center gap-3">
@@ -41,6 +50,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <OutletSwitcher className="hidden sm:block" />
+              {user?.role === "superadmin" && (
+                <Button asChild size="lg" variant="outline" className="border-primary/50 text-primary">
+                  <Link href="/admin">Portal</Link>
+                </Button>
+              )}
               <Button asChild size="lg">
                 <Link href="/billing">New Bill</Link>
               </Button>

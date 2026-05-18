@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
+import { Keypad } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,15 +25,16 @@ export default function LoginPage() {
     name: "",
     phone: "",
     pin: "",
-    outletName: "",
-    role: "owner"
+    businessName: "",
+    outletName: ""
   });
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
     try {
@@ -43,13 +45,13 @@ export default function LoginPage() {
           name: form.name,
           phone: form.phone,
           pin: form.pin,
-          outletName: form.outletName,
-          role: form.role as "owner" | "manager" | "staff"
+          businessName: form.businessName,
+          outletName: form.outletName || `${form.businessName} Main`
         });
       }
       router.push("/");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
+      const message = err instanceof Error ? err.message : "Authentication failed";
       setError(message);
     } finally {
       setLoading(false);
@@ -57,93 +59,109 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Outlet Pulse</CardTitle>
-          <CardDescription>
-            {mode === "login"
-              ? "Sign in to continue"
-              : "Create your outlet account"}
+    <div className="min-h-[85vh] flex items-center justify-center py-10 px-4">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.15),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.08),rgba(0,0,0,0))]" />
+      
+      <Card className="relative w-full max-w-md border border-border/70 shadow-soft backdrop-blur-md bg-surface/80 rounded-3xl animate-rise">
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-soft font-bold text-xl mb-3">
+            OP
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">Outlet Pulse</CardTitle>
+          <CardDescription className="text-sm text-muted">
+            {mode === "login" ? "Welcome back! Enter phone and security PIN" : "Launch your retail franchise system"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Button
-              variant={mode === "login" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => setMode("login")}
-            >
-              Login
-            </Button>
-            <Button
-              variant={mode === "register" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => setMode("register")}
-            >
-              Register
-            </Button>
-          </div>
-
-          {mode === "register" && (
-            <label className="space-y-2 text-sm">
-              Owner Name
-              <Input
-                value={form.name}
-                onChange={(event) => handleChange("name", event.target.value)}
-              />
-            </label>
-          )}
-
-          <label className="space-y-2 text-sm">
-            Phone
-            <Input
-              value={form.phone}
-              onChange={(event) => handleChange("phone", event.target.value)}
-            />
-          </label>
-
-          <label className="space-y-2 text-sm">
-            PIN
-            <Input
-              type="password"
-              value={form.pin}
-              onChange={(event) => handleChange("pin", event.target.value)}
-            />
-          </label>
-
-          {mode === "register" && (
-            <label className="space-y-2 text-sm">
-              Outlet Name
-              <Input
-                value={form.outletName}
-                onChange={(event) =>
-                  handleChange("outletName", event.target.value)
-                }
-              />
-            </label>
-          )}
-
-          {mode === "register" && (
-            <label className="space-y-2 text-sm">
-              Role
-              <select
-                value={form.role}
-                onChange={(event) => handleChange("role", event.target.value)}
-                className="h-11 w-full rounded-2xl border border-border/70 bg-surface/80 px-3 text-sm"
+        <CardContent className="pt-2">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Mode Switcher */}
+            <div className="flex bg-border/40 p-1.5 rounded-2xl gap-1">
+              <button
+                type="button"
+                onClick={() => { setMode("login"); setError(null); }}
+                className={`flex-1 py-2 text-xs font-semibold rounded-xl transition ${mode === "login" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
               >
-                <option value="owner">Owner</option>
-                <option value="manager">Manager</option>
-                <option value="staff">Staff</option>
-              </select>
-            </label>
-          )}
+                Access Portal
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("register"); setError(null); }}
+                className={`flex-1 py-2 text-xs font-semibold rounded-xl transition ${mode === "register" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
+              >
+                Launch Brand
+              </button>
+            </div>
 
-          {error && <p className="text-sm text-danger">{error}</p>}
+            {mode === "register" && (
+              <div className="space-y-3 animate-fade">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Owner Name *</label>
+                  <Input
+                    required
+                    id="reg-name"
+                    value={form.name}
+                    onChange={(event) => handleChange("name", event.target.value)}
+                    placeholder="Rahul Shah"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Brand / Business Name *</label>
+                  <Input
+                    required
+                    id="reg-biz"
+                    value={form.businessName}
+                    onChange={(event) => handleChange("businessName", event.target.value)}
+                    placeholder="e.g. Anand Lassi House"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">First Outlet Name</label>
+                  <Input
+                    id="reg-outlet"
+                    value={form.outletName}
+                    onChange={(event) => handleChange("outletName", event.target.value)}
+                    placeholder="e.g. Anand Outlet (Main)"
+                  />
+                </div>
+              </div>
+            )}
 
-          <Button className="w-full" size="lg" onClick={handleSubmit}>
-            {loading ? "Please wait" : mode === "login" ? "Login" : "Create"}
-          </Button>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Registered Phone *</label>
+              <Input
+                required
+                id="login-phone"
+                type="tel"
+                value={form.phone}
+                onChange={(event) => handleChange("phone", event.target.value)}
+                placeholder="e.g. 9876543210"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Security PIN (4–6 Digits) *</label>
+              <Input
+                required
+                id="login-pin"
+                type="password"
+                maxLength={6}
+                value={form.pin}
+                onChange={(event) => handleChange("pin", event.target.value)}
+                placeholder="••••"
+                className="tracking-widest text-center text-lg font-bold"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-xl bg-danger/10 border border-danger/20 p-2 text-center">
+                <p className="text-xs text-danger font-medium">{error}</p>
+              </div>
+            )}
+
+            <Button type="submit" className="w-full py-6 text-sm font-semibold rounded-2xl shadow-soft" disabled={loading} id="login-submit-btn">
+              {loading ? "Processing..." : mode === "login" ? "Sign In" : "Launch Franchise"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

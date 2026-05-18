@@ -1,437 +1,397 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import * as React from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Search, Plus, Minus, Trash2, ShoppingBag, Printer, RotateCcw, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/components/auth/auth-provider";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  addItem,
-  clearBill,
-  removeItem,
-  setPayment,
-  updateQty
+  addItem, removeItem, updateQty, setDiscount, setNotes,
+  setCustomer, setBillingMode, setPaymentMethod, setPaymentAmount, clearBill
 } from "@/store/billingSlice";
-import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, postJson, type QueueResult } from "@/lib/api-client";
+import { getJson, apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
-import { useSettings } from "@/components/settings/settings-provider";
+import { cn } from "@/lib/utils";
+import type { Product, Category } from "@/lib/types";
 
-type Product = {
-  _id: string;
-  name: string;
-  price: number;
-  taxRate?: number;
-  gstRate?: number;
-  sku?: string;
-  barcode?: string;
-  unit?: string;
-};
+const BILLING_MODES = [
+  { value: "quick", label: "Quick", icon: "⚡" },
+  { value: "takeaway", label: "Takeaway", icon: "🛍️" },
+  { value: "dine_in", label: "Dine-in", icon: "🪑" },
+  { value: "parcel", label: "Parcel", icon: "📦" }
+] as const;
 
-type OrderResponse = {
-  data: {
-    _id: string;
-    items: { name: string; qty: number; price: number; lineTotal: number }[];
-    subtotal: number;
-    tax: number;
-    total: number;
-    createdAt: string;
-  };
-};
+const PAYMENT_METHODS = [
+  { value: "cash", label: "Cash", icon: "💵" },
+  { value: "upi", label: "UPI", icon: "📱" },
+  { value: "card", label: "Card", icon: "💳" },
+  { value: "wallet", label: "Wallet", icon: "👛" },
+  { value: "split", label: "Split", icon: "✂️" }
+] as const;
 
 export default function BillingPage() {
+  const { token, outletId } = useAuth();
   const dispatch = useAppDispatch();
-  const queryClient = useQueryClient();
-  const { items, payment } = useAppSelector((state) => state.billing);
-  const { token, outletId, user } = useAuth();
-  const { settings } = useSettings();
-  const [scanValue, setScanValue] = useState("");
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [lastOrder, setLastOrder] = useState<OrderResponse["data"] | null>(null);
+  const qc = useQueryClient();
+  const billing = useAppSelector((s) => s.billing);
 
-  const { data } = useQuery({
-    queryKey: ["products", outletId],
-    queryFn: () =>
-      getJson<{ data: Product[] }>("/products", token, { outletId }),
+  const [search, setSearch] = React.useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
+  const [selectedParentId, setSelectedParentId] = React.useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = React.useState(false);
+
+  const { data: catData } = useQuery({
+    queryKey: ["categories", outletId],
+    queryFn: () => getJson<{ categories: Category[] }>("/categories", token, { outletId: outletId ?? undefined }),
     enabled: Boolean(token && outletId)
   });
 
-  const products = data?.data ?? [];
+  const { data: prodData } = useQuery({
+    queryKey: ["products", outletId, selectedCategoryId, search],
+    queryFn: () => getJson<{ products: Product[] }>("/products", token, {
+      outletId: outletId ?? undefined,
+      categoryId: selectedCategoryId ?? undefined,
+      search: search || undefined
+    }),
+    enabled: Boolean(token && outletId)
+  });
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.qty,
-    0
-  );
-  const tax = items.reduce(
-    (sum, item) => sum + item.price * item.qty * (settings.taxEnabled ? item.taxRate : 0),
-    0
-  );
-  const total = subtotal + tax;
-  const paid = payment.cash + payment.online + payment.card;
-  const balance = total - paid;
-
-  const paymentMethod = useMemo(() => {
-    const parts = [payment.cash, payment.online, payment.card].filter(
-      (value) => value > 0
-    );
-    if (parts.length > 1) {
-      return "split";
-    }
-    if (payment.online > 0) {
-      return "online";
-    }
-    if (payment.card > 0) {
-      return "card";
-    }
-    return "cash";
-  }, [payment.card, payment.cash, payment.online]);
-
-  const addProduct = (product: Product) => {
-    dispatch(
-      addItem({
-        id: product._id,
-        name: product.name,
-        price: product.price,
-        taxRate: settings.taxEnabled
-          ? product.taxRate ?? product.gstRate ?? 0
-          : 0,
-        sku: product.sku,
-        barcode: product.barcode,
-        unit: product.unit
-      })
-    );
-  };
-
-  const handleScan = () => {
-    const value = scanValue.trim();
-    if (!value) {
-      return;
-    }
-    const match = products.find(
-      (product) => product.barcode === value || product.sku === value
-    );
-    if (!match) {
-      setScanError("No product found for barcode or SKU.");
-      return;
-    }
-    setScanError(null);
-    setScanValue("");
-    addProduct(match);
-  };
-
-  const createOrder = useMutation({
-    mutationFn: () =>
-      postJson<OrderResponse>(
-        "/orders",
-        {
-          outletId,
-          createdBy: user?.id,
-          items: items.map((item) => ({
-            productId: item.id,
-            name: item.name,
-            qty: item.qty,
-            price: item.price,
-            taxRate: item.taxRate
-          })),
-          payment: {
-            method: paymentMethod,
-            cash: payment.cash,
-            online: payment.online,
-            card: payment.card
-          }
-        },
-        token,
-        { queueIfOffline: settings.offlineMode }
-      ),
-    onSuccess: (result) => {
-      if (result && (result as QueueResult).queued) {
-        setLastOrder(null);
-      } else {
-        setLastOrder((result as OrderResponse).data);
-      }
+  const submitOrder = useMutation({
+    mutationFn: (body: unknown) => apiFetch("/orders", { method: "POST", body, token }),
+    onSuccess: () => {
       dispatch(clearBill());
-      queryClient.invalidateQueries({ queryKey: ["report", outletId] });
-      queryClient.invalidateQueries({ queryKey: ["stock-summary", outletId] });
-      queryClient.invalidateQueries({ queryKey: ["stock-alerts", outletId] });
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+      qc.invalidateQueries({ queryKey: ["report"] });
+      qc.invalidateQueries({ queryKey: ["stock-alerts"] });
     }
   });
 
-  const readyToCharge = items.length > 0 && balance <= 0;
-  const canSubmit = readyToCharge && Boolean(token && outletId);
+  const categories = catData?.categories ?? [];
+  const topCategories = categories.filter((c) => !c.parentId);
+  const products = prodData?.products ?? [];
+
+  const subtotal = billing.items.reduce((s, i) => s + i.price * i.qty, 0);
+  const taxAmount = billing.taxEnabled ? subtotal * billing.taxRate : 0;
+  const total = Math.max(0, subtotal + taxAmount - billing.discount);
+
+  const handleAddProduct = (product: Product) => {
+    dispatch(addItem({
+      id: product._id,
+      name: product.name,
+      price: product.price,
+      taxRate: product.taxRate,
+      unit: product.unit,
+      image: product.image,
+      categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId ?? undefined
+    }));
+  };
+
+  const handleCheckout = () => {
+    if (billing.items.length === 0) return;
+    const paymentSplit = billing.paymentMethod === "split"
+      ? { cash: billing.payment.cash, upi: billing.payment.upi, card: billing.payment.card }
+      : undefined;
+    submitOrder.mutate({
+      outletId,
+      billingMode: billing.billingMode,
+      items: billing.items.map((i) => ({
+        productId: i.id,
+        name: i.name,
+        qty: i.qty,
+        price: i.price,
+        taxRate: i.taxRate,
+        lineTotal: i.price * i.qty,
+        taxTotal: i.price * i.qty * i.taxRate
+      })),
+      subtotal,
+      discount: billing.discount,
+      tax: taxAmount,
+      total,
+      notes: billing.notes,
+      customerName: billing.customerName || undefined,
+      payment: {
+        method: billing.paymentMethod,
+        amount: total,
+        split: paymentSplit
+      }
+    });
+  };
+
+  const activeSubcategories = selectedParentId
+    ? categories.filter((c) => c.parentId === selectedParentId)
+    : [];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Fast Billing</CardTitle>
-            <CardDescription>Tap items to add to the order</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4 space-y-2">
-              <label className="text-sm">Barcode / SKU</label>
-              <div className="flex gap-2">
-                <Input
-                  value={scanValue}
-                  onChange={(event) => setScanValue(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      handleScan();
-                    }
-                  }}
-                  placeholder="Scan barcode or type SKU"
-                />
-                <Button variant="outline" onClick={handleScan}>
-                  Add
-                </Button>
-              </div>
-              {scanError && <p className="text-xs text-danger">{scanError}</p>}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {products.length === 0 && (
-                <p className="text-sm text-muted">
-                  Add products in Settings before billing.
-                </p>
+    <div className="flex h-[calc(100vh-120px)] gap-4 overflow-hidden">
+      {/* LEFT: Product Panel */}
+      <div className="flex flex-1 flex-col gap-3 overflow-hidden">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <Input
+            id="product-search"
+            className="pl-9"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => { setSelectedCategoryId(null); setSelectedParentId(null); }}
+            className={cn(
+              "shrink-0 rounded-2xl px-4 py-2 text-sm font-medium transition",
+              !selectedCategoryId ? "bg-primary text-white" : "bg-surface border border-border text-muted hover:text-text"
+            )}
+          >
+            All
+          </button>
+          {topCategories.map((cat) => (
+            <button
+              key={cat._id}
+              onClick={() => {
+                const hasChildren = categories.some((c) => c.parentId === cat._id);
+                if (hasChildren) {
+                  setSelectedParentId(selectedParentId === cat._id ? null : cat._id);
+                  setSelectedCategoryId(cat._id);
+                } else {
+                  setSelectedCategoryId(cat._id);
+                  setSelectedParentId(null);
+                }
+              }}
+              className={cn(
+                "shrink-0 flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-medium transition",
+                selectedCategoryId === cat._id
+                  ? "text-white shadow-soft"
+                  : "bg-surface border border-border text-muted hover:text-text"
               )}
-              {products.map((item) => (
+              style={selectedCategoryId === cat._id ? { backgroundColor: cat.color } : {}}
+            >
+              <span>{cat.icon}</span>
+              {cat.name}
+              {categories.some((c) => c.parentId === cat._id) && (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Subcategory row */}
+        {activeSubcategories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {activeSubcategories.map((sub) => (
+              <button
+                key={sub._id}
+                onClick={() => setSelectedCategoryId(sub._id)}
+                className={cn(
+                  "shrink-0 rounded-xl px-3 py-1.5 text-xs font-medium transition border",
+                  selectedCategoryId === sub._id
+                    ? "bg-primary/10 text-primary border-primary/30"
+                    : "bg-surface border-border text-muted hover:text-text"
+                )}
+              >
+                {sub.icon} {sub.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Product Grid */}
+        <div className="flex-1 overflow-y-auto">
+          {products.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <p className="text-4xl">🛍️</p>
+              <p className="mt-2 text-sm text-muted">No products found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+              {products.map((product) => {
+                const cartItem = billing.items.find((i) => i.id === product._id);
+                return (
+                  <button
+                    key={product._id}
+                    onClick={() => handleAddProduct(product)}
+                    className={cn(
+                      "group relative rounded-3xl border p-4 text-left transition active:scale-95",
+                      "bg-surface hover:border-primary/50 hover:shadow-soft",
+                      cartItem ? "border-primary/40 bg-primary/5" : "border-border"
+                    )}
+                  >
+                    {cartItem && (
+                      <div className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-white shadow">
+                        {cartItem.qty}
+                      </div>
+                    )}
+                    {product.image && (
+                      <img src={product.image} alt={product.name}
+                        className="mb-2 h-16 w-full rounded-2xl object-cover" />
+                    )}
+                    <p className="text-sm font-semibold leading-tight line-clamp-2">{product.name}</p>
+                    <p className="mt-1 text-xs text-muted">{product.unit}</p>
+                    <p className="mt-2 text-base font-bold text-primary">{formatCurrency(product.price)}</p>
+                    {product.onHandQty <= product.lowStockThreshold && (
+                      <Badge variant="warning" className="mt-1 text-[10px]">Low Stock</Badge>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT: Cart Panel */}
+      <div className="flex w-80 shrink-0 flex-col gap-3 xl:w-96">
+        <div className="glass-panel flex flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 shadow-soft">
+          {/* Billing Mode */}
+          <div className="flex gap-1 border-b border-border/60 p-3">
+            {BILLING_MODES.map((mode) => (
+              <button
+                key={mode.value}
+                onClick={() => dispatch(setBillingMode(mode.value))}
+                className={cn(
+                  "flex-1 rounded-xl py-1.5 text-xs font-medium transition",
+                  billing.billingMode === mode.value
+                    ? "bg-primary text-white" : "text-muted hover:bg-border/40"
+                )}
+              >
+                {mode.icon} {mode.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Cart Items */}
+          <div className="flex-1 overflow-y-auto p-3">
+            {billing.items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full py-8 text-center">
+                <ShoppingBag className="h-12 w-12 text-muted/30" />
+                <p className="mt-3 text-sm text-muted">Cart is empty</p>
+                <p className="text-xs text-muted/60">Tap a product to add it</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {billing.items.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2 rounded-2xl bg-surface/60 p-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium leading-tight truncate">{item.name}</p>
+                      <p className="text-xs text-muted">{formatCurrency(item.price)} × {item.qty}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => dispatch(updateQty({ id: item.id, qty: item.qty - 1 }))}
+                        className="flex h-6 w-6 items-center justify-center rounded-lg bg-border/60 hover:bg-border transition">
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-5 text-center text-xs font-semibold">{item.qty}</span>
+                      <button onClick={() => dispatch(updateQty({ id: item.id, qty: item.qty + 1 }))}
+                        className="flex h-6 w-6 items-center justify-center rounded-lg bg-border/60 hover:bg-border transition">
+                        <Plus className="h-3 w-3" />
+                      </button>
+                      <button onClick={() => dispatch(removeItem(item.id))}
+                        className="flex h-6 w-6 items-center justify-center rounded-lg text-danger/70 hover:bg-danger/10 transition">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <span className="shrink-0 text-xs font-bold">{formatCurrency(item.price * item.qty)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Totals & Payment */}
+          <div className="border-t border-border/60 p-3 space-y-2">
+            <div className="flex justify-between text-xs text-muted">
+              <span>Subtotal</span><span className="font-medium text-text">{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted">
+              <span>Discount (₹)</span>
+              <input
+                type="number" min={0} value={billing.discount || ""}
+                onChange={(e) => dispatch(setDiscount(Number(e.target.value)))}
+                className="w-20 rounded-xl border border-border bg-surface px-2 py-1 text-right text-xs outline-none focus:border-primary"
+                placeholder="0"
+              />
+            </div>
+            <div className="flex justify-between text-sm font-bold border-t border-border/60 pt-2">
+              <span>Total</span>
+              <span className="text-primary text-base">{formatCurrency(total)}</span>
+            </div>
+
+            {/* Payment Methods */}
+            <div className="grid grid-cols-5 gap-1 pt-1">
+              {PAYMENT_METHODS.map((pm) => (
                 <button
-                  key={item._id}
-                  type="button"
-                  className="flex flex-col gap-2 rounded-3xl border border-border/70 bg-surface/80 p-4 text-left shadow-soft transition hover:-translate-y-0.5"
-                  onClick={() => addProduct(item)}
+                  key={pm.value}
+                  onClick={() => dispatch(setPaymentMethod(pm.value))}
+                  className={cn(
+                    "flex flex-col items-center rounded-xl py-1.5 text-[10px] font-medium transition",
+                    billing.paymentMethod === pm.value
+                      ? "bg-primary text-white" : "bg-border/40 text-muted hover:bg-border"
+                  )}
                 >
-                  <p className="text-base font-semibold">{item.name}</p>
-                  <p className="text-sm text-muted">{formatCurrency(item.price)}</p>
+                  <span className="text-sm">{pm.icon}</span>
+                  {pm.label}
                 </button>
               ))}
             </div>
-          </CardContent>
-        </Card>
 
-        {lastOrder && (
-          <Card id="receipt" className="animate-rise">
-            <CardHeader>
-              <CardTitle>Receipt</CardTitle>
-              <CardDescription>Order #{lastOrder._id.slice(-6)}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {lastOrder.items.map((item) => (
-                <div key={item.name} className="flex justify-between">
-                  <span>
-                    {item.name} x {item.qty}
-                  </span>
-                  <span>{formatCurrency(item.lineTotal)}</span>
-                </div>
-              ))}
-              <div className="border-t border-border/70 pt-2">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(lastOrder.subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{settings.gstEnabled ? "GST" : "Tax"}</span>
-                  <span>{formatCurrency(lastOrder.tax)}</span>
-                </div>
-                <div className="mt-2 flex justify-between font-semibold">
-                  <span>Total</span>
-                  <span>{formatCurrency(lastOrder.total)}</span>
-                </div>
+            {/* Split payment inputs */}
+            {billing.paymentMethod === "split" && (
+              <div className="space-y-1.5 rounded-2xl bg-surface/60 p-2">
+                {(["cash", "upi", "card"] as const).map((method) => (
+                  <div key={method} className="flex items-center gap-2">
+                    <span className="w-10 text-xs text-muted capitalize">{method}</span>
+                    <input
+                      type="number" min={0}
+                      value={billing.payment[method] || ""}
+                      onChange={(e) => dispatch(setPaymentAmount({ field: method, value: Number(e.target.value) }))}
+                      className="flex-1 rounded-xl border border-border bg-surface px-2 py-1 text-xs outline-none focus:border-primary"
+                      placeholder="0"
+                    />
+                  </div>
+                ))}
               </div>
-              <Button className="no-print" onClick={() => window.print()}>
-                Print Receipt
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Order Summary</CardTitle>
-            <CardDescription>Adjust quantities quickly</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {items.length === 0 && (
-              <p className="text-sm text-muted">No items added yet.</p>
             )}
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-2xl border border-border/70 bg-surface/70 p-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold">{item.name}</p>
-                  <p className="text-xs text-muted">{formatCurrency(item.price)} each</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      dispatch(updateQty({ id: item.id, qty: item.qty - 1 }))
-                    }
-                  >
-                    -
-                  </Button>
-                  <span className="w-6 text-center text-sm font-semibold">
-                    {item.qty}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      dispatch(updateQty({ id: item.id, qty: item.qty + 1 }))
-                    }
-                  >
-                    +
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => dispatch(removeItem(item.id))}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Split</CardTitle>
-            <CardDescription>Cash, UPI, or card</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-3">
-              <label className="space-y-1 text-sm">
-                Cash
-                <Input
-                  type="number"
-                  value={payment.cash}
-                  onChange={(event) =>
-                    dispatch(
-                      setPayment({
-                        field: "cash",
-                        value: Number(event.target.value)
-                      })
-                    )
-                  }
-                />
-              </label>
-              <label className="space-y-1 text-sm">
-                UPI / Online
-                <Input
-                  type="number"
-                  value={payment.online}
-                  onChange={(event) =>
-                    dispatch(
-                      setPayment({
-                        field: "online",
-                        value: Number(event.target.value)
-                      })
-                    )
-                  }
-                />
-              </label>
-              <label className="space-y-1 text-sm">
-                Card
-                <Input
-                  type="number"
-                  value={payment.card}
-                  onChange={(event) =>
-                    dispatch(
-                      setPayment({
-                        field: "card",
-                        value: Number(event.target.value)
-                      })
-                    )
-                  }
-                />
-              </label>
-            </div>
-            <Button
-              variant="soft"
-              size="sm"
-              onClick={() => {
-                dispatch(setPayment({ field: "cash", value: total }));
-                dispatch(setPayment({ field: "online", value: 0 }));
-                dispatch(setPayment({ field: "card", value: 0 }));
-              }}
-            >
-              Pay Full Cash
-            </Button>
-
-            <div className="rounded-2xl border border-border/70 bg-surface/70 p-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted">Subtotal</span>
-                <span>{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted">
-                  {settings.gstEnabled ? "GST" : "Tax"}
-                </span>
-                <span>{formatCurrency(tax)}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-base font-semibold">
-                <span>Total</span>
-                <span>{formatCurrency(total)}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-muted">
-                  {balance > 0 ? "Balance Due" : "Change"}
-                </span>
-                <span className="font-semibold">
-                  {formatCurrency(Math.abs(balance))}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                className="flex-1"
-                size="lg"
-                onClick={() => createOrder.mutate()}
-                disabled={!canSubmit || createOrder.isPending}
-              >
-                {createOrder.isPending ? "Saving..." : "Complete Sale"}
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" size="sm" className="flex-none" onClick={() => dispatch(clearBill())}
+                disabled={billing.items.length === 0}>
+                <RotateCcw className="h-3.5 w-3.5" />
               </Button>
               <Button
-                variant="ghost"
                 size="lg"
-                onClick={() => dispatch(clearBill())}
+                className="flex-1 gap-2"
+                onClick={handleCheckout}
+                disabled={billing.items.length === 0 || submitOrder.isPending}
+                id="checkout-btn"
               >
-                Clear
+                {submitOrder.isPending ? (
+                  <span className="animate-pulse">Processing...</span>
+                ) : (
+                  <><Printer className="h-4 w-4" /> Bill — {formatCurrency(total)}</>
+                )}
               </Button>
             </div>
-            {!readyToCharge && items.length > 0 && (
-              <p className="text-xs text-danger">
-                Collect full payment to complete sale.
-              </p>
+
+            {showSuccess && (
+              <div className="rounded-2xl bg-green-500/10 border border-green-500/30 p-3 text-center animate-rise">
+                <p className="text-sm font-medium text-green-600">✓ Order created successfully!</p>
+              </div>
             )}
-            {createOrder.isSuccess && lastOrder === null && (
-              <p className="text-xs text-muted">
-                Sale queued offline. It will sync once back online.
-              </p>
+            {submitOrder.isError && (
+              <div className="rounded-2xl bg-danger/10 border border-danger/30 p-2 text-center">
+                <p className="text-xs text-danger">{(submitOrder.error as Error).message}</p>
+              </div>
             )}
-            {createOrder.isError && (
-              <p className="text-xs text-danger">
-                {createOrder.error instanceof Error
-                  ? createOrder.error.message
-                  : "Failed to save order"}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

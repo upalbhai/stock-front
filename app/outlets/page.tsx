@@ -1,0 +1,159 @@
+"use client";
+
+import * as React from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Pencil, Trash2, Store, ToggleLeft, ToggleRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Switch } from "@/components/ui/switch";
+import { DataTable } from "@/components/ui/data-table";
+import { Avatar } from "@/components/ui/avatar";
+import { useAuth } from "@/components/auth/auth-provider";
+import { getJson, apiFetch } from "@/lib/api-client";
+import type { Outlet } from "@/lib/types";
+
+const emptyForm = {
+  name: "", address: "", phone: "", email: "",
+  taxEnabled: false, defaultTaxRate: 0,
+  billingModes: ["takeaway", "quick"]
+};
+
+export default function OutletsPage() {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const [form, setForm] = React.useState({ ...emptyForm });
+  const [editId, setEditId] = React.useState<string | null>(null);
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [showModal, setShowModal] = React.useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["outlets"],
+    queryFn: () => getJson<{ outlets: Outlet[] }>("/outlets", token),
+    enabled: Boolean(token)
+  });
+
+  const save = useMutation({
+    mutationFn: (body: unknown) => editId
+      ? apiFetch(`/outlets/${editId}`, { method: "PATCH", body, token })
+      : apiFetch("/outlets", { method: "POST", body, token }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["outlets"] }); setShowModal(false); setEditId(null); setForm({ ...emptyForm }); }
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => apiFetch(`/outlets/${id}`, { method: "DELETE", token }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["outlets"] }); setDeleteId(null); }
+  });
+
+  const outlets = data?.outlets ?? [];
+
+  const openEdit = (outlet: Outlet) => {
+    setEditId(outlet._id);
+    setForm({ name: outlet.name, address: outlet.address ?? "", phone: outlet.phone ?? "", email: outlet.email ?? "", taxEnabled: outlet.taxEnabled, defaultTaxRate: outlet.defaultTaxRate, billingModes: outlet.billingModes });
+    setShowModal(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Outlets</h1>
+          <p className="text-sm text-muted">Manage all your business locations</p>
+        </div>
+        <Button id="create-outlet-btn" onClick={() => { setEditId(null); setForm({ ...emptyForm }); setShowModal(true); }}>
+          <Plus className="h-4 w-4" /> Add Outlet
+        </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {isLoading ? [...Array(3)].map((_, i) => (
+          <div key={i} className="h-40 animate-pulse rounded-3xl bg-border/40" />
+        )) : outlets.map((outlet) => (
+          <div key={outlet._id} className="animate-rise glass-panel rounded-3xl border border-border/70 p-5 shadow-soft">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary text-xl">
+                  <Store className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="font-semibold">{outlet.name}</h2>
+                  <p className="text-xs text-muted">{outlet.address || "No address"}</p>
+                </div>
+              </div>
+              <Badge variant={outlet.isActive ? "soft" : "danger"}>
+                {outlet.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+            <div className="mt-4 flex gap-1.5 flex-wrap">
+              {outlet.billingModes.map((m) => (
+                <Badge key={m} variant="secondary" className="text-xs capitalize">{m.replace("_", " ")}</Badge>
+              ))}
+              {outlet.taxEnabled && <Badge variant="warning" className="text-xs">GST {outlet.defaultTaxRate}%</Badge>}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(outlet)} id={`edit-outlet-${outlet._id}`}>
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Button>
+              <Button variant="ghost" size="sm" className="text-danger hover:bg-danger/10"
+                onClick={() => setDeleteId(outlet._id)} id={`delete-outlet-${outlet._id}`}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Modal open={showModal} onClose={() => setShowModal(false)}
+        title={editId ? "Edit Outlet" : "Create Outlet"} size="md">
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate(form); }}>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Outlet Name *</label>
+            <Input id="outlet-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Anand Outlet" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Address</label>
+            <Input id="outlet-address" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="Street, City" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Phone</label>
+              <Input id="outlet-phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+91..." />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Email</label>
+              <Input id="outlet-email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="outlet@..." />
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-2xl border border-border p-3">
+            <div>
+              <p className="text-sm font-medium">Enable GST/Tax</p>
+              <p className="text-xs text-muted">Apply tax on all bills</p>
+            </div>
+            <Switch id="outlet-tax-toggle" checked={form.taxEnabled} onCheckedChange={(v) => setForm((f) => ({ ...f, taxEnabled: v }))} />
+          </div>
+          {form.taxEnabled && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Default Tax Rate (%)</label>
+              <Input id="outlet-tax-rate" type="number" min={0} max={100} value={form.defaultTaxRate}
+                onChange={(e) => setForm((f) => ({ ...f, defaultTaxRate: Number(e.target.value) }))} />
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" className="flex-1" disabled={save.isPending}>
+              {save.isPending ? "Saving..." : (editId ? "Save Changes" : "Create Outlet")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)}
+        onConfirm={() => deleteId && remove.mutate(deleteId)}
+        title="Deactivate Outlet?"
+        message="This outlet will be hidden from billing and operations. You can re-enable it later."
+        confirmLabel="Deactivate" loading={remove.isPending} />
+    </div>
+  );
+}

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type BadgeVariant = "default" | "soft" | "warning" | "danger";
+type BadgeVariant = "default" | "soft" | "warning" | "danger" | "secondary" | "info";
 
 export function Badge({
   className,
@@ -12,7 +12,9 @@ export function Badge({
     default: "bg-primary text-white",
     soft: "bg-primary/10 text-primary",
     warning: "bg-warning/15 text-warning",
-    danger: "bg-danger/15 text-danger"
+    danger: "bg-danger/15 text-danger",
+    secondary: "bg-border/80 text-muted",
+    info: "bg-info/15 text-info"
   };
 
   return (

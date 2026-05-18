@@ -7,30 +7,45 @@ type LineItem = {
   qty: number;
   taxRate: number;
   sku?: string;
-  barcode?: string;
   unit?: string;
+  image?: string;
+  categoryId?: string;
+  notes?: string;
 };
 
 type PaymentState = {
   cash: number;
-  online: number;
+  upi: number;
   card: number;
+  wallet: number;
 };
+
+type BillingMode = "takeaway" | "dine_in" | "parcel" | "quick";
 
 type BillingState = {
   items: LineItem[];
-  taxRate: number;
+  discount: number;
+  notes: string;
+  customerName: string;
+  customerPhone: string;
+  billingMode: BillingMode;
   payment: PaymentState;
+  paymentMethod: "cash" | "upi" | "card" | "wallet" | "split";
+  taxEnabled: boolean;
+  taxRate: number;
 };
 
 const initialState: BillingState = {
   items: [],
-  taxRate: 0.05,
-  payment: {
-    cash: 0,
-    online: 0,
-    card: 0
-  }
+  discount: 0,
+  notes: "",
+  customerName: "",
+  customerPhone: "",
+  billingMode: "quick",
+  payment: { cash: 0, upi: 0, card: 0, wallet: 0 },
+  paymentMethod: "cash",
+  taxEnabled: false,
+  taxRate: 0
 };
 
 const billingSlice = createSlice({
@@ -38,9 +53,7 @@ const billingSlice = createSlice({
   initialState,
   reducers: {
     addItem: (state, action: PayloadAction<Omit<LineItem, "qty">>) => {
-      const existing = state.items.find(
-        (item) => item.id === action.payload.id
-      );
+      const existing = state.items.find((item) => item.id === action.payload.id);
       if (existing) {
         existing.qty += 1;
       } else {
@@ -50,38 +63,54 @@ const billingSlice = createSlice({
     removeItem: (state, action: PayloadAction<string>) => {
       state.items = state.items.filter((item) => item.id !== action.payload);
     },
-    updateQty: (
-      state,
-      action: PayloadAction<{ id: string; qty: number }>
-    ) => {
-      const item = state.items.find((entry) => entry.id === action.payload.id);
+    updateQty: (state, action: PayloadAction<{ id: string; qty: number }>) => {
+      const item = state.items.find((e) => e.id === action.payload.id);
       if (item) {
         item.qty = Math.max(0, action.payload.qty);
         if (item.qty === 0) {
-          state.items = state.items.filter((entry) => entry.id !== item.id);
+          state.items = state.items.filter((e) => e.id !== item.id);
         }
       }
     },
-    setPayment: (
-      state,
-      action: PayloadAction<{ field: keyof PaymentState; value: number }>
-    ) => {
-      state.payment[action.payload.field] = Math.max(
-        0,
-        action.payload.value
-      );
+    updateItemNotes: (state, action: PayloadAction<{ id: string; notes: string }>) => {
+      const item = state.items.find((e) => e.id === action.payload.id);
+      if (item) item.notes = action.payload.notes;
+    },
+    setDiscount: (state, action: PayloadAction<number>) => {
+      state.discount = Math.max(0, action.payload);
+    },
+    setNotes: (state, action: PayloadAction<string>) => {
+      state.notes = action.payload;
+    },
+    setCustomer: (state, action: PayloadAction<{ name?: string; phone?: string }>) => {
+      if (action.payload.name !== undefined) state.customerName = action.payload.name;
+      if (action.payload.phone !== undefined) state.customerPhone = action.payload.phone;
+    },
+    setBillingMode: (state, action: PayloadAction<BillingMode>) => {
+      state.billingMode = action.payload;
+    },
+    setPaymentMethod: (state, action: PayloadAction<BillingState["paymentMethod"]>) => {
+      state.paymentMethod = action.payload;
+      // Reset split amounts when switching method
+      state.payment = { cash: 0, upi: 0, card: 0, wallet: 0 };
+    },
+    setPaymentAmount: (state, action: PayloadAction<{ field: keyof PaymentState; value: number }>) => {
+      state.payment[action.payload.field] = Math.max(0, action.payload.value);
+    },
+    setTaxEnabled: (state, action: PayloadAction<boolean>) => {
+      state.taxEnabled = action.payload;
     },
     setTaxRate: (state, action: PayloadAction<number>) => {
       state.taxRate = Math.max(0, action.payload);
     },
-    clearBill: (state) => {
-      state.items = [];
-      state.payment = { cash: 0, online: 0, card: 0 };
-    }
+    clearBill: () => initialState
   }
 });
 
-export const { addItem, removeItem, updateQty, setPayment, setTaxRate, clearBill } =
-  billingSlice.actions;
+export const {
+  addItem, removeItem, updateQty, updateItemNotes,
+  setDiscount, setNotes, setCustomer, setBillingMode,
+  setPaymentMethod, setPaymentAmount, setTaxEnabled, setTaxRate, clearBill
+} = billingSlice.actions;
 
 export default billingSlice.reducer;

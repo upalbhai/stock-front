@@ -1,54 +1,37 @@
-import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { Slot } from "@radix-ui/react-slot";
 
-type ButtonVariant = "primary" | "outline" | "ghost" | "soft" | "danger";
-type ButtonSize = "sm" | "md" | "lg" | "icon" | "xl";
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  asChild?: boolean;
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-}
-
-const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-white hover:brightness-110",
-  outline:
-    "border border-border/70 bg-transparent text-text hover:bg-surface",
-  ghost: "bg-transparent text-text hover:bg-surface",
-  soft: "bg-primary/10 text-primary hover:bg-primary/20",
-  danger: "bg-danger text-white hover:brightness-110"
-};
-
-const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-9 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
-  lg: "h-12 px-5 text-base",
-  xl: "h-14 px-6 text-base",
-  icon: "h-10 w-10"
-};
-
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    { className, variant = "primary", size = "md", asChild, ...props },
-    ref
-  ) => {
-    const Comp = asChild ? Slot : "button";
-    return (
-      <Comp
-        className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-          variantStyles[variant],
-          sizeStyles[size],
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    );
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 rounded-2xl font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50 disabled:pointer-events-none active:scale-95",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-white hover:bg-primary/90",
+        destructive: "bg-danger text-white hover:bg-danger/90",
+        outline: "border border-border bg-transparent text-text hover:bg-surface hover:border-primary/50",
+        ghost: "bg-transparent text-text hover:bg-border/40",
+        soft: "bg-primary/10 text-primary hover:bg-primary/20",
+        secondary: "bg-border/60 text-text hover:bg-border",
+        link: "underline-offset-4 hover:underline text-primary p-0 h-auto"
+      },
+      size: {
+        xs: "text-xs px-2.5 py-1.5 rounded-xl",
+        sm: "text-sm px-3 py-2",
+        default: "text-sm px-4 py-2.5",
+        lg: "text-sm px-5 py-3",
+        xl: "text-base px-6 py-3.5",
+        icon: "h-9 w-9 p-0"
+      }
+    },
+    defaultVariants: { variant: "default", size: "default" }
   }
 );
 
-Button.displayName = "Button";
+export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & { asChild?: boolean };
+
+export function Button({ className, variant, size, asChild, ...props }: ButtonProps) {
+  const Comp = asChild ? Slot : "button";
+  return <Comp className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+}
