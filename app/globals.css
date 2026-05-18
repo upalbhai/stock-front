@@ -85,3 +85,28 @@ body {
     opacity: 1;
   }
 }
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  #receipt,
+  #receipt * {
+    visibility: visible !important;
+  }
+
+  #receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

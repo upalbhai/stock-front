@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Provider } from "react-redux";
 import { ThemeProvider } from "next-themes";
 import { store } from "@/store/store";
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { SettingsProvider } from "@/components/settings/settings-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(
@@ -22,7 +24,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
-        <Provider store={store}>{children}</Provider>
+        <AuthProvider>
+          <SettingsProvider>
+            <Provider store={store}>{children}</Provider>
+          </SettingsProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

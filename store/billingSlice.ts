@@ -6,6 +6,9 @@ type LineItem = {
   price: number;
   qty: number;
   taxRate: number;
+  sku?: string;
+  barcode?: string;
+  unit?: string;
 };
 
 type PaymentState = {

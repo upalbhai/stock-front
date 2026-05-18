@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -8,36 +11,96 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth/auth-provider";
+import { getJson } from "@/lib/api-client";
+import { formatCurrency, formatNumber } from "@/lib/format";
 
-const stats = [
-  { label: "Today Sales", value: "INR 12,450", hint: "+8% vs yesterday" },
-  { label: "Orders", value: "148", hint: "Peak hour 6-8 PM" },
-  { label: "Cash Collected", value: "INR 5,240", hint: "42% of total" },
-  { label: "Online + Card", value: "INR 7,210", hint: "58% of total" }
-];
+type ReportData = {
+  totalSales: number;
+  totalOrders: number;
+  paymentSummary: {
+    cash: number;
+    online: number;
+    card: number;
+    split: number;
+  };
+  bestSelling: { name: string; qty: number }[];
+};
 
-const payments = [
-  { method: "Cash", amount: "INR 5,240" },
-  { method: "UPI", amount: "INR 4,150" },
-  { method: "Card", amount: "INR 3,060" },
-  { method: "Split", amount: "INR 1,120" }
-];
+type StockAlert = {
+  name: string;
+  onHandQty: number;
+  lowStockThreshold: number;
+};
 
-const alerts = [
-  { item: "Chaas Cups", remaining: "24", level: "Low" },
-  { item: "Butter Milk Bottles", remaining: "18", level: "Critical" },
-  { item: "Masala Snacks", remaining: "12", level: "Low" }
-];
-
-const topProducts = [
-  { item: "Chaas Cup", sold: "180" },
-  { item: "Mint Juice", sold: "120" },
-  { item: "Butter Milk Bottle", sold: "95" }
-];
+type StockSummary = {
+  totalSkus: number;
+  onHandTotal: number;
+  lowStock: number;
+};
 
 const chart = [30, 55, 45, 70, 60, 90, 75];
 
 export default function Page() {
+  const { token, outletId } = useAuth();
+
+  const { data: reportData } = useQuery({
+    queryKey: ["report", outletId],
+    queryFn: () =>
+      getJson<{ data: ReportData }>("/reports/daily", token, { outletId }),
+    enabled: Boolean(token && outletId)
+  });
+
+  const { data: alertData } = useQuery({
+    queryKey: ["stock-alerts", outletId],
+    queryFn: () =>
+      getJson<{ data: StockAlert[] }>("/stock/alerts", token, { outletId }),
+    enabled: Boolean(token && outletId)
+  });
+
+  const { data: stockSummaryData } = useQuery({
+    queryKey: ["stock-summary", outletId],
+    queryFn: () =>
+      getJson<{ data: StockSummary }>("/stock/summary", token, { outletId }),
+    enabled: Boolean(token && outletId)
+  });
+
+  const report = reportData?.data;
+  const payments = report?.paymentSummary;
+  const alerts = alertData?.data ?? [];
+  const bestSelling = report?.bestSelling ?? [];
+  const stockSummary = stockSummaryData?.data;
+
+  const stats = [
+    {
+      label: "Today Sales",
+      value: formatCurrency(report?.totalSales || 0),
+      hint: "Live from billing"
+    },
+    {
+      label: "Orders",
+      value: formatNumber(report?.totalOrders || 0),
+      hint: "Across all staff"
+    },
+    {
+      label: "Cash Collected",
+      value: formatCurrency(payments?.cash || 0),
+      hint: "Cash drawer"
+    },
+    {
+      label: "Online + Card",
+      value: formatCurrency((payments?.online || 0) + (payments?.card || 0)),
+      hint: "Digital payments"
+    }
+  ];
+
+  const paymentRows = [
+    { method: "Cash", amount: formatCurrency(payments?.cash || 0) },
+    { method: "UPI", amount: formatCurrency(payments?.online || 0) },
+    { method: "Card", amount: formatCurrency(payments?.card || 0) },
+    { method: "Split", amount: formatCurrency(payments?.split || 0) }
+  ];
+
   return (
     <div className="space-y-6">
       <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
@@ -65,7 +128,7 @@ export default function Page() {
             <CardDescription>Collected by method</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {payments.map((payment) => (
+            {paymentRows.map((payment) => (
               <div
                 key={payment.method}
                 className="flex items-center justify-between text-sm"
@@ -112,6 +175,9 @@ export default function Page() {
                 </div>
               ))}
             </div>
+            <p className="mt-3 text-xs text-muted">
+              Hourly analytics will appear once order tracking is enabled.
+            </p>
           </CardContent>
         </Card>
 
@@ -122,22 +188,29 @@ export default function Page() {
               <CardDescription>Low stock items</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {alerts.map((alert) => (
-                <div
-                  key={alert.item}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <div>
-                    <p className="font-medium">{alert.item}</p>
-                    <p className="text-xs text-muted">
-                      Remaining: {alert.remaining}
-                    </p>
+              {alerts.length === 0 && (
+                <p className="text-sm text-muted">No low stock alerts.</p>
+              )}
+              {alerts.map((alert) => {
+                const isCritical =
+                  alert.onHandQty <= Math.max(2, alert.lowStockThreshold / 2);
+                return (
+                  <div
+                    key={alert.name}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <div>
+                      <p className="font-medium">{alert.name}</p>
+                      <p className="text-xs text-muted">
+                        Remaining: {alert.onHandQty}
+                      </p>
+                    </div>
+                    <Badge variant={isCritical ? "danger" : "warning"}>
+                      {isCritical ? "Critical" : "Low"}
+                    </Badge>
                   </div>
-                  <Badge variant={alert.level === "Critical" ? "danger" : "warning"}>
-                    {alert.level}
-                  </Badge>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
 
@@ -147,17 +220,47 @@ export default function Page() {
               <CardDescription>Best sellers today</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {topProducts.map((product) => (
+              {bestSelling.length === 0 && (
+                <p className="text-sm text-muted">
+                  No sales data for today.
+                </p>
+              )}
+              {bestSelling.map((product) => (
                 <div
-                  key={product.item}
+                  key={product.name}
                   className="flex items-center justify-between text-sm"
                 >
-                  <span className="font-medium">{product.item}</span>
-                  <span className="text-muted">{product.sold} sold</span>
+                  <span className="font-medium">{product.name}</span>
+                  <span className="text-muted">{product.qty} sold</span>
                 </div>
               ))}
             </CardContent>
           </Card>
+
+          {stockSummary && (
+            <Card className="animate-rise">
+              <CardHeader>
+                <CardTitle>Stock Summary</CardTitle>
+                <CardDescription>Live count overview</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Total SKUs</span>
+                  <span className="font-semibold">{stockSummary.totalSkus}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Units on hand</span>
+                  <span className="font-semibold">
+                    {formatNumber(stockSummary.onHandTotal)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Low stock SKUs</span>
+                  <span className="font-semibold">{stockSummary.lowStock}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </section>
     </div>

@@ -7,20 +7,49 @@ import {
   Package,
   Receipt,
   LineChart,
-  Settings
+  Settings,
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth, type UserRole } from "@/components/auth/auth-provider";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/stock", label: "Stock", icon: Package },
-  { href: "/billing", label: "Billing", icon: Receipt },
-  { href: "/reports", label: "Reports", icon: LineChart },
-  { href: "/settings", label: "Settings", icon: Settings }
+  {
+    href: "/",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["owner", "manager", "staff"] as UserRole[]
+  },
+  {
+    href: "/stock",
+    label: "Stock",
+    icon: Package,
+    roles: ["owner", "manager"] as UserRole[]
+  },
+  {
+    href: "/billing",
+    label: "Billing",
+    icon: Receipt,
+    roles: ["owner", "manager", "staff"] as UserRole[]
+  },
+  {
+    href: "/reports",
+    label: "Reports",
+    icon: LineChart,
+    roles: ["owner", "manager"] as UserRole[]
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: Settings,
+    roles: ["owner", "manager"] as UserRole[]
+  }
 ];
 
 export function SideNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const role = user?.role ?? "staff";
 
   return (
     <nav className="glass-panel rounded-3xl border border-border/70 p-4 shadow-soft">
@@ -29,6 +58,22 @@ export function SideNav() {
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
+          const canAccess = item.roles.includes(role);
+          if (!canAccess) {
+            return (
+              <div
+                key={item.href}
+                className="flex items-center justify-between rounded-2xl px-3 py-2 text-sm font-medium text-muted/60"
+              >
+                <span className="flex items-center gap-3">
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </span>
+                <Lock className="h-3 w-3" />
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.href}
@@ -52,6 +97,8 @@ export function SideNav() {
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const role = user?.role ?? "staff";
 
   return (
     <nav className="fixed bottom-4 left-0 right-0 z-50 px-4 lg:hidden">
@@ -59,6 +106,18 @@ export function BottomNav() {
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
+          const canAccess = item.roles.includes(role);
+          if (!canAccess) {
+            return (
+              <div
+                key={item.href}
+                className="flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium text-muted/60"
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </div>
+            );
+          }
           return (
             <Link
               key={item.href}
