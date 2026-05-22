@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/error";
 import { Sparkles, ShieldCheck, UserCheck } from "lucide-react";
 
 export default function InviteAcceptPage() {
@@ -39,12 +40,17 @@ export default function InviteAcceptPage() {
     }),
     onSuccess: async (data) => {
       // Store credentials and initialize auth context
-      localStorage.setItem("auth_token", data.token);
-      localStorage.setItem("auth_user", JSON.stringify(data.user));
+      const { setStoredAuth, setStoredOutletId } = await import("@/lib/auth-storage");
+      try {
+        setStoredAuth({ token: data.token, user: data.user });
+        setStoredOutletId(data.user.outletId || null);
+      } catch {
+        localStorage.setItem("outlet-auth", JSON.stringify({ token: data.token, user: data.user }));
+      }
       window.location.href = "/";
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Failed to accept invitation");
+      setError(getErrorMessage(err, "Failed to accept invitation"));
     }
   });
 

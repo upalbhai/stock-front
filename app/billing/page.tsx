@@ -381,7 +381,7 @@ export default function BillingPage() {
             </div>
 
             {showSuccess && (
-              <div className="rounded-2xl bg-green-500/10 border border-green-500/30 p-3 text-center animate-rise">
+              <div className="rounded-2xl bg-border/30 border border-border p-3 text-center animate-rise">
                 <p className="text-sm font-medium text-green-600">✓ Order created successfully!</p>
               </div>
             )}

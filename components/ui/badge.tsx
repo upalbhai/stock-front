@@ -9,12 +9,12 @@ export function Badge({
   ...props
 }: React.HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant }) {
   const styles: Record<BadgeVariant, string> = {
-    default: "bg-primary text-white",
-    soft: "bg-primary/10 text-primary",
-    warning: "bg-warning/15 text-warning",
-    danger: "bg-danger/15 text-danger",
-    secondary: "bg-border/80 text-muted",
-    info: "bg-info/15 text-info"
+    default: "bg-primary text-primary-foreground",
+    soft: "bg-surface text-text border border-border",
+    warning: "bg-border/70 text-text",
+    danger: "bg-destructive text-destructive-foreground",
+    secondary: "bg-border/50 text-muted",
+    info: "bg-surface text-muted border border-border"
   };
 
   return (

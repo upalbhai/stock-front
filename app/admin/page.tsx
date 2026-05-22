@@ -188,7 +188,7 @@ export default function AdminPage() {
                 <button onClick={() => toggleMutation.mutate({ id: b._id, isActive: !b.isActive })}
                   className="hover:scale-105 transition">
                   {b.isActive ? (
-                    <Badge variant="soft" className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Active</Badge>
+                    <Badge variant="soft" className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-text/70" /> Active</Badge>
                   ) : (
                     <Badge variant="danger" className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-danger" /> Suspended</Badge>
                   )}

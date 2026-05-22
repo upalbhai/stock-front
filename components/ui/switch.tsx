@@ -21,14 +21,14 @@ export function Switch({ checked, onCheckedChange, disabled, id, className }: Sw
       className={cn(
         "relative inline-flex h-6 w-11 cursor-pointer rounded-full border-2 border-transparent",
         "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-        "data-[state=checked]:bg-primary data-[state=unchecked]:bg-border",
+          "data-[state=checked]:bg-primary data-[state=unchecked]:bg-border/80",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-soft",
+          "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-soft",
           "ring-0 transition-transform",
           "data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
         )}

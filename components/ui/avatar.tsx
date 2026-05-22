@@ -18,8 +18,9 @@ function getInitials(name: string) {
 function stringToColor(str: string) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 60%, 50%)`;
+  const lightness = 26 + (Math.abs(hash) % 12);
+  const saturation = 8 + (Math.abs(hash) % 4);
+  return `hsl(220, ${saturation}%, ${lightness}%)`;
 }
 
 export function Avatar({ name = "", src, size = "md", className }: AvatarProps) {
@@ -34,7 +35,7 @@ export function Avatar({ name = "", src, size = "md", className }: AvatarProps) 
   }
   return (
     <div
-      className={cn("flex shrink-0 items-center justify-center rounded-full font-semibold text-white", sizeMap[size], className)}
+      className={cn("flex shrink-0 items-center justify-center rounded-full font-semibold text-primary-foreground", sizeMap[size], className)}
       style={{ backgroundColor: stringToColor(name) }}
     >
       {getInitials(name)}

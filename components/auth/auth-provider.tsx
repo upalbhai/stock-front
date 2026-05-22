@@ -10,7 +10,7 @@ import type { AuthUser, UserRole } from "@/lib/types";
 export type { AuthUser, UserRole } from "@/lib/types";
 
 type AuthResponse = { token: string; user: AuthUser };
-type RegisterPayload = { name: string; phone: string; pin: string; businessName?: string; outletName?: string; outletId?: string };
+type RegisterPayload = { name: string; phone: string; email: string; pin: string; businessName?: string; outletName?: string; outletId?: string };
 type LoginPayload = { phone: string; pin: string };
 
 type AuthContextValue = {
@@ -22,6 +22,8 @@ type AuthContextValue = {
   impersonating: boolean;
   login: (payload: LoginPayload) => Promise<AuthResponse>;
   register: (payload: RegisterPayload) => Promise<AuthResponse>;
+  sendOtp: (email: string) => Promise<void>;
+  verifyOtp: (payload: { email: string; code: string }) => Promise<AuthResponse | { message: string }>;
   logout: () => void;
   setOutletId: (outletId: string | null) => void;
   exitImpersonation?: () => Promise<void>;
@@ -89,10 +91,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return response;
   }, [setAuthState]);
 
+  const sendOtp = React.useCallback(async (email: string) => {
+    await apiFetch<void>("/auth/send-otp", { method: "POST", body: { email } });
+  }, []);
+
+  const verifyOtp = React.useCallback(async (payload: { email: string; code: string }) => {
+    const res = await apiFetch<any>("/auth/verify-otp", { method: "POST", body: payload });
+    // if token returned, treat as auth response
+    if (res?.token && res?.user) {
+      setAuthState(res as AuthResponse);
+      return res as AuthResponse;
+    }
+    // otherwise can be informational message (e.g., awaiting approval)
+    return res as { message: string };
+  }, [setAuthState]);
+
   const register = React.useCallback(async (payload: RegisterPayload) => {
-    const response = await apiFetch<AuthResponse>("/auth/register", { method: "POST", body: payload });
-    setAuthState(response);
-    return response;
+    const response = await apiFetch<any>("/auth/register", { method: "POST", body: payload });
+    // backend may return a token/user or just a message indicating awaiting approval
+    if (response?.token && response?.user) {
+      setAuthState(response as AuthResponse);
+      return response as AuthResponse;
+    }
+    // return the informational response for the UI to display
+    return response as { message?: string };
   }, [setAuthState]);
 
   const logout = React.useCallback(() => {

@@ -17,9 +17,9 @@ type StatsCardProps = {
 const colorMap = {
   default: "text-text",
   primary: "text-primary",
-  success: "text-green-500",
-  warning: "text-warning",
-  danger: "text-danger"
+  success: "text-muted",
+  warning: "text-muted",
+  danger: "text-muted"
 };
 
 export function StatsCard({ label, value, hint, trend, icon, className, color = "default" }: StatsCardProps) {
@@ -35,7 +35,7 @@ export function StatsCard({ label, value, hint, trend, icon, className, color = 
             {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
             {trend && (
               <div className={cn("mt-2 flex items-center gap-1 text-xs font-medium",
-                trend.value >= 0 ? "text-green-500" : "text-danger"
+                trend.value >= 0 ? "text-text" : "text-muted"
               )}>
                 {trend.value >= 0
                   ? <TrendingUp className="h-3 w-3" />
@@ -46,7 +46,7 @@ export function StatsCard({ label, value, hint, trend, icon, className, color = 
             )}
           </div>
           {icon && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-border/40 text-text">
               {icon}
             </div>
           )}

@@ -45,7 +45,7 @@ export function Select({ value, onValueChange, placeholder, options, disabled, c
               <SelectPrimitive.Item
                 key={opt.value}
                 value={opt.value}
-                className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none hover:bg-primary/10 hover:text-primary data-[state=checked]:text-primary"
+                className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none hover:bg-border/40 hover:text-text data-[state=checked]:text-text"
               >
                 {opt.icon && <span>{opt.icon}</span>}
                 <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>

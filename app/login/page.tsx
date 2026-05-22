@@ -12,16 +12,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
+import { getErrorMessage } from "@/lib/error";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register } = useAuth();
+  const { login, register, sendOtp, verifyOtp } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailMode, setEmailMode] = useState<"none" | "send" | "verify">("none");
 
   const [form, setForm] = useState({
     name: "",
+    email: "",
     phone: "",
     pin: "",
     businessName: "",
@@ -38,22 +41,46 @@ export default function LoginPage() {
     setError(null);
     try {
       if (mode === "login") {
-        await login({ phone: form.phone, pin: form.pin });
+        if (emailMode === "verify") {
+          const res = await verifyOtp({ email: form.email, code: form.pin });
+          if ((res as any).message) {
+            setError((res as any).message);
+            setLoading(false);
+            return;
+          }
+        } else {
+          await login({ phone: form.phone, pin: form.pin });
+        }
       } else {
-        await register({
+        const res = await register({
           name: form.name,
           phone: form.phone,
+          email: form.email,
           pin: form.pin,
           businessName: form.businessName,
           outletName: form.outletName || `${form.businessName} Main`
         });
+        if ((res as any)?.message) {
+          setError((res as any).message || "Registration submitted. Await admin approval.");
+          setLoading(false);
+          return;
+        }
       }
       router.push("/");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Authentication failed";
-      setError(message);
+      setError(getErrorMessage(err, "Authentication failed"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    setError(null);
+    try {
+      await sendOtp(form.email);
+      setEmailMode("verify");
+    } catch (e) {
+      setError(getErrorMessage(e, "Failed to send code"));
     }
   };
 
@@ -68,7 +95,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Outlet Pulse</CardTitle>
           <CardDescription className="text-sm text-muted">
-            {mode === "login" ? "Welcome back! Enter phone and security PIN" : "Launch your retail franchise system"}
+            {mode === "login" ? "Sign in with phone PIN or email code" : "Launch your retail franchise system"}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-2">
@@ -122,19 +149,63 @@ export default function LoginPage() {
                     placeholder="e.g. Anand Outlet (Main)"
                   />
                 </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Owner Email *</label>
+                  <Input
+                    required
+                    id="reg-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => handleChange("email", event.target.value)}
+                    placeholder="owner@business.com"
+                  />
+                </div>
               </div>
             )}
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Registered Phone *</label>
-              <Input
-                required
-                id="login-phone"
-                type="tel"
-                value={form.phone}
-                onChange={(event) => handleChange("phone", event.target.value)}
-                placeholder="e.g. 9876543210"
-              />
+              {mode === "login" && emailMode !== "none" ? (
+                <>
+                  <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                  <Input
+                    required
+                    id="login-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => handleChange("email", event.target.value)}
+                    placeholder="you@company.com"
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="mb-1 block text-xs font-medium text-muted">Registered Phone *</label>
+                  <Input
+                    required
+                    id="login-phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={(event) => handleChange("phone", event.target.value)}
+                    placeholder="e.g. 9876543210"
+                  />
+                </>
+              )}
+              {mode === "login" && (
+                <div className="mt-2 flex items-center justify-between">
+                  {emailMode === "none" ? (
+                    <button type="button" className="text-xs text-primary font-medium" onClick={() => setEmailMode("send")}>Sign in with email code</button>
+                  ) : emailMode === "send" ? (
+                    <div className="flex gap-2">
+                      <button type="button" className="text-xs text-primary font-medium" onClick={handleSendOtp}>Send code</button>
+                      <button type="button" className="text-xs text-muted" onClick={() => setEmailMode("none")}>Use PIN instead</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <span className="text-xs text-muted">Enter the code sent to your email and press Sign In</span>
+                      <button type="button" className="text-xs text-muted" onClick={() => setEmailMode("none")}>Use PIN instead</button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
