@@ -13,20 +13,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getErrorMessage } from "@/lib/error";
+import { ArrowLeft } from "lucide-react";
+
+type LoginStep = "email" | "password" | "otp" | "phone";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, sendOtp, verifyOtp } = useAuth();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const { loginWithEmail, login, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword } = useAuth();
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">("login");
+  const [loginStep, setLoginStep] = useState<LoginStep>("email");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailMode, setEmailMode] = useState<"none" | "send" | "verify">("none");
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
     email: "",
+    password: "",
+    confirmPassword: "",
     phone: "",
     pin: "",
+    code: "", // for otp/reset
     businessName: "",
     outletName: ""
   });
@@ -35,36 +42,43 @@ export default function LoginPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailCheckSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
+    
     try {
-      if (mode === "login") {
-        if (emailMode === "verify") {
-          const res = await verifyOtp({ email: form.email, code: form.pin });
-          if ((res as any).message) {
-            setError((res as any).message);
-            setLoading(false);
-            return;
-          }
-        } else {
-          await login({ phone: form.phone, pin: form.pin });
-        }
-      } else {
-        const res = await register({
-          name: form.name,
-          phone: form.phone,
-          email: form.email,
-          pin: form.pin,
-          businessName: form.businessName,
-          outletName: form.outletName || `${form.businessName} Main`
-        });
-        if ((res as any)?.message) {
-          setError((res as any).message || "Registration submitted. Await admin approval.");
+      const res = await checkEmail(form.email);
+      setLoginStep(res.method);
+      if (res.message) {
+        setSuccess(res.message);
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to verify email"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      if (loginStep === "password") {
+        await loginWithEmail({ email: form.email, password: form.password });
+      } else if (loginStep === "otp") {
+        const res = await verifyOtp({ email: form.email, code: form.code });
+        if ((res as any).message) {
+          setError((res as any).message);
           setLoading(false);
           return;
         }
+      } else if (loginStep === "phone") {
+        await login({ phone: form.phone, pin: form.pin });
       }
       router.push("/");
     } catch (err) {
@@ -74,13 +88,95 @@ export default function LoginPage() {
     }
   };
 
-  const handleSendOtp = async () => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      const res = await register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        phone: form.phone || undefined,
+        businessName: form.businessName,
+        outletName: form.outletName || `${form.businessName} Main`
+      });
+      
+      if ((res as any)?.message) {
+        setSuccess((res as any).message || "Registration submitted.");
+        setMode("login");
+        setLoginStep("email");
+      } else {
+        router.push("/");
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, "Registration failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
     setError(null);
     try {
+      await forgotPassword(form.email);
+      setSuccess("If an account exists, a reset code has been sent to your email.");
+      setMode("reset");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to send reset code"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      const res = await resetPassword({ email: form.email, code: form.code, newPassword: form.password });
+      setSuccess(res.message);
+      setMode("login");
+      setLoginStep("email");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to reset password"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!form.email) {
+      setError("Please enter your email first");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
       await sendOtp(form.email);
-      setEmailMode("verify");
+      setSuccess("OTP sent to your email!");
     } catch (e) {
       setError(getErrorMessage(e, "Failed to send code"));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,142 +191,196 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Outlet Pulse</CardTitle>
           <CardDescription className="text-sm text-muted">
-            {mode === "login" ? "Sign in with phone PIN or email code" : "Launch your retail franchise system"}
+            {mode === "login" ? "Sign in to your account" : mode === "register" ? "Start your 7-day free trial" : mode === "forgot" ? "Reset your password" : "Create new password"}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-2">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Mode Switcher */}
-            <div className="flex bg-border/40 p-1.5 rounded-2xl gap-1">
+          
+          {(mode === "login" || mode === "register") && (
+            <div className="flex bg-border/40 p-1.5 rounded-2xl gap-1 mb-6">
               <button
                 type="button"
-                onClick={() => { setMode("login"); setError(null); }}
+                onClick={() => { setMode("login"); setLoginStep("email"); setError(null); setSuccess(null); }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-xl transition ${mode === "login" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
               >
-                Access Portal
+                Sign In
               </button>
               <button
                 type="button"
-                onClick={() => { setMode("register"); setError(null); }}
+                onClick={() => { setMode("register"); setError(null); setSuccess(null); }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-xl transition ${mode === "register" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
               >
-                Launch Brand
+                Free Trial
               </button>
             </div>
+          )}
 
+          {success && (
+            <div className="mb-4 rounded-xl bg-success/10 border border-success/20 p-3 text-center">
+              <p className="text-xs text-success font-medium">{success}</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="mb-4 rounded-xl bg-danger/10 border border-danger/20 p-3 text-center">
+              <p className="text-xs text-danger font-medium">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={
+            mode === "register" ? handleRegisterSubmit : 
+            mode === "forgot" ? handleForgotSubmit : 
+            mode === "reset" ? handleResetSubmit : 
+            mode === "login" && loginStep === "email" ? handleEmailCheckSubmit : 
+            handleLoginSubmit
+          } className="space-y-4">
+            
+            {/* REGISTER FORM */}
             {mode === "register" && (
               <div className="space-y-3 animate-fade">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">Owner Name *</label>
-                  <Input
-                    required
-                    id="reg-name"
-                    value={form.name}
-                    onChange={(event) => handleChange("name", event.target.value)}
-                    placeholder="Rahul Shah"
-                  />
+                  <Input required value={form.name} onChange={(e) => handleChange("name", e.target.value)} placeholder="John Doe" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Brand / Business Name *</label>
-                  <Input
-                    required
-                    id="reg-biz"
-                    value={form.businessName}
-                    onChange={(event) => handleChange("businessName", event.target.value)}
-                    placeholder="e.g. Anand Lassi House"
-                  />
+                  <label className="mb-1 block text-xs font-medium text-muted">Business Name *</label>
+                  <Input required value={form.businessName} onChange={(e) => handleChange("businessName", e.target.value)} placeholder="My Super Store" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">First Outlet Name</label>
-                  <Input
-                    id="reg-outlet"
-                    value={form.outletName}
-                    onChange={(event) => handleChange("outletName", event.target.value)}
-                    placeholder="e.g. Anand Outlet (Main)"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Owner Email *</label>
-                  <Input
-                    required
-                    id="reg-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => handleChange("email", event.target.value)}
-                    placeholder="owner@business.com"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              {mode === "login" && emailMode !== "none" ? (
-                <>
                   <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
-                  <Input
-                    required
-                    id="login-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => handleChange("email", event.target.value)}
-                    placeholder="you@company.com"
-                  />
-                </>
-              ) : (
-                <>
-                  <label className="mb-1 block text-xs font-medium text-muted">Registered Phone *</label>
-                  <Input
-                    required
-                    id="login-phone"
-                    type="tel"
-                    value={form.phone}
-                    onChange={(event) => handleChange("phone", event.target.value)}
-                    placeholder="e.g. 9876543210"
-                  />
-                </>
-              )}
-              {mode === "login" && (
-                <div className="mt-2 flex items-center justify-between">
-                  {emailMode === "none" ? (
-                    <button type="button" className="text-xs text-primary font-medium" onClick={() => setEmailMode("send")}>Sign in with email code</button>
-                  ) : emailMode === "send" ? (
-                    <div className="flex gap-2">
-                      <button type="button" className="text-xs text-primary font-medium" onClick={handleSendOtp}>Send code</button>
-                      <button type="button" className="text-xs text-muted" onClick={() => setEmailMode("none")}>Use PIN instead</button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <span className="text-xs text-muted">Enter the code sent to your email and press Sign In</span>
-                      <button type="button" className="text-xs text-muted" onClick={() => setEmailMode("none")}>Use PIN instead</button>
-                    </div>
-                  )}
+                  <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="john@example.com" />
                 </div>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Security PIN (4–6 Digits) *</label>
-              <Input
-                required
-                id="login-pin"
-                type="password"
-                maxLength={6}
-                value={form.pin}
-                onChange={(event) => handleChange("pin", event.target.value)}
-                placeholder="••••"
-                className="tracking-widest text-center text-lg font-bold"
-              />
-            </div>
-
-            {error && (
-              <div className="rounded-xl bg-danger/10 border border-danger/20 p-2 text-center">
-                <p className="text-xs text-danger font-medium">{error}</p>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Password *</label>
+                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" minLength={6} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Confirm Password *</label>
+                  <Input required type="password" value={form.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="••••••••" minLength={6} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Phone (Optional)</label>
+                  <Input type="tel" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="9876543210" />
+                </div>
               </div>
             )}
 
-            <Button type="submit" className="w-full py-6 text-sm font-semibold rounded-2xl shadow-soft" disabled={loading} id="login-submit-btn">
-              {loading ? "Processing..." : mode === "login" ? "Sign In" : "Launch Franchise"}
+            {/* LOGIN FORM - EMAIL STEP */}
+            {mode === "login" && loginStep === "email" && (
+              <div className="space-y-3 animate-fade">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                  <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="you@company.com" />
+                </div>
+              </div>
+            )}
+
+            {/* LOGIN FORM - PASSWORD STEP */}
+            {mode === "login" && loginStep === "password" && (
+              <div className="space-y-3 animate-fade">
+                <div className="flex items-center gap-2 mb-2 text-sm text-muted">
+                  <button type="button" onClick={() => setLoginStep("email")} className="p-1 hover:bg-border/50 rounded-full transition"><ArrowLeft className="w-4 h-4" /></button>
+                  <span className="font-medium text-text">{form.email}</span>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-medium text-muted">Password *</label>
+                    <button type="button" onClick={() => setMode("forgot")} className="text-xs text-primary font-medium hover:underline">Forgot password?</button>
+                  </div>
+                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" autoFocus />
+                </div>
+              </div>
+            )}
+
+            {/* LOGIN FORM - OTP STEP */}
+            {mode === "login" && loginStep === "otp" && (
+              <div className="space-y-3 animate-fade">
+                <div className="flex items-center gap-2 mb-2 text-sm text-muted">
+                  <button type="button" onClick={() => setLoginStep("email")} className="p-1 hover:bg-border/50 rounded-full transition"><ArrowLeft className="w-4 h-4" /></button>
+                  <span className="font-medium text-text">{form.email}</span>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-medium text-muted">OTP Code *</label>
+                    <button type="button" onClick={handleSendOtp} disabled={loading} className="text-xs text-primary font-medium hover:underline">Resend Code</button>
+                  </div>
+                  <Input required value={form.code} onChange={(e) => handleChange("code", e.target.value)} placeholder="Enter code from email" className="tracking-widest text-center text-lg font-bold" autoFocus />
+                </div>
+              </div>
+            )}
+
+            {/* LOGIN FORM - PHONE PIN STEP */}
+            {mode === "login" && loginStep === "phone" && (
+              <div className="space-y-3 animate-fade">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Phone *</label>
+                  <Input required type="tel" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="9876543210" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Security PIN *</label>
+                  <Input required type="password" maxLength={6} value={form.pin} onChange={(e) => handleChange("pin", e.target.value)} placeholder="••••" className="tracking-widest text-center text-lg font-bold" />
+                </div>
+              </div>
+            )}
+
+            {/* FORGOT PASSWORD FORM */}
+            {mode === "forgot" && (
+              <div className="space-y-3 animate-fade">
+                <p className="text-xs text-muted mb-4">Enter your email address and we'll send you a code to reset your password.</p>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                  <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="you@company.com" />
+                </div>
+              </div>
+            )}
+
+            {/* RESET PASSWORD FORM */}
+            {mode === "reset" && (
+              <div className="space-y-3 animate-fade">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                  <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="you@company.com" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Reset Code *</label>
+                  <Input required value={form.code} onChange={(e) => handleChange("code", e.target.value)} placeholder="Enter code from email" className="tracking-widest text-center text-lg font-bold" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">New Password *</label>
+                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" minLength={6} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Confirm New Password *</label>
+                  <Input required type="password" value={form.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="••••••••" minLength={6} />
+                </div>
+              </div>
+            )}
+
+            <Button type="submit" className="w-full py-6 text-sm font-semibold rounded-2xl shadow-soft mt-4" disabled={loading}>
+              {loading ? "Processing..." : 
+               mode === "login" && loginStep === "email" ? "Continue with Email" :
+               mode === "login" ? "Sign In" : 
+               mode === "register" ? "Start Free Trial" : 
+               mode === "forgot" ? "Send Reset Code" : "Reset Password"}
             </Button>
+            
+            {mode === "login" && loginStep === "email" && (
+              <button type="button" onClick={() => { setLoginStep("phone"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted hover:text-text mt-2 block transition">
+                Sign in with Phone & PIN instead
+              </button>
+            )}
+
+            {mode === "login" && loginStep === "phone" && (
+              <button type="button" onClick={() => { setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted hover:text-text mt-2 block transition">
+                Back to Email login
+              </button>
+            )}
+            
+            {(mode === "forgot" || mode === "reset") && (
+              <button type="button" onClick={() => { setMode("login"); setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted hover:text-text mt-2 block transition">
+                Back to Sign In
+              </button>
+            )}
           </form>
         </CardContent>
       </Card>

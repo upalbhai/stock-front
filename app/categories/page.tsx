@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, ChevronRight, FolderOpen } from "lucide-react";
+import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -34,11 +35,26 @@ export default function CategoriesPage() {
     mutationFn: (body: unknown) => editId
       ? apiFetch(`/categories/${editId}`, { method: "PATCH", body, token })
       : apiFetch("/categories", { method: "POST", body, token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["categories"] }); setShowModal(false); setEditId(null); }
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["categories"] });
+      setShowModal(false);
+      setEditId(null);
+      toast.success(editId ? "Category updated successfully" : "Category created successfully");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to save category");
+    }
   });
   const remove = useMutation({
     mutationFn: (id: string) => apiFetch(`/categories/${id}`, { method: "DELETE", token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["categories"] }); setDeleteId(null); }
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["categories"] });
+      setDeleteId(null);
+      toast.success("Category deleted successfully");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to delete category");
+    }
   });
 
   const allCategories = data?.categories ?? [];
@@ -114,7 +130,7 @@ export default function CategoriesPage() {
       )}
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Category" : "Create Category"} size="md">
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate({ ...form, parentId: form.parentId || undefined, sortOrder: Number(form.sortOrder) }); }}>
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate({ ...form, parentId: form.parentId || null, sortOrder: Number(form.sortOrder) }); }}>
           <div><label className="mb-1 block text-xs font-medium text-muted">Category Name *</label><Input id="cat-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Lassi, Tea, Juice" /></div>
           <div><label className="mb-1 block text-xs font-medium text-muted">Parent Category</label><Select id="cat-parent" value={form.parentId} onValueChange={(v) => setForm((f) => ({ ...f, parentId: v }))} options={topLevelOptions} /></div>
           <div>

@@ -24,6 +24,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth>
       <div className="min-h-screen">
+        {user?.subscriptionStatus === "trial" && user.trialEndsAt && (
+          <div className="bg-primary/10 text-primary py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-4 animate-fade border-b border-primary/20">
+            <span>
+              ⭐ Free Trial Active: {Math.max(0, Math.ceil((new Date(user.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 3600 * 24)))} days remaining
+            </span>
+            <Button size="xs" variant="default" className="rounded-xl px-3 py-1 font-bold shadow-sm" asChild>
+              <Link href="/subscribe">Upgrade Now</Link>
+            </Button>
+          </div>
+        )}
         {impersonating && (
           <div className="bg-danger text-white py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-4 animate-fade">
             <span>⚠️ Impersonation active: Viewing session as {user?.name}. All actions are audited.</span>

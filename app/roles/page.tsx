@@ -6,7 +6,7 @@ import { Plus, Pencil, Trash2, Shield, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Modal } from "@/components/ui/modal";
+import { Drawer } from "@/components/ui/drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
@@ -125,49 +125,54 @@ export default function RolesPage() {
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Role" : "Create Role"} size="xl">
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="mb-1 block text-xs font-medium text-muted">Role Name *</label><Input id="role-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Senior Cashier" /></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Description</label><Input id="role-desc" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="What this role can do" /></div>
-          </div>
-          <div>
-            <p className="mb-3 text-sm font-semibold">Permissions Matrix</p>
-            <div className="overflow-x-auto rounded-2xl border border-border">
-              <table className="w-full text-xs">
-                <thead><tr className="border-b border-border bg-surface/60">
-                  <th className="px-3 py-2 text-left font-semibold text-muted">Module</th>
-                  {ALL_ACTIONS.map((a) => <th key={a} className="px-2 py-2 text-center font-semibold text-muted capitalize">{a}</th>)}
-                </tr></thead>
-                <tbody className="divide-y divide-border/40">
-                  {ALL_MODULES.map((mod) => (
-                    <tr key={mod} className="hover:bg-surface/60">
-                      <td className="px-3 py-2 font-medium">{MODULE_ICONS[mod]} {mod}</td>
-                      {ALL_ACTIONS.map((action) => {
-                        const checked = (form.permissions[mod] ?? []).includes(action);
-                        return (
-                          <td key={action} className="px-2 py-2 text-center">
-                            <button type="button" onClick={() => toggleAction(mod, action)}
-                              className={cn("h-5 w-5 rounded-md border transition mx-auto flex items-center justify-center",
-                                checked ? "bg-primary border-primary text-white" : "border-border hover:border-primary/50"
-                              )}>
-                              {checked && <span className="text-[10px]">✓</span>}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      <Drawer open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Role" : "Create Role"} size="lg">
+        <form className="flex flex-col h-full overflow-hidden" onSubmit={handleSubmit}>
+          {/* Scrollable Body */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="mb-1 block text-xs font-medium text-muted">Role Name *</label><Input id="role-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Senior Cashier" /></div>
+              <div><label className="mb-1 block text-xs font-medium text-muted">Description</label><Input id="role-desc" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="What this role can do" /></div>
+            </div>
+            <div>
+              <p className="mb-3 text-sm font-semibold">Permissions Matrix</p>
+              <div className="overflow-x-auto rounded-2xl border border-border">
+                <table className="w-full text-xs">
+                  <thead><tr className="border-b border-border bg-surface/60">
+                    <th className="px-3 py-2 text-left font-semibold text-muted">Module</th>
+                    {ALL_ACTIONS.map((a) => <th key={a} className="px-2 py-2 text-center font-semibold text-muted capitalize">{a}</th>)}
+                  </tr></thead>
+                  <tbody className="divide-y divide-border/40">
+                    {ALL_MODULES.map((mod) => (
+                      <tr key={mod} className="hover:bg-surface/60">
+                        <td className="px-3 py-2 font-medium">{MODULE_ICONS[mod]} {mod}</td>
+                        {ALL_ACTIONS.map((action) => {
+                          const checked = (form.permissions[mod] ?? []).includes(action);
+                          return (
+                            <td key={action} className="px-2 py-2 text-center">
+                              <button type="button" onClick={() => toggleAction(mod, action)}
+                                className={cn("h-5 w-5 rounded-md border transition mx-auto flex items-center justify-center",
+                                  checked ? "bg-primary border-primary text-white" : "border-border hover:border-primary/50"
+                                )}>
+                                {checked && <span className="text-[10px]">✓</span>}
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-          <div className="flex gap-3 pt-2">
+
+          {/* Sticky Footer */}
+          <div className="p-6 border-t border-border/60 bg-surface flex gap-3">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" className="flex-1" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Create Role")}</Button>
           </div>
         </form>
-      </Modal>
+      </Drawer>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && remove.mutate(deleteId)}
         title="Delete Role?" message="Any staff with this role will lose their permissions." confirmLabel="Delete" loading={remove.isPending} />

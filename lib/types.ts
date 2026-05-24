@@ -7,13 +7,37 @@ export type AuthUser = {
   businessId?: string | null;
   outletId?: string | null;
   outletIds?: string[];
+  subscriptionStatus?: "trial" | "active" | "expired" | "cancelled" | null;
+  trialEndsAt?: string | null;
+  trialExpired?: boolean;
+};
+
+export type Plan = {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  maxOutlets: number;
+  maxStaff: number;
+  maxProducts: number;
+  features: string[];
+  isPopular?: boolean;
 };
 
 export type Business = {
   _id: string;
   name: string;
   code: string;
-  plan: "free" | "starter" | "pro" | "enterprise";
+  plan?: string;
+  planId?: Plan | string;
+  subscriptionStatus?: "trial" | "active" | "expired" | "cancelled";
+  trialEndsAt?: string;
+  currentPeriodEnd?: string;
+  maxOutlets?: number;
+  maxStaff?: number;
+  maxProducts?: number;
   isActive: boolean;
   currency: string;
   timezone: string;

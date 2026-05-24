@@ -17,14 +17,7 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { formatNumber, formatDate } from "@/lib/format";
-import type { Business, StaffUser } from "@/lib/types";
-
-const PLAN_OPTIONS = [
-  { value: "free", label: "Free Plan" },
-  { value: "starter", label: "Starter" },
-  { value: "pro", label: "Pro" },
-  { value: "enterprise", label: "Enterprise" }
-];
+import type { Business, StaffUser, Plan } from "@/lib/types";
 
 export default function AdminPage() {
   const { token, login, logout, user } = useAuth();
@@ -54,6 +47,13 @@ export default function AdminPage() {
   const { data: bizData, isLoading: loadingBiz } = useQuery({
     queryKey: ["admin-businesses", search],
     queryFn: () => getJson<{ businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[] }>("/admin/businesses", token, { search: search || undefined }),
+    enabled: Boolean(token && user?.role === "superadmin")
+  });
+
+  // Plans Query
+  const { data: plansData } = useQuery({
+    queryKey: ["admin-plans"],
+    queryFn: () => getJson<{ plans: Plan[] }>("/plans/all", token),
     enabled: Boolean(token && user?.role === "superadmin")
   });
 
@@ -112,9 +112,12 @@ export default function AdminPage() {
     !userSearch || u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.phone.includes(userSearch)
   );
 
+  const plans = plansData?.plans || [];
+  const PLAN_OPTIONS = plans.map(p => ({ value: p._id, label: p.name }));
+
   const openPlanEdit = (biz: Business) => {
     setSelectedBusiness(biz);
-    setPlanForm({ plan: biz.plan, maxOutlets: biz.settings?.defaultTaxRate ?? 1 }); // maxOutlets stored or defaults
+    setPlanForm({ plan: (biz.planId as any)?._id || biz.planId || biz.plan || "", maxOutlets: biz.maxOutlets || 1 });
     setShowPlanModal(true);
   };
 
@@ -123,7 +126,7 @@ export default function AdminPage() {
     if (!selectedBusiness) return;
     planMutation.mutate({
       id: selectedBusiness._id,
-      body: { plan: planForm.plan, maxOutlets: Number(planForm.maxOutlets) }
+      body: { planId: planForm.plan, maxOutlets: Number(planForm.maxOutlets) }
     });
   };
 
@@ -175,10 +178,27 @@ export default function AdminPage() {
               )
             },
             {
-              key: "plan", header: "Subscription Plan",
+              key: "plan", header: "Subscription",
               render: (b) => (
-                <div className="flex items-center gap-1.5">
-                  <Badge variant="soft" className="capitalize">{b.plan}</Badge>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="soft" className="capitalize">
+                      {typeof b.planId === "object" ? (b.planId as any).name : b.planId || b.plan}
+                    </Badge>
+                    <Badge variant={b.subscriptionStatus === "active" ? "default" : b.subscriptionStatus === "trial" ? "soft" : "danger"} className="capitalize text-[10px]">
+                      {b.subscriptionStatus || "unknown"}
+                    </Badge>
+                  </div>
+                  {b.subscriptionStatus === "trial" && b.trialEndsAt && (
+                    <span className="text-[10px] text-muted block">
+                      Ends: {new Date(b.trialEndsAt).toLocaleDateString()}
+                    </span>
+                  )}
+                  {b.subscriptionStatus === "active" && b.currentPeriodEnd && (
+                    <span className="text-[10px] text-muted block">
+                      Renews: {new Date(b.currentPeriodEnd).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
               )
             },

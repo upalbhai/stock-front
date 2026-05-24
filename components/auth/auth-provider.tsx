@@ -10,8 +10,9 @@ import type { AuthUser, UserRole } from "@/lib/types";
 export type { AuthUser, UserRole } from "@/lib/types";
 
 type AuthResponse = { token: string; user: AuthUser };
-type RegisterPayload = { name: string; phone: string; email: string; pin: string; businessName?: string; outletName?: string; outletId?: string };
+type RegisterPayload = { name: string; email: string; password?: string; phone?: string; pin?: string; businessName?: string; outletName?: string; outletId?: string };
 type LoginPayload = { phone: string; pin: string };
+type EmailLoginPayload = { email: string; password?: string };
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -21,12 +22,17 @@ type AuthContextValue = {
   isLoading: boolean;
   impersonating: boolean;
   login: (payload: LoginPayload) => Promise<AuthResponse>;
+  loginWithEmail: (payload: EmailLoginPayload) => Promise<AuthResponse>;
+  checkEmail: (email: string) => Promise<{ method: "password" | "otp"; message?: string }>;
   register: (payload: RegisterPayload) => Promise<AuthResponse>;
   sendOtp: (email: string) => Promise<void>;
   verifyOtp: (payload: { email: string; code: string }) => Promise<AuthResponse | { message: string }>;
+  forgotPassword: (email: string) => Promise<{ message: string }>;
+  resetPassword: (payload: { email: string; code: string; newPassword: string }) => Promise<{ message: string }>;
   logout: () => void;
   setOutletId: (outletId: string | null) => void;
   exitImpersonation?: () => Promise<void>;
+  isTrialExpired: boolean;
 };
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined);
@@ -86,10 +92,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = React.useCallback(async (payload: LoginPayload) => {
+    const response = await apiFetch<AuthResponse>("/auth/login-pin", { method: "POST", body: payload });
+    setAuthState(response);
+    return response;
+  }, [setAuthState]);
+
+  const loginWithEmail = React.useCallback(async (payload: EmailLoginPayload) => {
     const response = await apiFetch<AuthResponse>("/auth/login", { method: "POST", body: payload });
     setAuthState(response);
     return response;
   }, [setAuthState]);
+
+  const checkEmail = React.useCallback(async (email: string) => {
+    return await apiFetch<{ method: "password" | "otp"; message?: string }>("/auth/check-email", { method: "POST", body: { email } });
+  }, []);
 
   const sendOtp = React.useCallback(async (email: string) => {
     await apiFetch<void>("/auth/send-otp", { method: "POST", body: { email } });
@@ -116,6 +132,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // return the informational response for the UI to display
     return response as { message?: string };
   }, [setAuthState]);
+
+  const forgotPassword = React.useCallback(async (email: string) => {
+    return await apiFetch<{ message: string }>("/auth/forgot-password", { method: "POST", body: { email } });
+  }, []);
+
+  const resetPassword = React.useCallback(async (payload: { email: string; code: string; newPassword: string }) => {
+    return await apiFetch<{ message: string }>("/auth/reset-password", { method: "POST", body: payload });
+  }, []);
 
   const logout = React.useCallback(() => {
     clearStoredAuth();
@@ -159,8 +183,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token, logout]);
 
+  const isTrialExpired = React.useMemo(() => {
+    return user?.trialExpired || false;
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, token, outletId, businessId, isLoading, impersonating, login, register, logout, setOutletId, exitImpersonation }}>
+    <AuthContext.Provider value={{ 
+      user, token, outletId, businessId, isLoading, impersonating, 
+      login, loginWithEmail, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword, 
+      logout, setOutletId, exitImpersonation, isTrialExpired
+    }}>
       {children}
     </AuthContext.Provider>
   );
