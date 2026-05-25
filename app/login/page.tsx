@@ -111,9 +111,9 @@ export default function LoginPage() {
       });
       
       if ((res as any)?.message) {
-        setSuccess((res as any).message || "Registration submitted.");
+        setSuccess("Account created successfully! We've sent a verification code to your email.");
         setMode("login");
-        setLoginStep("email");
+        setLoginStep("otp");
       } else {
         router.push("/");
       }
