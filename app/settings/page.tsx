@@ -15,6 +15,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { useSettings } from "@/components/settings/settings-provider";
 import { RoleGate } from "@/components/auth/role-gate";
+import { SecuritySettings } from "@/components/settings/security-settings";
 
 export default function SettingsPage() {
   const { token, outletId, businessId } = useAuth();
@@ -157,6 +158,8 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-6">
+            <SecuritySettings />
+
             {/* System Preferences & Operational toggles */}
             <Card className="rounded-3xl border border-border/70 shadow-soft">
               <CardHeader>

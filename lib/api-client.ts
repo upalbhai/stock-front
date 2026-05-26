@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./constants";
 import { queueRequest } from "./offline-queue";
+import { ApiResponse } from "./types";
 
 export type QueueResult = { queued: true };
 

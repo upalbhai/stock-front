@@ -1,5 +1,27 @@
 export type UserRole = "superadmin" | "owner" | "manager" | "staff";
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface CursorMeta {
+  nextCursor: string | null;
+  hasNextPage: boolean;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  meta: {
+    pagination?: PaginationMeta;
+    cursor?: CursorMeta;
+  } | null;
+}
+
 export type AuthUser = {
   id: string;
   name: string;

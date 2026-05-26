@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -26,6 +26,9 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -40,6 +43,39 @@ export default function LoginPage() {
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) {
+      const pastedData = value.replace(/[^0-9a-zA-Z]/g, "").slice(0, 6).split("");
+      const newOtp = [...otpCode];
+      for (let i = 0; i < pastedData.length; i++) {
+        if (index + i < 6) {
+          newOtp[index + i] = pastedData[i];
+        }
+      }
+      setOtpCode(newOtp);
+      setForm(prev => ({ ...prev, code: newOtp.join("") }));
+      
+      const nextIndex = Math.min(index + pastedData.length, 5);
+      otpRefs.current[nextIndex]?.focus();
+      return;
+    }
+
+    const newOtp = [...otpCode];
+    newOtp[index] = value;
+    setOtpCode(newOtp);
+    setForm(prev => ({ ...prev, code: newOtp.join("") }));
+
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otpCode[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
   };
 
   const handleEmailCheckSubmit = async (e: React.FormEvent) => {
@@ -94,17 +130,10 @@ export default function LoginPage() {
     setError(null);
     setSuccess(null);
     
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
-    
     try {
       const res = await register({
         name: form.name,
         email: form.email,
-        password: form.password,
         phone: form.phone || undefined,
         businessName: form.businessName,
         outletName: form.outletName || `${form.businessName} Main`
@@ -201,14 +230,14 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => { setMode("login"); setLoginStep("email"); setError(null); setSuccess(null); }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-xl transition ${mode === "login" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
+                className={"flex-1 py-2 text-xs font-semibold rounded-xl transition"}
               >
                 Sign In
               </button>
               <button
                 type="button"
                 onClick={() => { setMode("register"); setError(null); setSuccess(null); }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-xl transition ${mode === "register" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
+                className={"flex-1 py-2 text-xs font-semibold rounded-xl transition"}
               >
                 Free Trial
               </button>
@@ -247,16 +276,12 @@ export default function LoginPage() {
                   <Input required value={form.businessName} onChange={(e) => handleChange("businessName", e.target.value)} placeholder="My Super Store" />
                 </div>
                 <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">Outlet Name (Optional)</label>
+                  <Input value={form.outletName} onChange={(e) => handleChange("outletName", e.target.value)} placeholder="Main Branch" />
+                </div>
+                <div>
                   <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
                   <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="john@example.com" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Password *</label>
-                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" minLength={6} />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Confirm Password *</label>
-                  <Input required type="password" value={form.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" minLength={6} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">Phone (Optional)</label>
@@ -287,7 +312,7 @@ export default function LoginPage() {
                     <label className="block text-xs font-medium text-muted">Password *</label>
                     <button type="button" onClick={() => setMode("forgot")} className="text-xs text-primary font-medium hover:underline">Forgot password?</button>
                   </div>
-                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autoFocus />
+                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" autoFocus />
                 </div>
               </div>
             )}
@@ -300,11 +325,23 @@ export default function LoginPage() {
                   <span className="font-medium text-text">{form.email}</span>
                 </div>
                 <div>
-                  <div className="flex justify-between items-center mb-1">
+                  <div className="flex justify-between items-center mb-2">
                     <label className="block text-xs font-medium text-muted">OTP Code *</label>
                     <button type="button" onClick={handleSendOtp} disabled={loading} className="text-xs text-primary font-medium hover:underline">Resend Code</button>
                   </div>
-                  <Input required value={form.code} onChange={(e) => handleChange("code", e.target.value)} placeholder="Enter code from email" className="tracking-widest text-center text-lg font-bold" autoFocus />
+                  <div className="flex gap-2 justify-between">
+                    {otpCode.map((digit, idx) => (
+                      <Input
+                        key={idx}
+                        ref={(el) => { otpRefs.current[idx] = el; }}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                        className="w-12 h-14 text-center text-xl font-bold rounded-xl bg-surface border-border shadow-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                        maxLength={6}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -318,7 +355,7 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">Security PIN *</label>
-                  <Input required type="password" maxLength={6} value={form.pin} onChange={(e) => handleChange("pin", e.target.value)} placeholder="â€¢â€¢â€¢â€¢" className="tracking-widest text-center text-lg font-bold" />
+                  <Input required type="password" maxLength={6} value={form.pin} onChange={(e) => handleChange("pin", e.target.value)} placeholder="••••" className="tracking-widest text-center text-lg font-bold" />
                 </div>
               </div>
             )}
@@ -347,11 +384,11 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">New Password *</label>
-                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" minLength={6} />
+                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" minLength={6} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">Confirm New Password *</label>
-                  <Input required type="password" value={form.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" minLength={6} />
+                  <Input required type="password" value={form.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="••••••••" minLength={6} />
                 </div>
               </div>
             )}

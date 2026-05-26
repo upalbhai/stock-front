@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
+import { Plus, Pencil, Trash2, Search, Package, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import type { Product, Category, Outlet } from "@/lib/types";
+import { productService } from "@/services/product.service";
 
 const UNIT_OPTIONS = ["pcs","kg","liter","packet","dozen","box","bottle","gm"].map((u) => ({ value: u, label: u }));
 
@@ -26,12 +28,28 @@ export default function ProductsPage() {
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState({ name: "", description: "", sku: "", unit: "pcs", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" });
+  const { ref, inView } = useInView();
 
-  const { data: prodData, isLoading } = useQuery({
+  const {
+    data: prodData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
     queryKey: ["products", outletId, catFilter, search],
-    queryFn: () => getJson<{ products: Product[] }>("/products", token, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined }),
+    queryFn: ({ pageParam }) => productService.getProductsWithCursor(token as string, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, cursor: pageParam as string | undefined }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.meta?.cursor?.nextCursor,
     enabled: Boolean(token)
   });
+
+  React.useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
+
   const { data: catData } = useQuery({
     queryKey: ["categories", outletId],
     queryFn: () => getJson<{ categories: Category[] }>("/categories", token, { flat: "true" }),
@@ -49,7 +67,7 @@ export default function ProductsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setDeleteId(null); }
   });
 
-  const products = prodData?.products ?? [];
+  const products = prodData?.pages.flatMap((page) => page.data) ?? [];
   const categories = catData?.categories ?? [];
 
   const openCreate = () => { setEditId(null); setForm({ name: "", description: "", sku: "", unit: "pcs", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" }); setShowModal(true); };
@@ -86,6 +104,10 @@ export default function ProductsPage() {
           { key: "isActive", header: "Status", render: (p) => <Badge variant={p.isActive ? "soft" : "danger"}>{p.isActive ? "Active" : "Inactive"}</Badge> },
           { key: "actions", header: "", render: (p) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(p._id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>) }
         ]} />
+
+      <div ref={ref} className="flex justify-center p-4">
+        {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-muted" />}
+      </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Product" : "Add Product"} size="lg">
         <form className="space-y-4" onSubmit={handleSubmit}>
