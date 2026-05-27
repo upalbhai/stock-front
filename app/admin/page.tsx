@@ -29,7 +29,7 @@ export default function AdminPage() {
   const [selectedBusiness, setSelectedBusiness] = React.useState<Business | null>(null);
 
   // Form states
-  const [planForm, setPlanForm] = React.useState({ plan: "free", maxOutlets: 1 });
+  const [planForm, setPlanForm] = React.useState({ plan: "free", maxOutlets: 1, subscriptionStatus: "trial", planExpiresAt: "" });
 
   // Impersonate state
   const [showImpersonateModal, setShowImpersonateModal] = React.useState(false);
@@ -117,7 +117,12 @@ export default function AdminPage() {
 
   const openPlanEdit = (biz: Business) => {
     setSelectedBusiness(biz);
-    setPlanForm({ plan: (biz.planId as any)?._id || biz.planId || biz.plan || "", maxOutlets: biz.maxOutlets || 1 });
+    setPlanForm({ 
+      plan: (biz.planId as any)?._id || biz.planId || biz.plan || "", 
+      maxOutlets: biz.maxOutlets || 1,
+      subscriptionStatus: biz.subscriptionStatus || "trial",
+      planExpiresAt: biz.currentPeriodEnd ? new Date(biz.currentPeriodEnd).toISOString().split('T')[0] : ""
+    });
     setShowPlanModal(true);
   };
 
@@ -126,7 +131,12 @@ export default function AdminPage() {
     if (!selectedBusiness) return;
     planMutation.mutate({
       id: selectedBusiness._id,
-      body: { planId: planForm.plan, maxOutlets: Number(planForm.maxOutlets) }
+      body: { 
+        planId: planForm.plan, 
+        maxOutlets: Number(planForm.maxOutlets),
+        subscriptionStatus: planForm.subscriptionStatus,
+        currentPeriodEnd: planForm.planExpiresAt ? new Date(planForm.planExpiresAt).toISOString() : undefined
+      }
     });
   };
 

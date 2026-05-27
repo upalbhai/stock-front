@@ -21,11 +21,13 @@ type ReportData = {
   paymentSummary: {
     cash: number;
     online: number;
+    upi: number;
     card: number;
     split: number;
   };
   bestSelling: { name: string; qty: number; total: number }[];
   remainingStock: { name: string; onHandQty: number; lowStockThreshold: number; unit: string }[];
+  staffSales: { name: string; revenue: number; orders: number }[];
 };
 
 export default function ReportsPage() {
@@ -180,6 +182,37 @@ export default function ReportsPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        {/* Bottom Row: Staff Performance */}
+        <Card className="rounded-3xl border border-border/70 shadow-soft lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Staff Shift Performance</CardTitle>
+            <CardDescription>Sales tracked by individual team members</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <p className="text-sm text-muted animate-pulse">Calculating staff contributions...</p>
+            ) : !report?.staffSales?.length ? (
+              <p className="text-sm text-muted italic">No staff sales data available.</p>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                {report.staffSales.map((staff, idx) => (
+                  <div key={staff.name} className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-surface">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{staff.name}</p>
+                      <p className="text-sm text-muted">{staff.orders} orders</p>
+                    </div>
+                    <div className="ml-auto text-right">
+                      <p className="font-bold text-primary">{formatCurrency(staff.revenue)}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

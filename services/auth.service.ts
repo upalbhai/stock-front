@@ -3,26 +3,26 @@ import { API_ROUTES } from "@/lib/routes";
 
 export const authService = {
   checkEmail: async (email: string) => {
-    return apiClient.post<{ exists: boolean, message: string }>(API_ROUTES.AUTH.SEND_OTP, { email, type: "login" });
+    return apiClient<{ exists: boolean, message: string }>(API_ROUTES.AUTH.SEND_OTP, { method: "POST", body: { email, type: "login" } });
   },
 
   verifyOtp: async (email: string, otp: string) => {
-    return apiClient.post<{ token: string, user: any }>(API_ROUTES.AUTH.VERIFY_OTP, { email, otp });
+    return apiClient<{ token: string, user: any }>(API_ROUTES.AUTH.VERIFY_OTP, { method: "POST", body: { email, otp } });
   },
 
   loginWithPassword: async (data: any) => {
-    return apiClient.post(API_ROUTES.AUTH.LOGIN, data);
+    return apiClient<any>(API_ROUTES.AUTH.LOGIN, { method: "POST", body: data });
   },
 
   register: async (data: any) => {
-    return apiClient.post(API_ROUTES.AUTH.REGISTER, data);
+    return apiClient<any>(API_ROUTES.AUTH.REGISTER, { method: "POST", body: data });
   },
 
   getMe: async () => {
-    return apiClient.get(API_ROUTES.AUTH.ME);
+    return apiClient<any>(API_ROUTES.AUTH.ME, { method: "GET" });
   },
 
   setupPassword: async (data: any) => {
-    return apiClient.post<{ message: string }>("/auth/setup-password", data);
+    return apiClient<{ message: string }>("/auth/setup-password", { method: "POST", body: data });
   }
 };

@@ -1,4 +1,4 @@
-"use client";
+ï»¿"use client";
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -312,7 +312,7 @@ export default function LoginPage() {
                     <label className="block text-xs font-medium text-muted">Password *</label>
                     <button type="button" onClick={() => setMode("forgot")} className="text-xs text-primary font-medium hover:underline">Forgot password?</button>
                   </div>
-                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" autoFocus />
+                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½" autoFocus />
                 </div>
               </div>
             )}
@@ -355,7 +355,7 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">Security PIN *</label>
-                  <Input required type="password" maxLength={6} value={form.pin} onChange={(e) => handleChange("pin", e.target.value)} placeholder="••••" className="tracking-widest text-center text-lg font-bold" />
+                  <Input required type="password" maxLength={6} value={form.pin} onChange={(e) => handleChange("pin", e.target.value)} placeholder="ï¿½ï¿½ï¿½ï¿½" className="tracking-widest text-center text-lg font-bold" />
                 </div>
               </div>
             )}
@@ -384,11 +384,11 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">New Password *</label>
-                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" minLength={6} />
+                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½" minLength={6} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">Confirm New Password *</label>
-                  <Input required type="password" value={form.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="••••••••" minLength={6} />
+                  <Input required type="password" value={form.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½" minLength={6} />
                 </div>
               </div>
             )}

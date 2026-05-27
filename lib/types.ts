@@ -81,6 +81,7 @@ export type Outlet = {
   code: string;
   address?: string;
   phone?: string;
+  email?: string;
   isActive: boolean;
   taxEnabled: boolean;
   defaultTaxRate: number;

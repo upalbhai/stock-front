@@ -6,7 +6,7 @@ import Script from "next/script";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Sparkles, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/components/auth/auth-provider";
 import { apiFetch, getJson } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
@@ -216,7 +216,7 @@ export default function SubscribePage() {
                     </ul>
                   </CardContent>
 
-                  <CardFooter>
+                  <div className="p-6 pt-0">
                     {isCurrentPlan ? (
                       <Button className="w-full rounded-2xl py-6 bg-success text-success-foreground hover:bg-success" disabled>
                         Current Plan
@@ -231,7 +231,7 @@ export default function SubscribePage() {
                         {loadingPlan === plan._id ? "Processing..." : "Subscribe Now"}
                       </Button>
                     )}
-                  </CardFooter>
+                  </div>
                 </Card>
               );
             })}

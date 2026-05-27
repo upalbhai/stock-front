@@ -3,9 +3,10 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
-import { clearStoredAuth, getStoredAuth, getStoredOutletId, setStoredAuth, setStoredOutletId } from "@/lib/auth-storage";
 import { flushOfflineQueue } from "@/lib/offline-queue";
 import type { AuthUser, UserRole } from "@/lib/types";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { setAuth, setOutlet as setOutletAction, clearAuth } from "@/store/authSlice";
 
 export type { AuthUser, UserRole } from "@/lib/types";
 
@@ -24,7 +25,7 @@ type AuthContextValue = {
   login: (payload: LoginPayload) => Promise<AuthResponse>;
   loginWithEmail: (payload: EmailLoginPayload) => Promise<AuthResponse>;
   checkEmail: (email: string) => Promise<{ method: "password" | "otp"; message?: string }>;
-  register: (payload: RegisterPayload) => Promise<AuthResponse>;
+  register: (payload: RegisterPayload) => Promise<AuthResponse | { message?: string }>;
   sendOtp: (email: string) => Promise<void>;
   verifyOtp: (payload: { email: string; code: string }) => Promise<AuthResponse | { message: string }>;
   forgotPassword: (email: string) => Promise<{ message: string }>;
@@ -39,28 +40,13 @@ const AuthContext = React.createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
-  const [user, setUser] = React.useState<AuthUser | null>(null);
-  const [token, setToken] = React.useState<string | null>(null);
-  const [outletId, setOutletIdState] = React.useState<string | null>(null);
-  const [businessId, setBusinessId] = React.useState<string | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [impersonating, setImpersonating] = React.useState(false);
+  const dispatch = useAppDispatch();
+  const { user, token, outletId, businessId, impersonating } = useAppSelector((state) => state.auth);
+  // Redux persist handles rehydration, but to avoid hydration mismatch, track if we're mounted/rehydrated if necessary.
+  const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
-    const stored = getStoredAuth();
-    if (stored) {
-      setUser(stored.user);
-      setToken(stored.token);
-      setBusinessId(stored.user.businessId || null);
-      // Detect impersonation from token
-      try {
-        const payload = JSON.parse(atob(stored.token.split(".")[1]));
-        setImpersonating(!!payload.impersonating);
-      } catch { /* noop */ }
-    }
-    const selectedOutlet = getStoredOutletId();
-    setOutletIdState(selectedOutlet || stored?.user?.outletId || null);
-    setIsLoading(false);
+    setIsMounted(true);
   }, []);
 
   React.useEffect(() => {
@@ -74,22 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const setOutletId = React.useCallback((selected: string | null) => {
-    setOutletIdState(selected);
-    setStoredOutletId(selected);
-  }, []);
+    dispatch(setOutletAction(selected));
+  }, [dispatch]);
 
   const setAuthState = React.useCallback((data: AuthResponse) => {
-    setUser(data.user);
-    setToken(data.token);
-    setBusinessId(data.user.businessId || null);
-    setOutletIdState(data.user.outletId || null);
-    setStoredOutletId(data.user.outletId || null);
-    setStoredAuth({ token: data.token, user: data.user });
-    try {
-      const payload = JSON.parse(atob(data.token.split(".")[1]));
-      setImpersonating(!!payload.impersonating);
-    } catch { /* noop */ }
-  }, []);
+    dispatch(setAuth({ user: data.user, token: data.token }));
+  }, [dispatch]);
 
   const login = React.useCallback(async (payload: LoginPayload) => {
     const response = await apiFetch<AuthResponse>("/auth/login-pin", { method: "POST", body: payload });
@@ -142,15 +118,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = React.useCallback(() => {
-    clearStoredAuth();
-    setStoredOutletId(null);
-    setUser(null);
-    setToken(null);
-    setBusinessId(null);
-    setImpersonating(false);
+    dispatch(clearAuth());
     localStorage.removeItem("original_admin_token");
     queryClient.clear();
-  }, [queryClient]);
+  }, [dispatch, queryClient]);
 
   const exitImpersonation = React.useCallback(async () => {
     const orig = localStorage.getItem("original_admin_token");
@@ -172,24 +143,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: "Super Admin",
         role: "superadmin"
       };
-      setToken(orig);
-      setUser(restoredUser);
-      setBusinessId(null);
-      setImpersonating(false);
-      setStoredAuth({ token: orig, user: restoredUser });
+      dispatch(setAuth({ user: restoredUser, token: orig }));
       window.location.href = "/admin";
     } catch {
       logout();
     }
-  }, [token, logout]);
+  }, [token, dispatch, logout]);
 
   const isTrialExpired = React.useMemo(() => {
     return user?.trialExpired || false;
   }, [user]);
 
+  // isMounted tracking will prevent hydration mismatch, but effectively it means 
+  // on first render it returns the states from the store which might be persisted.
   return (
     <AuthContext.Provider value={{ 
-      user, token, outletId, businessId, isLoading, impersonating, 
+      user, token, outletId, businessId, isLoading: !isMounted, impersonating, 
       login, loginWithEmail, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword, 
       logout, setOutletId, exitImpersonation, isTrialExpired
     }}>
