@@ -4,7 +4,7 @@ import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Package, ArrowLeftRight, History, Play, AlertTriangle, Check, Plus,
-  ChevronRight, RefreshCw, Send, CheckCircle2, XCircle
+  ChevronRight, RefreshCw, Send, CheckCircle2, XCircle, Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,11 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
+import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { formatNumber, formatDate } from "@/lib/format";
+import { getErrorMessage } from "@/lib/error";
 import type { Product, StockTransfer, Outlet } from "@/lib/types";
 
 type StockHistoryEntry = {
@@ -41,6 +43,7 @@ const TRANSFER_STATUS_COLORS: Record<string, "soft" | "warning" | "default" | "d
 export default function StockPage() {
   const { token, outletId } = useAuth();
   const qc = useQueryClient();
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [activeTab, setActiveTab] = React.useState<"overview" | "start-of-day" | "history" | "transfers">("overview");
 
   // Adjust Dialog State
@@ -49,6 +52,7 @@ export default function StockPage() {
   const [adjustQty, setAdjustQty] = React.useState("");
   const [adjustType, setAdjustType] = React.useState<"add" | "set">("add");
   const [adjustNote, setAdjustNote] = React.useState("");
+  const [adjustError, setAdjustError] = React.useState<string | null>(null);
 
   // Transfer Dialog State
   const [showTransferModal, setShowTransferModal] = React.useState(false);
@@ -59,11 +63,33 @@ export default function StockPage() {
   // Start of day count state
   const [startOfDayCounts, setStartOfDayCounts] = React.useState<Record<string, number>>({});
 
+  // Overview Tab State
+  const [prodSearch, setProdSearch] = React.useState("");
+  const [prodPage, setProdPage] = React.useState(1);
+  const [prodLimit, setProdLimit] = React.useState(50);
+  const [prodIsRefetching, setProdIsRefetching] = React.useState(false);
+  const [prodCooldownSeconds, setProdCooldownSeconds] = React.useState(0);
+
+  // History Tab State
+  const [historySearch, setHistorySearch] = React.useState("");
+  const [historyPage, setHistoryPage] = React.useState(1);
+  const [historyLimit, setHistoryLimit] = React.useState(50);
+  const [historyIsRefetching, setHistoryIsRefetching] = React.useState(false);
+  const [historyCooldownSeconds, setHistoryCooldownSeconds] = React.useState(0);
+
+  // Transfers Tab State
+  const [transferSearch, setTransferSearch] = React.useState("");
+  const [transferPage, setTransferPage] = React.useState(1);
+  const [transferLimit, setTransferLimit] = React.useState(50);
+  const [transferIsRefetching, setTransferIsRefetching] = React.useState(false);
+  const [transferCooldownSeconds, setTransferCooldownSeconds] = React.useState(0);
+
   // API Queries
-  const { data: prodData, isLoading: loadingProds } = useQuery({
-    queryKey: ["products", outletId],
-    queryFn: () => getJson<{ products: Product[] }>("/products", token, { outletId: outletId ?? undefined }),
-    enabled: Boolean(token && outletId)
+  const { data: prodData, isLoading: loadingProds, refetch: refetchProducts } = useQuery({
+    queryKey: ["products", outletId, prodSearch, prodPage, prodLimit],
+    queryFn: () => getJson<{ data: Product[]; meta?: any }>("/products", token, { outletId: outletId ?? undefined, search: prodSearch || undefined, page: prodPage, limit: prodLimit }),
+    // enable when we have a token — outletId is optional on the API
+    enabled: Boolean(token)
   });
 
   const { data: summaryData } = useQuery({
@@ -72,15 +98,15 @@ export default function StockPage() {
     enabled: Boolean(token && outletId)
   });
 
-  const { data: historyData, isLoading: loadingHistory } = useQuery({
-    queryKey: ["stock-history", outletId],
-    queryFn: () => getJson<{ entries: StockHistoryEntry[] }>("/stock/history", token, { outletId: outletId ?? undefined }),
+  const { data: historyData, isLoading: loadingHistory, refetch: refetchHistory } = useQuery({
+    queryKey: ["stock-history", outletId, historySearch, historyPage, historyLimit],
+    queryFn: () => getJson<{ data: StockHistoryEntry[]; meta?: any }>("/stock/history", token, { outletId: outletId ?? undefined, search: historySearch || undefined, page: historyPage, limit: historyLimit }),
     enabled: Boolean(token && outletId)
   });
 
-  const { data: transfersData, isLoading: loadingTransfers } = useQuery({
-    queryKey: ["stock-transfers"],
-    queryFn: () => getJson<{ transfers: StockTransfer[] }>("/stock/transfers", token),
+  const { data: transfersData, isLoading: loadingTransfers, refetch: refetchTransfers } = useQuery({
+    queryKey: ["stock-transfers", transferSearch, transferPage, transferLimit],
+    queryFn: () => getJson<{ data: StockTransfer[]; meta?: any }>("/stock/transfers", token, { search: transferSearch || undefined, page: transferPage, limit: transferLimit }),
     enabled: Boolean(token)
   });
 
@@ -100,6 +126,15 @@ export default function StockPage() {
       setShowAdjustModal(false);
       setAdjustQty("");
       setAdjustNote("");
+      setAdjustError(null);
+    }
+    ,
+    onError: (err: unknown) => {
+      const msg = getErrorMessage(err, "Failed to adjust stock");
+      console.error("Adjust error:", err);
+      setAdjustError(msg);
+      // also show a quick alert so user notices immediately
+      alert(msg);
     }
   });
 
@@ -112,6 +147,11 @@ export default function StockPage() {
       setTransferItems([]);
       setTransferNote("");
     }
+    , onError: (err: unknown) => {
+      const msg = getErrorMessage(err, "Failed to create transfer request");
+      console.error("Transfer error:", err);
+      alert(msg);
+    }
   });
 
   const approveTransferMutation = useMutation({
@@ -121,6 +161,11 @@ export default function StockPage() {
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["stock-summary"] });
       qc.invalidateQueries({ queryKey: ["stock-history"] });
+    }
+    , onError: (err: unknown) => {
+      const msg = getErrorMessage(err, "Failed to approve transfer");
+      console.error("Approve transfer error:", err);
+      alert(msg);
     }
   });
 
@@ -132,13 +177,77 @@ export default function StockPage() {
       qc.invalidateQueries({ queryKey: ["stock-history"] });
       setActiveTab("overview");
     }
+    , onError: (err: unknown) => {
+      const msg = getErrorMessage(err, "Failed to save opening stock");
+      console.error("Save opening stock error:", err);
+      alert(msg);
+    }
   });
 
-  const products = prodData?.products ?? [];
+  const rawProd = prodData as any;
+  const products: Product[] = (rawProd && (rawProd.products ?? rawProd.data)) ?? [];
+  console.log("Products query state:", { token, outletId, loadingProds, prodData: rawProd });
+  console.log('Products list length:', products.length);
   const summary = summaryData?.data;
-  const history = historyData?.entries ?? [];
-  const transfers = transfersData?.transfers ?? [];
+  const history = (historyData as any)?.data ?? (historyData as any)?.entries ?? [];
+  const transfers = (transfersData as any)?.data ?? (transfersData as any)?.transfers ?? [];
+  const prodMeta = (prodData as any)?.meta?.pagination;
+  const historyMeta = (historyData as any)?.meta?.pagination;
+  const transfersMeta = (transfersData as any)?.meta?.pagination;
   const outlets = (outletsData?.outlets ?? []).filter((o) => o._id !== outletId);
+
+  // Cleanup effect for timeout ref
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  // Refetch handlers with 15s cooldown
+  const handleProdRefetch = () => {
+    setProdIsRefetching(true);
+    setProdCooldownSeconds(15);
+    refetchProducts();
+    let seconds = 15;
+    timeoutRef.current = setInterval(() => {
+      seconds -= 1;
+      setProdCooldownSeconds(seconds);
+      if (seconds === 0) {
+        setProdIsRefetching(false);
+        if (timeoutRef.current) clearInterval(timeoutRef.current);
+      }
+    }, 1000);
+  };
+
+  const handleHistoryRefetch = () => {
+    setHistoryIsRefetching(true);
+    setHistoryCooldownSeconds(15);
+    refetchHistory();
+    let seconds = 15;
+    timeoutRef.current = setInterval(() => {
+      seconds -= 1;
+      setHistoryCooldownSeconds(seconds);
+      if (seconds === 0) {
+        setHistoryIsRefetching(false);
+        if (timeoutRef.current) clearInterval(timeoutRef.current);
+      }
+    }, 1000);
+  };
+
+  const handleTransfersRefetch = () => {
+    setTransferIsRefetching(true);
+    setTransferCooldownSeconds(15);
+    refetchTransfers();
+    let seconds = 15;
+    timeoutRef.current = setInterval(() => {
+      seconds -= 1;
+      setTransferCooldownSeconds(seconds);
+      if (seconds === 0) {
+        setTransferIsRefetching(false);
+        if (timeoutRef.current) clearInterval(timeoutRef.current);
+      }
+    }, 1000);
+  };
 
   // Initialize start of day counts
   React.useEffect(() => {
@@ -155,7 +264,8 @@ export default function StockPage() {
     const qtyVal = Number(adjustQty);
     adjustMutation.mutate({
       productId: selectedProduct._id,
-      outletId,
+      // avoid sending explicit `null` which fails backend validation — omit or send undefined
+      outletId: outletId ?? undefined,
       qty: qtyVal,
       type: adjustType === "set" ? "adjustment" : "purchase",
       note: adjustNote || "Manual stock adjustment"
@@ -249,6 +359,23 @@ export default function StockPage() {
             <StatsCard label="Low Stock Items" value={summary?.lowStock || 0} color={summary?.lowStock ? "danger" : "default"} icon={<AlertTriangle className="h-5 w-5" />} />
           </div>
 
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between flex-wrap">
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <Search className="h-4 w-4 text-muted flex-shrink-0" />
+              <Input
+                type="text"
+                placeholder="Search products by name..."
+                value={prodSearch}
+                onChange={(e) => { setProdSearch(e.target.value); setProdPage(1); }}
+                className="flex-1"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={handleProdRefetch} disabled={prodIsRefetching} id="refetch-products-stock-btn">
+              <RefreshCw className={`h-4 w-4 ${prodIsRefetching ? "animate-spin" : ""}`} />
+              {prodIsRefetching ? `Refetch (${prodCooldownSeconds}s)` : "Refetch"}
+            </Button>
+          </div>
+
           <DataTable
             loading={loadingProds}
             data={products}
@@ -289,6 +416,16 @@ export default function StockPage() {
               }
             ]}
           />
+
+          {prodMeta && (
+            <Pagination
+              page={prodPage}
+              totalPages={prodMeta.totalPages || 1}
+              pageSize={prodLimit}
+              onPageChange={setProdPage}
+              onPageSizeChange={(size) => { setProdLimit(size); setProdPage(1); }}
+            />
+          )}
         </div>
       )}
 
@@ -337,99 +474,157 @@ export default function StockPage() {
 
       {/* TAB CONTENT: History */}
       {activeTab === "history" && (
-        <DataTable
-          loading={loadingHistory}
-          data={history}
-          keyExtractor={(e) => e._id}
-          emptyMessage="No stock ledger entries yet."
-          columns={[
-            {
-              key: "createdAt", header: "Time",
-              render: (e) => <span className="text-xs text-muted">{new Date(e.createdAt).toLocaleString("en-IN")}</span>
-            },
-            {
-              key: "product", header: "Product",
-              render: (e) => <span className="font-medium">{e.productId?.name || "Deleted Product"}</span>
-            },
-            {
-              key: "type", header: "Transaction Type",
-              render: (e) => <Badge variant="secondary" className="capitalize">{e.type.replace(/_/g, " ")}</Badge>
-            },
-            {
-              key: "qty", header: "Qty Change",
-              render: (e) => (
-                <span className={`font-semibold ${e.qty >= 0 ? "text-green-600" : "text-danger"}`}>
-                  {e.qty >= 0 ? `+${e.qty}` : e.qty} {e.productId?.unit}
-                </span>
-              )
-            },
-            {
-              key: "ledger", header: "Ledger State",
-              render: (e) => <span className="text-xs text-muted">{e.qtyBefore} → {e.qtyAfter}</span>
-            },
-            {
-              key: "note", header: "Note",
-              render: (e) => <span className="text-xs text-muted truncate max-w-xs block">{e.note || "—"}</span>
-            }
-          ]}
-        />
+        <div className="space-y-6 animate-rise">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between flex-wrap">
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <Search className="h-4 w-4 text-muted flex-shrink-0" />
+              <Input
+                type="text"
+                placeholder="Search history by product..."
+                value={historySearch}
+                onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
+                className="flex-1"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={handleHistoryRefetch} disabled={historyIsRefetching} id="refetch-history-btn">
+              <RefreshCw className={`h-4 w-4 ${historyIsRefetching ? "animate-spin" : ""}`} />
+              {historyIsRefetching ? `Refetch (${historyCooldownSeconds}s)` : "Refetch"}
+            </Button>
+          </div>
+
+          <DataTable
+            loading={loadingHistory}
+            data={history}
+            keyExtractor={(e: StockHistoryEntry) => e._id}
+            emptyMessage="No stock ledger entries yet."
+            columns={[
+              {
+                key: "createdAt", header: "Time",
+                render: (e: StockHistoryEntry) => <span className="text-xs text-muted">{new Date(e.createdAt).toLocaleString("en-IN")}</span>
+              },
+              {
+                key: "product", header: "Product",
+                render: (e: StockHistoryEntry) => <span className="font-medium">{e.productId?.name || "Deleted Product"}</span>
+              },
+              {
+                key: "type", header: "Transaction Type",
+                render: (e: StockHistoryEntry) => <Badge variant="secondary" className="capitalize">{e.type.replace(/_/g, " ")}</Badge>
+              },
+              {
+                key: "qty", header: "Qty Change",
+                render: (e: StockHistoryEntry) => (
+                  <span className={`font-semibold ${e.qty >= 0 ? "text-green-600" : "text-danger"}`}>
+                    {e.qty >= 0 ? `+${e.qty}` : e.qty} {e.productId?.unit}
+                  </span>
+                )
+              },
+              {
+                key: "ledger", header: "Ledger State",
+                render: (e: StockHistoryEntry) => <span className="text-xs text-muted">{e.qtyBefore} → {e.qtyAfter}</span>
+              },
+              {
+                key: "note", header: "Note",
+                render: (e: StockHistoryEntry) => <span className="text-xs text-muted truncate max-w-xs block">{e.note || "—"}</span>
+              }
+            ]}
+          />
+
+          {historyMeta && (
+            <Pagination
+              page={historyPage}
+              totalPages={historyMeta.totalPages || 1}
+              pageSize={historyLimit}
+              onPageChange={setHistoryPage}
+              onPageSizeChange={(size) => { setHistoryLimit(size); setHistoryPage(1); }}
+            />
+          )}
+        </div>
       )}
 
       {/* TAB CONTENT: Transfers */}
       {activeTab === "transfers" && (
-        <DataTable
-          loading={loadingTransfers}
-          data={transfers}
-          keyExtractor={(t) => t._id}
-          emptyMessage="No inventory transfers logged."
-          columns={[
-            {
-              key: "createdAt", header: "Date Requested",
-              render: (t) => <span className="text-xs text-muted">{new Date(t.createdAt).toLocaleDateString("en-IN")}</span>
-            },
-            {
-              key: "route", header: "Route",
-              render: (t) => (
-                <span className="text-xs font-semibold">
-                  {t.fromOutletId?.name} ➔ {t.toOutletId?.name}
-                </span>
-              )
-            },
-            {
-              key: "items", header: "Items (Qty)",
-              render: (t) => (
-                <div className="flex flex-col gap-0.5">
-                  {t.items.map((item, idx) => (
-                    <span key={idx} className="text-xs text-muted">
-                      • {item.productName} ({item.qty} {item.unit})
-                    </span>
-                  ))}
-                </div>
-              )
-            },
-            {
-              key: "status", header: "Status",
-              render: (t) => <Badge variant={TRANSFER_STATUS_COLORS[t.status] || "secondary"} className="capitalize text-xs">{t.status}</Badge>
-            },
-            {
-              key: "requestedBy", header: "Requested By",
-              render: (t) => <span className="text-xs text-muted">{t.requestedBy?.name || "System"}</span>
-            },
-            {
-              key: "actions", header: "",
-              render: (t) => (
-                <div className="flex gap-2">
-                  {t.status === "pending" && t.toOutletId?._id === outletId && (
-                    <Button variant="default" size="sm" onClick={() => approveTransferMutation.mutate(t._id)}
-                      disabled={approveTransferMutation.isPending}>
-                      Approve & Receive
-                    </Button>
-                  )}
-                </div>
-              )
-            }
-          ]}
-        />
+        <div className="space-y-6 animate-rise">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between flex-wrap">
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <Search className="h-4 w-4 text-muted flex-shrink-0" />
+              <Input
+                type="text"
+                placeholder="Search transfers..."
+                value={transferSearch}
+                onChange={(e) => { setTransferSearch(e.target.value); setTransferPage(1); }}
+                className="flex-1"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={handleTransfersRefetch} disabled={transferIsRefetching} id="refetch-transfers-btn">
+              <RefreshCw className={`h-4 w-4 ${transferIsRefetching ? "animate-spin" : ""}`} />
+              {transferIsRefetching ? `Refetch (${transferCooldownSeconds}s)` : "Refetch"}
+            </Button>
+          </div>
+
+          <DataTable
+            loading={loadingTransfers}
+            data={transfers}
+            keyExtractor={(t: StockTransfer) => t._id}
+            emptyMessage="No inventory transfers logged."
+            columns={[
+              {
+                key: "createdAt", header: "Date Requested",
+                render: (t: StockTransfer) => <span className="text-xs text-muted">{new Date(t.createdAt).toLocaleDateString("en-IN")}</span>
+              },
+              {
+                key: "route", header: "Route",
+                render: (t: StockTransfer) => (
+                  <span className="text-xs font-semibold">
+                    {t.fromOutletId?.name} ➔ {t.toOutletId?.name}
+                  </span>
+                )
+              },
+              {
+                key: "items", header: "Items (Qty)",
+                render: (t: StockTransfer) => (
+                  <div className="flex flex-col gap-0.5">
+                    {t.items.map((item: any, idx: number) => (
+                      <span key={idx} className="text-xs text-muted">
+                        • {item.productName} ({item.qty} {item.unit})
+                      </span>
+                    ))}
+                  </div>
+                )
+              },
+              {
+                key: "status", header: "Status",
+                render: (t: StockTransfer) => <Badge variant={TRANSFER_STATUS_COLORS[t.status] || "secondary"} className="capitalize text-xs">{t.status}</Badge>
+              },
+              {
+                key: "requestedBy", header: "Requested By",
+                render: (t: StockTransfer) => <span className="text-xs text-muted">{t.requestedBy?.name || "System"}</span>
+              },
+              {
+                key: "actions", header: "",
+                render: (t: StockTransfer) => (
+                  <div className="flex gap-2">
+                    {t.status === "pending" && t.toOutletId?._id === outletId && (
+                      <Button variant="default" size="sm" onClick={() => approveTransferMutation.mutate(t._id)}
+                        disabled={approveTransferMutation.isPending}>
+                        Approve & Receive
+                      </Button>
+                    )}
+                  </div>
+                )
+              }
+            ]}
+          />
+
+          {transfersMeta && (
+            <Pagination
+              page={transferPage}
+              totalPages={transfersMeta.totalPages || 1}
+              pageSize={transferLimit}
+              onPageChange={setTransferPage}
+              onPageSizeChange={(size) => { setTransferLimit(size); setTransferPage(1); }}
+            />
+          )}
+        </div>
       )}
 
       {/* MODAL: Quick Adjust Stock */}

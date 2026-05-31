@@ -32,6 +32,7 @@ type AuthContextValue = {
   resetPassword: (payload: { email: string; code: string; newPassword: string }) => Promise<{ message: string }>;
   logout: () => void;
   setOutletId: (outletId: string | null) => void;
+  impersonate: (targetUserId: string) => Promise<void>;
   exitImpersonation?: () => Promise<void>;
   isTrialExpired: boolean;
 };
@@ -154,6 +155,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token, dispatch, logout]);
 
+  const impersonate = React.useCallback(async (targetUserId: string) => {
+    const response = await apiFetch<ApiResponse<{ token: string; user: AuthUser }>>("/admin/impersonate", {
+      method: "POST",
+      body: { targetUserId },
+      token
+    });
+    // Store current admin credentials in local storage to preserve state
+    localStorage.setItem("original_admin_token", token || "");
+    // Update Redux state with target user token
+    dispatch(setAuth({ user: response.data.user, token: response.data.token }));
+  }, [token, dispatch]);
+
   const isTrialExpired = React.useMemo(() => {
     return user?.trialExpired || false;
   }, [user]);
@@ -164,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{ 
       user, token, outletId, businessId, isLoading: !isMounted, impersonating, 
       login, loginWithEmail, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword, 
-      logout, setOutletId, exitImpersonation, isTrialExpired
+      logout, setOutletId, impersonate, exitImpersonation, isTrialExpired
     }}>
       {children}
     </AuthContext.Provider>

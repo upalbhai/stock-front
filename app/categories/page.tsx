@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, ChevronRight, FolderOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronRight, FolderOpen, RefreshCw } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/select";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import Pagination from "@/components/ui/pagination";
 import type { Category } from "@/lib/types";
 
 const EMOJI_OPTIONS = ["🍽️","🥤","🧃","☕","🍵","🥛","🧁","🍰","🍕","🥗","🌮","🍜","🥚","🥗","🫙","🍱","🍦","🧊","🍹","🍺"];
@@ -20,16 +21,43 @@ const COLOR_OPTIONS = ["#6366f1","#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d
 export default function CategoriesPage() {
   const { token } = useAuth();
   const qc = useQueryClient();
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [showModal, setShowModal] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isRefetching, setIsRefetching] = React.useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(50);
   const [form, setForm] = React.useState({ name: "", parentId: "", icon: "🍽️", color: "#6366f1", description: "", sortOrder: "0" });
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => getJson<{ categories: Category[] }>("/categories", token, { flat: "true" }),
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["categories", page, limit],
+    queryFn: () => getJson<{ data?: Category[]; categories?: Category[]; meta?: { pagination?: { page: number; limit: number; total: number; totalPages: number } } }>("/categories", token, { flat: "true", page, limit }),
     enabled: Boolean(token)
   });
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const handleRefetch = () => {
+    setIsRefetching(true);
+    setCooldownSeconds(15);
+    refetch();
+    
+    let seconds = 15;
+    timeoutRef.current = setInterval(() => {
+      seconds -= 1;
+      setCooldownSeconds(seconds);
+      if (seconds === 0) {
+        setIsRefetching(false);
+        if (timeoutRef.current) clearInterval(timeoutRef.current);
+      }
+    }, 1000);
+  };
 
   const save = useMutation({
     mutationFn: (body: unknown) => editId
@@ -57,8 +85,9 @@ export default function CategoriesPage() {
     }
   });
 
-  const allCategories = data?.categories ?? [];
+  const allCategories = data?.data ?? data?.categories ?? [];
   const topLevel = allCategories.filter((c) => !c.parentId);
+  const pagination = data?.meta?.pagination ?? { page: 1, limit, total: allCategories.length, totalPages: 1 };
 
   const openCreate = (parentId = "") => {
     setEditId(null);
@@ -77,7 +106,13 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Categories</h1><p className="text-sm text-muted">Organize products into categories and subcategories</p></div>
-        <Button id="create-category-btn" onClick={() => openCreate("")}><Plus className="h-4 w-4" /> Add Category</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefetch} disabled={isRefetching} id="refetch-categories-btn">
+            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
+            {isRefetching ? `Refetch (${cooldownSeconds}s)` : "Refetch"}
+          </Button>
+          <Button id="create-category-btn" onClick={() => openCreate("")}><Plus className="h-4 w-4" /> Add Category</Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -128,6 +163,10 @@ export default function CategoriesPage() {
           })}
         </div>
       )}
+
+      <div className="flex justify-center p-4">
+        <Pagination page={page} totalPages={pagination.totalPages} pageSize={limit} onPageChange={(p) => setPage(p)} onPageSizeChange={(s) => { setLimit(s); setPage(1); }} />
+      </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Category" : "Create Category"} size="md">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate({ ...form, parentId: form.parentId || null, sortOrder: Number(form.sortOrder) }); }}>

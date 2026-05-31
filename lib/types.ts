@@ -55,6 +55,7 @@ export type Business = {
   plan?: string;
   planId?: Plan | string;
   subscriptionStatus?: "trial" | "active" | "expired" | "cancelled";
+  status?: "pending" | "active" | "suspended" | "banned";
   trialEndsAt?: string;
   currentPeriodEnd?: string;
   maxOutlets?: number;
@@ -109,6 +110,19 @@ export type Category = {
   sortOrder: number;
   isActive: boolean;
   children?: Category[];
+};
+
+export type Unit = {
+  _id: string;
+  businessId: string;
+  outletId?: string | null;
+  name: string;
+  key: string;
+  abbreviation?: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Product = {

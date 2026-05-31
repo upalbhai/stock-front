@@ -3,52 +3,79 @@
 import * as React from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { Plus, Pencil, Trash2, Search, Package, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
+import AsyncSelect from "@/components/ui/async-select";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import type { Product, Category, Outlet } from "@/lib/types";
 import { productService } from "@/services/product.service";
+import Pagination from "@/components/ui/pagination";
 
 const UNIT_OPTIONS = ["pcs","kg","liter","packet","dozen","box","bottle","gm"].map((u) => ({ value: u, label: u }));
+
+async function loadUnits({ page, limit, q }: { page: number; limit: number; q?: string }) {
+  const params = new URLSearchParams();
+  params.set("flat", "true");
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+  if (q) params.set("q", q);
+  const res = await fetch(`/api/units?${params.toString()}`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to load units");
+  return res.json();
+}
 
 export default function ProductsPage() {
   const { token, outletId } = useAuth();
   const qc = useQueryClient();
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [search, setSearch] = React.useState("");
   const [catFilter, setCatFilter] = React.useState("");
   const [showModal, setShowModal] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isRefetching, setIsRefetching] = React.useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
   const [form, setForm] = React.useState({ name: "", description: "", sku: "", unit: "pcs", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" });
   const { ref, inView } = useInView();
 
-  const {
-    data: prodData,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage
-  } = useInfiniteQuery({
-    queryKey: ["products", outletId, catFilter, search],
-    queryFn: ({ pageParam }) => productService.getProductsWithCursor(token as string, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, cursor: pageParam as string | undefined }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.meta?.cursor?.nextCursor,
+  const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(50);
+
+  const { data: prodData, isLoading, refetch: refetchProducts } = useQuery({
+    queryKey: ["products", outletId, catFilter, search, page, limit],
+    queryFn: () => getJson<any>("/products", token, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, page, limit }),
     enabled: Boolean(token)
   });
 
   React.useEffect(() => {
-    if (inView && hasNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, fetchNextPage]);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const handleRefetch = () => {
+    setIsRefetching(true);
+    setCooldownSeconds(15);
+    refetchProducts();
+    
+    let seconds = 15;
+    timeoutRef.current = setInterval(() => {
+      seconds -= 1;
+      setCooldownSeconds(seconds);
+      if (seconds === 0) {
+        setIsRefetching(false);
+        if (timeoutRef.current) clearInterval(timeoutRef.current);
+      }
+    }, 1000);
+  };
 
   const { data: catData } = useQuery({
     queryKey: ["categories", outletId],
@@ -67,7 +94,10 @@ export default function ProductsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setDeleteId(null); }
   });
 
-  const products = prodData?.pages.flatMap((page) => page.data) ?? [];
+  // normalize response which may use `data` or `products` + extract pagination
+  const raw = prodData as any;
+  const products: Product[] = (raw && (raw.products ?? raw.data)) ?? [];
+  const pagination = raw?.meta?.pagination ?? raw?.meta ?? { page: 1, limit, total: products.length, totalPages: 1 };
   const categories = catData?.categories ?? [];
 
   const openCreate = () => { setEditId(null); setForm({ name: "", description: "", sku: "", unit: "pcs", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" }); setShowModal(true); };
@@ -88,25 +118,33 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Products</h1><p className="text-sm text-muted">{products.length} products</p></div>
-        <Button id="create-product-btn" onClick={openCreate}><Plus className="h-4 w-4" /> Add Product</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefetch} disabled={isRefetching} id="refetch-products-btn">
+            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
+            {isRefetching ? `Refetch (${cooldownSeconds}s)` : "Refetch"}
+          </Button>
+          <Button id="create-product-btn" onClick={openCreate}><Plus className="h-4 w-4" /> Add Product</Button>
+        </div>
       </div>
-      <div className="flex gap-3">
-        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input className="pl-9" placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-        <Select value={catFilter} onValueChange={setCatFilter} options={catOptions} className="w-48" placeholder="Category" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted/60" /><Input className="pl-10 py-3 text-base" placeholder="Search products by name or SKU..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+        <Select value={catFilter} onValueChange={setCatFilter} options={catOptions} className="sm:w-56" placeholder="Filter by Category" />
       </div>
 
       <DataTable loading={isLoading} data={products} keyExtractor={(p) => p._id} emptyMessage="No products yet. Add your first product."
         columns={[
-          { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-3">{p.image ? <img src={p.image} className="h-10 w-10 rounded-xl object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Package className="h-5 w-5" /></div>}<div><p className="font-medium">{p.name}</p>{p.sku && <p className="text-xs text-muted">SKU: {p.sku}</p>}</div></div>) },
-          { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },
-          { key: "price", header: "Price", render: (p) => <span className="font-semibold">{formatCurrency(p.price)}</span> },
-          { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-semibold text-danger" : "font-semibold"}>{p.onHandQty} {p.unit}</p>{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px]">Low</Badge>}</div>) },
+          { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image ? <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0"><Package className="h-6 w-6" /></div>}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
+          { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm font-medium">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },
+          { key: "price", header: "Price", render: (p) => <span className="font-bold text-lg">{formatCurrency(p.price)}</span> },
+          { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {p.unit}</p>{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
           { key: "isActive", header: "Status", render: (p) => <Badge variant={p.isActive ? "soft" : "danger"}>{p.isActive ? "Active" : "Inactive"}</Badge> },
-          { key: "actions", header: "", render: (p) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(p._id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>) }
+          { key: "actions", header: "", render: (p) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(p._id)}><Trash2 className="h-4 w-4" /></Button></div>) }
         ]} />
 
-      <div ref={ref} className="flex justify-center p-4">
-        {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-muted" />}
+      <div className="flex justify-center p-4">
+        {isLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted" /> : (
+          <Pagination page={page} totalPages={pagination.totalPages} pageSize={limit} onPageChange={(p) => setPage(p)} onPageSizeChange={(s) => { setLimit(s); setPage(1); }} />
+        )}
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Product" : "Add Product"} size="lg">
@@ -114,7 +152,21 @@ export default function ProductsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2"><label className="mb-1 block text-xs font-medium text-muted">Product Name *</label><Input id="product-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Mango Lassi" /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Category</label><Select id="product-cat" value={form.categoryId} onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))} options={catOptions} /></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Unit</label><Select id="product-unit" value={form.unit} onValueChange={(v) => setForm((f) => ({ ...f, unit: v }))} options={UNIT_OPTIONS} /></div>
+            <div><label className="mb-1 block text-xs font-medium text-muted">Unit</label>
+              <AsyncSelect
+                value={form.unit ? { id: form.unit, name: form.unit } : null}
+                onChange={(opt) => {
+                  if (!opt) return setForm((f) => ({ ...f, unit: "" }));
+                  const o = Array.isArray(opt) ? opt[0] : opt as any;
+                  setForm((f) => ({ ...f, unit: o.id ?? o._id ?? o.name ?? String(o) }));
+                }}
+                loadOptions={loadUnits}
+                placeholder="Unit"
+                searchable
+                pageSize={25}
+                creatable
+              />
+            </div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Selling Price (₹) *</label><Input id="product-price" required type="number" min={0} value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0.00" /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Cost Price (₹)</label><Input id="product-cost" type="number" min={0} value={form.costPrice} onChange={(e) => setForm((f) => ({ ...f, costPrice: e.target.value }))} placeholder="0.00" /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} value={form.onHandQty} onChange={(e) => setForm((f) => ({ ...f, onHandQty: e.target.value }))} /></div>

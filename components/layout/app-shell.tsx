@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <header className="sticky top-0 z-40 border-b border-border/60 bg-surface/85 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+          <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 xl:px-8">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-soft">
                 RO
@@ -76,11 +76,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 pb-24 pt-6 lg:grid-cols-[240px_1fr] lg:pb-10">
-          <aside className="hidden lg:block">
+        <div className="mx-auto grid w-full grid-cols-1 gap-6 px-4 pb-24 pt-6 sm:px-6 xl:px-8 lg:grid-cols-[280px_minmax(0,1fr)] lg:pb-10">
+          <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
             <SideNav />
           </aside>
-          <main className="space-y-6">{children}</main>
+          <main className="min-w-0 space-y-6">{children}</main>
         </div>
 
         <BottomNav />
