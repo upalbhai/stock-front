@@ -157,7 +157,7 @@ export default function StockPage() {
       productId: selectedProduct._id,
       outletId,
       qty: qtyVal,
-      type: adjustType === "set" ? "adjustment" : "receipt",
+      type: adjustType === "set" ? "adjustment" : "purchase",
       note: adjustNote || "Manual stock adjustment"
     });
   };

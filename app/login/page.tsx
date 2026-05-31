@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getErrorMessage } from "@/lib/error";
 import { ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 
 type LoginStep = "email" | "password" | "otp" | "phone";
 
@@ -230,14 +232,24 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => { setMode("login"); setLoginStep("email"); setError(null); setSuccess(null); }}
-                className={"flex-1 py-2 text-xs font-semibold rounded-xl transition"}
+                className={cn(
+                  "flex-1 py-2 text-xs font-semibold rounded-xl transition",
+                  mode === "login"
+                    ? "bg-card text-card-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
                 Sign In
               </button>
               <button
                 type="button"
                 onClick={() => { setMode("register"); setError(null); setSuccess(null); }}
-                className={"flex-1 py-2 text-xs font-semibold rounded-xl transition"}
+                className={cn(
+                  "flex-1 py-2 text-xs font-semibold rounded-xl transition",
+                  mode === "register"
+                    ? "bg-card text-card-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
                 Free Trial
               </button>

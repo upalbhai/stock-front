@@ -4,7 +4,7 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { flushOfflineQueue } from "@/lib/offline-queue";
-import type { AuthUser, UserRole } from "@/lib/types";
+import type { AuthUser, UserRole, ApiResponse } from "@/lib/types";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setAuth, setOutlet as setOutletAction, clearAuth } from "@/store/authSlice";
 
@@ -68,45 +68,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [dispatch]);
 
   const login = React.useCallback(async (payload: LoginPayload) => {
-    const response = await apiFetch<AuthResponse>("/auth/login-pin", { method: "POST", body: payload });
-    setAuthState(response);
-    return response;
+    const response = await apiFetch<ApiResponse<AuthResponse>>("/auth/login-pin", { method: "POST", body: payload });
+    setAuthState(response.data);
+    return response.data;
   }, [setAuthState]);
 
   const loginWithEmail = React.useCallback(async (payload: EmailLoginPayload) => {
-    const response = await apiFetch<AuthResponse>("/auth/login", { method: "POST", body: payload });
-    setAuthState(response);
-    return response;
+    const response = await apiFetch<ApiResponse<AuthResponse>>("/auth/login", { method: "POST", body: payload });
+    setAuthState(response.data);
+    return response.data;
   }, [setAuthState]);
 
   const checkEmail = React.useCallback(async (email: string) => {
-    return await apiFetch<{ method: "password" | "otp"; message?: string }>("/auth/check-email", { method: "POST", body: { email } });
+    const response = await apiFetch<ApiResponse<{ method: "password" | "otp" }>>("/auth/check-email", { method: "POST", body: { email } });
+    return {
+      method: response.data.method,
+      message: response.message
+    };
   }, []);
 
   const sendOtp = React.useCallback(async (email: string) => {
-    await apiFetch<void>("/auth/send-otp", { method: "POST", body: { email } });
+    await apiFetch<ApiResponse<void>>("/auth/send-otp", { method: "POST", body: { email } });
   }, []);
 
   const verifyOtp = React.useCallback(async (payload: { email: string; code: string }) => {
-    const res = await apiFetch<any>("/auth/verify-otp", { method: "POST", body: payload });
+    const res = await apiFetch<ApiResponse<any>>("/auth/verify-otp", { method: "POST", body: payload });
     // if token returned, treat as auth response
-    if (res?.token && res?.user) {
-      setAuthState(res as AuthResponse);
-      return res as AuthResponse;
+    if (res?.data?.token && res?.data?.user) {
+      setAuthState(res.data as AuthResponse);
+      return res.data as AuthResponse;
     }
     // otherwise can be informational message (e.g., awaiting approval)
-    return res as { message: string };
+    return { message: res.message || "Email verified" };
   }, [setAuthState]);
 
   const register = React.useCallback(async (payload: RegisterPayload) => {
-    const response = await apiFetch<any>("/auth/register", { method: "POST", body: payload });
+    const response = await apiFetch<ApiResponse<any>>("/auth/register", { method: "POST", body: payload });
     // backend may return a token/user or just a message indicating awaiting approval
-    if (response?.token && response?.user) {
-      setAuthState(response as AuthResponse);
-      return response as AuthResponse;
+    if (response?.data?.token && response?.data?.user) {
+      setAuthState(response.data as AuthResponse);
+      return response.data as AuthResponse;
     }
     // return the informational response for the UI to display
-    return response as { message?: string };
+    return { message: response.message };
   }, [setAuthState]);
 
   const forgotPassword = React.useCallback(async (email: string) => {
