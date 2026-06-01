@@ -43,7 +43,7 @@ export default function ProductsPage() {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [isRefetching, setIsRefetching] = React.useState(false);
   const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
-  const [form, setForm] = React.useState({ name: "", description: "", sku: "", unit: "pcs", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" });
+  const [form, setForm] = React.useState({ name: "", description: "", sku: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" });
   const { ref, inView } = useInView();
 
   const [page, setPage] = React.useState(1);
@@ -100,10 +100,24 @@ export default function ProductsPage() {
   const pagination = raw?.meta?.pagination ?? raw?.meta ?? { page: 1, limit, total: products.length, totalPages: 1 };
   const categories = catData?.categories ?? [];
 
-  const openCreate = () => { setEditId(null); setForm({ name: "", description: "", sku: "", unit: "pcs", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" }); setShowModal(true); };
+  const openCreate = () => { setEditId(null); setForm({ name: "", description: "", sku: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" }); setShowModal(true); };
   const openEdit = (p: Product) => {
     setEditId(p._id);
-    setForm({ name: p.name, description: p.description ?? "", sku: p.sku ?? "", unit: p.unit, price: String(p.price), costPrice: String(p.costPrice ?? 0), categoryId: typeof p.categoryId === "object" ? p.categoryId?._id ?? "" : p.categoryId ?? "", taxRate: String(p.taxRate), gstRate: String(p.gstRate), onHandQty: String(p.onHandQty), lowStockThreshold: String(p.lowStockThreshold), sortOrder: String(p.sortOrder) });
+    setForm({
+      name: p.name,
+      description: p.description ?? "",
+      sku: p.sku ?? "",
+      unit: (p as any).unitId?.abbreviation ?? p.unit,
+      unitId: (p as any).unitId?._id ?? "",
+      price: String(p.price),
+      costPrice: String(p.costPrice ?? 0),
+      categoryId: typeof p.categoryId === "object" ? p.categoryId?._id ?? "" : p.categoryId ?? "",
+      taxRate: String(p.taxRate),
+      gstRate: String(p.gstRate),
+      onHandQty: String(p.onHandQty),
+      lowStockThreshold: String(p.lowStockThreshold),
+      sortOrder: String(p.sortOrder)
+    });
     setShowModal(true);
   };
 
@@ -136,7 +150,7 @@ export default function ProductsPage() {
           { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image ? <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0"><Package className="h-6 w-6" /></div>}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
           { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm font-medium">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },
           { key: "price", header: "Price", render: (p) => <span className="font-bold text-lg">{formatCurrency(p.price)}</span> },
-          { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {p.unit}</p>{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
+          { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {(p as any).unitId?.abbreviation ?? p.unit}</p>{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
           { key: "isActive", header: "Status", render: (p) => <Badge variant={p.isActive ? "soft" : "danger"}>{p.isActive ? "Active" : "Inactive"}</Badge> },
           { key: "actions", header: "", render: (p) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(p._id)}><Trash2 className="h-4 w-4" /></Button></div>) }
         ]} />
@@ -154,11 +168,16 @@ export default function ProductsPage() {
             <div><label className="mb-1 block text-xs font-medium text-muted">Category</label><Select id="product-cat" value={form.categoryId} onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))} options={catOptions} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Unit</label>
               <AsyncSelect
-                value={form.unit ? { id: form.unit, name: form.unit } : null}
+                value={form.unitId ? { id: form.unitId, name: form.unit } : (form.unit ? { id: `new_${form.unit}`, name: form.unit } : null)}
                 onChange={(opt) => {
-                  if (!opt) return setForm((f) => ({ ...f, unit: "" }));
+                  if (!opt) return setForm((f) => ({ ...f, unit: "", unitId: "" }));
                   const o = Array.isArray(opt) ? opt[0] : opt as any;
-                  setForm((f) => ({ ...f, unit: o.id ?? o._id ?? o.name ?? String(o) }));
+                  // If created new option (id starts with new_), treat as plain string
+                  if (String(o.id).startsWith("new_")) {
+                    setForm((f) => ({ ...f, unit: o.name ?? o.label ?? String(o), unitId: "" }));
+                  } else {
+                    setForm((f) => ({ ...f, unit: o.name ?? o.label ?? String(o), unitId: o.id ?? o._id }));
+                  }
                 }}
                 loadOptions={loadUnits}
                 placeholder="Unit"
