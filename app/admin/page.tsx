@@ -54,35 +54,35 @@ export default function AdminPage() {
   const { data: bizData, isLoading: loadingBiz } = useQuery({
     queryKey: ["admin-businesses", search, statusFilter],
     queryFn: () => getJson<{ businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[] }>("/admin/businesses", token, { search: search || undefined, status: statusFilter || undefined }),
-    enabled: Boolean(token && user?.role === "superadmin")
+    enabled: Boolean(token && user?.role === "superadmin" && activeTab === "businesses")
   });
 
   // Outlets List Query
   const { data: outletsData, isLoading: loadingOutlets } = useQuery({
     queryKey: ["admin-outlets", search, statusFilter],
     queryFn: () => getJson<{ outlets: any[] }>("/admin/outlets", token, { search: search || undefined, status: statusFilter || undefined }),
-    enabled: Boolean(token && user?.role === "superadmin")
+    enabled: Boolean(token && user?.role === "superadmin" && activeTab === "outlets")
   });
 
   // All Users List Query
   const { data: allUsersData, isLoading: loadingAllUsers } = useQuery({
     queryKey: ["admin-all-users", search],
     queryFn: () => getJson<{ users: any[] }>("/users", token, { search: search || undefined }),
-    enabled: Boolean(token && user?.role === "superadmin")
+    enabled: Boolean(token && user?.role === "superadmin" && activeTab === "users")
   });
 
   // Audit Logs Query
   const { data: auditData, isLoading: loadingAudit } = useQuery({
     queryKey: ["admin-audit-logs"],
     queryFn: () => getJson<{ logs: AuditLog[]; total: number }>("/audit-logs", token),
-    enabled: Boolean(token && user?.role === "superadmin")
+    enabled: Boolean(token && user?.role === "superadmin" && activeTab === "audit_logs")
   });
 
   // Plans Query
   const { data: plansData } = useQuery({
     queryKey: ["admin-plans"],
     queryFn: () => getJson<{ plans: Plan[] }>("/plans/all", token),
-    enabled: Boolean(token && user?.role === "superadmin")
+    enabled: Boolean(token && user?.role === "superadmin" && activeTab === "businesses")
   });
 
   // Target business users lookup for Impersonation

@@ -101,11 +101,11 @@ export default function ReportsPage() {
         />
         <StatsCard
           label="Cash Collected"
-          value={formatCurrency(report?.paymentSummary.cash || 0)}
+          value={formatCurrency(report?.paymentSummary?.cash || 0)}
         />
         <StatsCard
           label="Digital Payments (UPI/Card)"
-          value={formatCurrency((report?.paymentSummary.online || 0) + (report?.paymentSummary.card || 0))}
+          value={formatCurrency((report?.paymentSummary?.online || 0) + (report?.paymentSummary?.card || 0))}
           color="success"
         />
       </div>
@@ -121,7 +121,7 @@ export default function ReportsPage() {
           <CardContent className="space-y-1">
             {isLoading ? (
               <p className="text-sm text-muted animate-pulse">Analyzing sales matrix...</p>
-            ) : !report?.bestSelling.length ? (
+            ) : !report?.bestSelling?.length ? (
               <p className="text-sm text-muted italic">No sales recorded on this business date.</p>
             ) : (
               <div className="border border-border/50 rounded-2xl overflow-hidden">
@@ -159,7 +159,7 @@ export default function ReportsPage() {
           <CardContent className="space-y-4 max-h-[400px] overflow-y-auto">
             {isLoading ? (
               <p className="text-sm text-muted animate-pulse">Checking stock registers...</p>
-            ) : !report?.remainingStock.length ? (
+            ) : !report?.remainingStock?.length ? (
               <p className="text-sm text-muted italic">No stock levels tracked yet.</p>
             ) : (
               <div className="space-y-3">

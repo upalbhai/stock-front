@@ -356,17 +356,7 @@ export default function BillingPage() {
 
           {/* Pagination Controls */}
           {prodMeta && prodMeta.totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 py-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setProdPage(Math.max(1, prodPage - 1))}
-                disabled={prodPage === 1}
-                className="h-8 w-8"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              
+            <div className="flex justify-center py-4">
               <Pagination
                 page={prodPage}
                 totalPages={prodMeta.totalPages}
@@ -374,16 +364,6 @@ export default function BillingPage() {
                 onPageChange={setProdPage}
                 onPageSizeChange={(size) => { setProdLimit(size); setProdPage(1); }}
               />
-              
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setProdPage(Math.min(prodMeta.totalPages, prodPage + 1))}
-                disabled={prodPage === prodMeta.totalPages}
-                className="h-8 w-8"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
             </div>
           )}
         </div>

@@ -189,11 +189,15 @@ export default function StockPage() {
   console.log("Products query state:", { token, outletId, loadingProds, prodData: rawProd });
   console.log('Products list length:', products.length);
   const summary = summaryData?.data;
-  const history = (historyData as any)?.data ?? (historyData as any)?.entries ?? [];
-  const transfers = (transfersData as any)?.data ?? (transfersData as any)?.transfers ?? [];
+  const history = (historyData as any)?.data?.entries ?? (historyData as any)?.entries ?? [];
+  const historyTotal = (historyData as any)?.data?.total ?? (historyData as any)?.total ?? 0;
+  const historyTotalPages = Math.ceil(historyTotal / historyLimit) || 1;
+
+  const transfers = (transfersData as any)?.data?.transfers ?? (transfersData as any)?.transfers ?? [];
+  const transferTotal = (transfersData as any)?.data?.total ?? (transfersData as any)?.total ?? 0;
+  const transferTotalPages = Math.ceil(transferTotal / transferLimit) || 1;
+
   const prodMeta = (prodData as any)?.meta?.pagination;
-  const historyMeta = (historyData as any)?.meta?.pagination;
-  const transfersMeta = (transfersData as any)?.meta?.pagination;
   const outlets = (outletsData?.outlets ?? []).filter((o) => o._id !== outletId);
 
   // Cleanup effect for timeout ref
@@ -529,10 +533,10 @@ export default function StockPage() {
             ]}
           />
 
-          {historyMeta && (
+          {historyTotal > 0 && (
             <Pagination
               page={historyPage}
-              totalPages={historyMeta.totalPages || 1}
+              totalPages={historyTotalPages}
               pageSize={historyLimit}
               onPageChange={setHistoryPage}
               onPageSizeChange={(size) => { setHistoryLimit(size); setHistoryPage(1); }}
@@ -615,10 +619,10 @@ export default function StockPage() {
             ]}
           />
 
-          {transfersMeta && (
+          {transferTotal > 0 && (
             <Pagination
               page={transferPage}
-              totalPages={transfersMeta.totalPages || 1}
+              totalPages={transferTotalPages}
               pageSize={transferLimit}
               onPageChange={setTransferPage}
               onPageSizeChange={(size) => { setTransferLimit(size); setTransferPage(1); }}

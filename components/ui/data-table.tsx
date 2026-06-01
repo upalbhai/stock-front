@@ -18,7 +18,7 @@ type DataTableProps<T> = {
   loading?: boolean;
 };
 
-export function DataTable<T>({ columns, data, keyExtractor, emptyMessage = "No records found.", className, loading }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data = [], keyExtractor, emptyMessage = "No records found.", className, loading }: DataTableProps<T>) {
   if (loading) {
     return (
       <div className="space-y-2">
