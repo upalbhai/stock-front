@@ -16,9 +16,20 @@ type DataTableProps<T> = {
   emptyMessage?: string;
   className?: string;
   loading?: boolean;
+  error?: boolean;
+  errorMessage?: string;
 };
 
-export function DataTable<T>({ columns, data = [], keyExtractor, emptyMessage = "No records found.", className, loading }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data = [], keyExtractor, emptyMessage = "No records found.", className, loading, error, errorMessage }: DataTableProps<T>) {
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-3xl border border-danger/40 bg-danger/5 py-16 text-center">
+        <p className="text-4xl">⚠️</p>
+        <p className="mt-3 font-medium text-danger">{errorMessage || "Failed to load data."}</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-2">

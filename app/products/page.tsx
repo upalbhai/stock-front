@@ -4,6 +4,7 @@ import * as React from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { Plus, Pencil, Trash2, Search, Package, Loader2, RefreshCw } from "lucide-react";
+import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import type { Product, Category, Outlet } from "@/lib/types";
+import { getErrorMessage } from "@/lib/error";
 import { productService } from "@/services/product.service";
 import Pagination from "@/components/ui/pagination";
 
@@ -49,7 +51,7 @@ export default function ProductsPage() {
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
 
-  const { data: prodData, isLoading, refetch: refetchProducts } = useQuery({
+  const { data: prodData, isLoading, isError, error, refetch: refetchProducts } = useQuery({
     queryKey: ["products", outletId, catFilter, search, page, limit],
     queryFn: () => getJson<any>("/products", token, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, page, limit }),
     enabled: Boolean(token)
@@ -87,11 +89,13 @@ export default function ProductsPage() {
     mutationFn: (body: unknown) => editId
       ? apiFetch(`/products/${editId}`, { method: "PATCH", body, token })
       : apiFetch("/products", { method: "POST", body, token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setShowModal(false); setEditId(null); }
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setShowModal(false); setEditId(null); toast.success(editId ? "Product updated" : "Product created"); },
+    onError: (err) => { toast.error(getErrorMessage(err, "Failed to save product")); }
   });
   const remove = useMutation({
     mutationFn: (id: string) => apiFetch(`/products/${id}`, { method: "DELETE", token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setDeleteId(null); }
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setDeleteId(null); toast.success("Product deleted"); },
+    onError: (err) => { toast.error(getErrorMessage(err, "Failed to delete product")); }
   });
 
   // normalize response which may use `data` or `products` + extract pagination
@@ -145,7 +149,7 @@ export default function ProductsPage() {
         <Select value={catFilter} onValueChange={setCatFilter} options={catOptions} className="sm:w-56" placeholder="Filter by Category" />
       </div>
 
-      <DataTable loading={isLoading} data={products} keyExtractor={(p) => p._id} emptyMessage="No products yet. Add your first product."
+      <DataTable loading={isLoading} error={isError} errorMessage={error ? getErrorMessage(error) : undefined} data={products} keyExtractor={(p) => p._id} emptyMessage="No products yet. Add your first product."
         columns={[
           { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image ? <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0"><Package className="h-6 w-6" /></div>}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
           { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm font-medium">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },

@@ -106,8 +106,10 @@ export default function LoginPage() {
     setSuccess(null);
     
     try {
+      let loggedInUser = null;
       if (loginStep === "password") {
-        await loginWithEmail({ email: form.email, password: form.password });
+        const res = await loginWithEmail({ email: form.email, password: form.password });
+        loggedInUser = res.user;
       } else if (loginStep === "otp") {
         const res = await verifyOtp({ email: form.email, code: form.code });
         if ((res as any).message) {
@@ -115,10 +117,17 @@ export default function LoginPage() {
           setLoading(false);
           return;
         }
+        loggedInUser = (res as any).user;
       } else if (loginStep === "phone") {
-        await login({ phone: form.phone, pin: form.pin });
+        const res = await login({ phone: form.phone, pin: form.pin });
+        loggedInUser = res.user;
       }
-      router.push("/");
+
+      if (loggedInUser?.role === "superadmin") {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
     } catch (err) {
       setError(getErrorMessage(err, "Authentication failed"));
     } finally {
@@ -146,7 +155,12 @@ export default function LoginPage() {
         setMode("login");
         setLoginStep("otp");
       } else {
-        router.push("/");
+        const loggedInUser = (res as any).user;
+        if (loggedInUser?.role === "superadmin") {
+          router.push("/admin");
+        } else {
+          router.push("/");
+        }
       }
     } catch (err) {
       setError(getErrorMessage(err, "Registration failed"));

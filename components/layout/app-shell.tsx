@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { SideNav, BottomNav } from "@/components/layout/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -10,16 +9,27 @@ import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/auth/auth-provider";
 import { OutletSwitcher } from "@/components/layout/outlet-switcher";
 import { useOnlineStatus } from "@/hooks/use-online";
+import React from "react";
+import Link from "next/link";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout, impersonating, exitImpersonation } = useAuth();
   const isAuthRoute = pathname.startsWith("/login");
   const isOnline = useOnlineStatus();
 
+  React.useEffect(() => {
+    if (user?.role === "superadmin" && !impersonating && pathname !== "/admin" && !pathname.startsWith("/admin") && !isAuthRoute) {
+      router.push("/admin");
+    }
+  }, [user, impersonating, pathname, isAuthRoute, router]);
+
   if (isAuthRoute) {
     return <main className="min-h-screen px-4 py-10">{children}</main>;
   }
+
+  const isSuperAdmin = user?.role === "superadmin";
 
   return (
     <RequireAuth>
@@ -44,32 +54,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <header className="sticky top-0 z-40 border-b border-border/60 bg-surface/85 backdrop-blur">
-          <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 xl:px-8">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-soft">
+          <div className="mx-auto flex w-full items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-4 xl:px-8">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-primary text-xs sm:text-base font-bold text-white shadow-soft">
                 RO
               </div>
-              <div>
-                <p className="text-lg font-semibold">Outlet Pulse</p>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                  <span>{user ? `Hi, ${user.name}` : ""}</span>
-                  {user && <Badge variant="soft">{user.role}</Badge>}
-                  {!isOnline && <Badge variant="warning">Offline</Badge>}
+              <div className="min-w-0">
+                <p className="text-sm sm:text-lg font-semibold leading-tight truncate">Outlet Pulse</p>
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-xs text-muted mt-0.5">
+                  <span className="truncate max-w-[70px] sm:max-w-none">{user ? `Hi, ${user.name}` : ""}</span>
+                  {user && <Badge variant="soft" className="px-1 py-0 text-[9px] sm:text-xs">{user.role}</Badge>}
+                  {!isOnline && <Badge variant="warning" className="px-1 py-0 text-[9px] sm:text-xs">Offline</Badge>}
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <OutletSwitcher className="hidden sm:block" />
-              {user?.role === "superadmin" && (
-                <Button asChild size="lg" variant="outline" className="border-primary/50 text-primary">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {(!isSuperAdmin || impersonating) && <OutletSwitcher className="hidden sm:block" />}
+              {isSuperAdmin && !impersonating && (
+                <Button asChild size="sm" variant="outline" className="h-8 px-2 text-xs sm:h-11 sm:px-8 sm:text-base border-primary/50 text-primary">
                   <Link href="/admin">Portal</Link>
                 </Button>
               )}
-              <Button asChild size="lg">
-                <Link href="/billing">New Bill</Link>
-              </Button>
+              {(!isSuperAdmin || impersonating) && (
+                <Button asChild size="sm" className="hidden sm:flex h-11 px-8 text-base">
+                  <Link href="/billing">New Bill</Link>
+                </Button>
+              )}
               <ThemeToggle />
-              <Button variant="ghost" onClick={logout}>
+              <Button variant="ghost" size="sm" onClick={logout} className="h-8 px-2 text-xs sm:h-10 sm:px-4 sm:text-sm">
                 Logout
               </Button>
             </div>

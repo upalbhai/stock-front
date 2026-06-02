@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/error";
 import type { Unit } from "@/lib/types";
 
 export default function UnitsPage() {
@@ -63,7 +64,7 @@ export default function UnitsPage() {
       toast.success(editId ? "Unit updated" : "Unit created");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to save unit");
+      toast.error(getErrorMessage(err, "Failed to save unit"));
     }
   });
 
@@ -75,7 +76,7 @@ export default function UnitsPage() {
       toast.success("Unit deleted");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to delete unit");
+      toast.error(getErrorMessage(err, "Failed to delete unit"));
     }
   });
 

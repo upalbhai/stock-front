@@ -16,6 +16,7 @@ import {
 import { getJson, apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/error";
 import type { Product, Category } from "@/lib/types";
 
 const BILLING_MODES = [
@@ -45,6 +46,7 @@ export default function BillingPage() {
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
   const [selectedParentId, setSelectedParentId] = React.useState<string | null>(null);
   const [showSuccess, setShowSuccess] = React.useState(false);
+  const [showMobileCart, setShowMobileCart] = React.useState(false);
   const [prodPage, setProdPage] = React.useState(1);
   const [prodLimit, setProdLimit] = React.useState(12);
   const [prodIsRefetching, setProdIsRefetching] = React.useState(false);
@@ -203,9 +205,9 @@ export default function BillingPage() {
   const totalCatPages = Math.ceil((topCategories.length + 1) / catItemsPerPage); // +1 for "All" button
 
   return (
-    <div className="flex h-[calc(100vh-120px)] gap-2 overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] gap-2 overflow-hidden relative">
       {/* LEFT: Product Panel */}
-      <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+      <div className="flex flex-1 flex-col gap-2 overflow-hidden pb-16 lg:pb-0">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -370,8 +372,21 @@ export default function BillingPage() {
       </div>
 
       {/* RIGHT: Cart Panel */}
-      <div className="flex w-72 shrink-0 flex-col gap-2 xl:w-80">
+      <div className={cn(
+        "flex shrink-0 flex-col gap-2 transition-all duration-300",
+        // Desktop
+        "lg:w-72 xl:w-80 lg:static lg:h-auto lg:border-t-0 lg:pt-0 lg:bg-transparent lg:p-0",
+        // Mobile
+        "fixed inset-0 z-[60] bg-background/95 backdrop-blur-md p-4 pt-16 pb-20 lg:z-auto",
+        showMobileCart ? "flex translate-y-0" : "hidden lg:flex"
+      )}>
         <div className="glass-panel flex flex-1 flex-col overflow-hidden rounded-2xl border border-border/70 shadow-soft">
+          {/* Mobile Header */}
+          <div className="flex lg:hidden justify-between items-center px-4 py-2 border-b border-border/60 bg-surface">
+            <span className="font-bold">Current Order</span>
+            <Button variant="ghost" size="sm" onClick={() => setShowMobileCart(false)}>Close</Button>
+          </div>
+          
           {/* Billing Mode */}
           <div className="flex gap-0.5 border-b border-border/60 p-2">
             {BILLING_MODES.map((mode) => (
@@ -517,11 +532,22 @@ export default function BillingPage() {
             )}
             {submitOrder.isError && (
               <div className="rounded-lg bg-danger/10 border border-danger/30 p-1.5 text-center">
-                <p className="text-[9px] text-danger">{(submitOrder.error as Error).message}</p>
+                <p className="text-[9px] text-danger">{getErrorMessage(submitOrder.error)}</p>
               </div>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Mobile Floating Cart Toggle */}
+      <div className="fixed bottom-4 left-4 right-4 z-[60] lg:hidden">
+        <Button 
+          className="w-full h-14 shadow-2xl gap-2 font-bold text-sm bg-primary text-white border border-primary/20 rounded-2xl" 
+          onClick={() => setShowMobileCart(!showMobileCart)}
+        >
+          <ShoppingBag className="h-5 w-5" />
+          {showMobileCart ? "Back to Products" : `View Cart (${billing.items.reduce((acc, i) => acc + i.qty, 0)}) — ${formatCurrency(total)}`}
+        </Button>
       </div>
     </div>
   );

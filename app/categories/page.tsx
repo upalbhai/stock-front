@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import Pagination from "@/components/ui/pagination";
 import type { Category } from "@/lib/types";
@@ -70,7 +71,7 @@ export default function CategoriesPage() {
       toast.success(editId ? "Category updated successfully" : "Category created successfully");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to save category");
+      toast.error(getErrorMessage(err, "Failed to save category"));
     }
   });
   const remove = useMutation({
@@ -81,7 +82,7 @@ export default function CategoriesPage() {
       toast.success("Category deleted successfully");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to delete category");
+      toast.error(getErrorMessage(err, "Failed to delete category"));
     }
   });
 

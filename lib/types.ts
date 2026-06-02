@@ -46,6 +46,7 @@ export type Plan = {
   maxProducts: number;
   features: string[];
   isPopular?: boolean;
+  isActive: boolean;
 };
 
 export type Business = {

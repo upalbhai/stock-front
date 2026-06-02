@@ -63,8 +63,48 @@ function NavLink({ item, isActive, canAccess, compact = false }: {
 
 export function SideNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, impersonating } = useAuth();
   const role = (user?.role ?? "staff") as UserRole;
+
+  if (role === "superadmin" && !impersonating) {
+    const adminNavItems = [
+      { href: "/admin", label: "Dashboard Stats", icon: LayoutDashboard },
+      { href: "/admin?tab=businesses", label: "Businesses", icon: Store },
+      { href: "/admin?tab=outlets", label: "Outlets", icon: Store },
+      { href: "/admin?tab=users", label: "Users Registry", icon: Users },
+      { href: "/admin?tab=audit_logs", label: "Audit Trails", icon: ClipboardList }
+    ];
+
+    const currentTab = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") || "businesses" : "businesses";
+
+    return (
+      <nav className="glass-panel rounded-3xl border border-border/70 p-4 shadow-soft">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted">Platform Admin</p>
+        <div className="mt-3 space-y-1">
+          {adminNavItems.map((item) => {
+            const isStats = item.href === "/admin";
+            const isActive = isStats 
+              ? pathname === "/admin" && !new URLSearchParams(window.location.search).get("tab")
+              : pathname === "/admin" && currentTab === item.href.split("tab=")[1];
+            
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition",
+                  isActive ? "bg-primary text-white shadow-soft" : "text-muted hover:bg-surface hover:text-text"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
 
   const coreItems = navItems.slice(0, 7);
   const mgmtItems = navItems.slice(7);
@@ -93,8 +133,10 @@ export function SideNav() {
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, impersonating } = useAuth();
   const role = (user?.role ?? "staff") as UserRole;
+
+  if (role === "superadmin" && !impersonating) return null;
 
   return (
     <nav className="fixed bottom-4 left-0 right-0 z-50 px-4 lg:hidden">
