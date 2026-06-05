@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
 import AsyncSelect from "@/components/ui/async-select";
 import { DataTable } from "@/components/ui/data-table";
+import { BarcodeScanner } from "@/components/ui/barcode-scanner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
@@ -41,11 +42,12 @@ export default function ProductsPage() {
   const [search, setSearch] = React.useState("");
   const [catFilter, setCatFilter] = React.useState("");
   const [showModal, setShowModal] = React.useState(false);
+  const [showScanner, setShowScanner] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [isRefetching, setIsRefetching] = React.useState(false);
   const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
-  const [form, setForm] = React.useState({ name: "", description: "", sku: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" });
+  const [form, setForm] = React.useState({ name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" });
   const { ref, inView } = useInView();
 
   const [page, setPage] = React.useState(1);
@@ -104,13 +106,14 @@ export default function ProductsPage() {
   const pagination = raw?.meta?.pagination ?? raw?.meta ?? { page: 1, limit, total: products.length, totalPages: 1 };
   const categories = catData?.categories ?? [];
 
-  const openCreate = () => { setEditId(null); setForm({ name: "", description: "", sku: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" }); setShowModal(true); };
+  const openCreate = () => { setEditId(null); setForm({ name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" }); setShowModal(true); };
   const openEdit = (p: Product) => {
     setEditId(p._id);
     setForm({
       name: p.name,
       description: p.description ?? "",
       sku: p.sku ?? "",
+      barcode: p.barcode ?? "",
       unit: (p as any).unitId?.abbreviation ?? p.unit,
       unitId: (p as any).unitId?._id ?? "",
       price: String(p.price),
@@ -195,6 +198,15 @@ export default function ProductsPage() {
             <div><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} value={form.onHandQty} onChange={(e) => setForm((f) => ({ ...f, onHandQty: e.target.value }))} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Low Stock Alert</label><Input id="product-threshold" type="number" min={0} value={form.lowStockThreshold} onChange={(e) => setForm((f) => ({ ...f, lowStockThreshold: e.target.value }))} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">SKU</label><Input id="product-sku" value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} placeholder="Optional" /></div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Barcode</label>
+              <div className="relative">
+                <Input id="product-barcode" value={form.barcode} onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))} placeholder="Scan or type" className="pr-10" />
+                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted" onClick={() => setShowScanner(true)}>
+                  <span className="text-lg">📷</span>
+                </Button>
+              </div>
+            </div>
             <div><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} value={form.gstRate} onChange={(e) => setForm((f) => ({ ...f, gstRate: e.target.value }))} /></div>
           </div>
           <div className="flex gap-3 pt-2">
@@ -205,6 +217,7 @@ export default function ProductsPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && remove.mutate(deleteId)} title="Delete Product?" message="This product will be hidden from billing." confirmLabel="Delete" loading={remove.isPending} />
+      <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={(text) => setForm((f) => ({ ...f, barcode: text }))} />
     </div>
   );
 }

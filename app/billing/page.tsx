@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/pagination";
+import { BarcodeScanner } from "@/components/ui/barcode-scanner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -47,6 +48,7 @@ export default function BillingPage() {
   const [selectedParentId, setSelectedParentId] = React.useState<string | null>(null);
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [showMobileCart, setShowMobileCart] = React.useState(false);
+  const [showScanner, setShowScanner] = React.useState(false);
   const [prodPage, setProdPage] = React.useState(1);
   const [prodLimit, setProdLimit] = React.useState(12);
   const [prodIsRefetching, setProdIsRefetching] = React.useState(false);
@@ -115,6 +117,69 @@ export default function BillingPage() {
       return () => scrollElement.removeEventListener("scroll", handleScroll);
     }
   }, []);
+
+  const handleBarcodeScanned = React.useCallback(async (scannedBarcode: string) => {
+    if (!token) return;
+    try {
+      const res = await getJson<{ data: Product[]; products?: Product[] }>("/products", token, {
+        outletId: outletId ?? undefined,
+        search: scannedBarcode,
+        limit: 2
+      });
+      const prods = res.data || res.products || [];
+      const exactMatch = prods.find((p) => p.barcode === scannedBarcode || p.sku === scannedBarcode);
+      
+      if (exactMatch) {
+        dispatch(addItem({
+          id: exactMatch._id,
+          name: exactMatch.name,
+          price: exactMatch.price,
+          taxRate: exactMatch.taxRate,
+          unit: exactMatch.unit,
+          image: exactMatch.image,
+          categoryId: typeof exactMatch.categoryId === "object" ? exactMatch.categoryId?._id : exactMatch.categoryId ?? undefined
+        }));
+        setSearch("");
+        setShowScanner(false);
+      } else {
+        setSearch(scannedBarcode);
+        setShowScanner(false);
+      }
+    } catch (err) {
+      console.error("Barcode scan failed", err);
+    }
+  }, [token, outletId, dispatch]);
+
+  // Hardware Scanner Global Listener
+  React.useEffect(() => {
+    let buffer = "";
+    let lastTime = 0;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      const currentTime = new Date().getTime();
+      
+      if (currentTime - lastTime > 50) { 
+        // Real hardware scanners type very fast (<30ms between keys)
+        buffer = "";
+      }
+      
+      if (e.key === "Enter" && buffer.length > 0) {
+        e.preventDefault();
+        handleBarcodeScanned(buffer);
+        buffer = "";
+      } else if (e.key.length === 1) {
+        buffer += e.key;
+      }
+      
+      lastTime = currentTime;
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleBarcodeScanned]);
 
   // Refetch handler with 15s cooldown
   const handleProdRefetch = () => {
@@ -209,15 +274,25 @@ export default function BillingPage() {
       {/* LEFT: Product Panel */}
       <div className="flex flex-1 flex-col gap-2 overflow-hidden pb-16 lg:pb-0">
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input
-            id="product-search"
-            className="pl-9 py-2.5"
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Input
+              id="product-search"
+              className="pl-9 py-2.5"
+              placeholder="Search products or scan..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                 if (e.key === "Enter" && search.trim().length > 0) {
+                    handleBarcodeScanned(search.trim());
+                 }
+              }}
+            />
+          </div>
+          <Button variant="outline" className="px-3 shrink-0" onClick={() => setShowScanner(true)} title="Scan Barcode">
+            <span className="text-lg">📷</span>
+          </Button>
         </div>
 
         {/* Category Tabs */}
@@ -549,6 +624,8 @@ export default function BillingPage() {
           {showMobileCart ? "Back to Products" : `View Cart (${billing.items.reduce((acc, i) => acc + i.qty, 0)}) — ${formatCurrency(total)}`}
         </Button>
       </div>
+
+      <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={handleBarcodeScanned} />
     </div>
   );
 }

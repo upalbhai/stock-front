@@ -134,6 +134,7 @@ export type Product = {
   name: string;
   description?: string;
   sku?: string;
+  barcode?: string;
   unit: string;
   price: number;
   costPrice?: number;
