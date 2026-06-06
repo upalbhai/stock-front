@@ -4,14 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Package, Receipt, LineChart, Settings, Lock,
-  Store, Users, Shield, DollarSign, ArrowLeftRight, ClipboardList, Tag, FolderOpen, Gauge
+  Store, Users, Shield, DollarSign, ArrowLeftRight, ClipboardList, Tag, FolderOpen, Gauge, History, UserCircle, FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, type UserRole } from "@/components/auth/auth-provider";
+import { useFeature } from "@/hooks/useFeature";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["owner", "manager", "staff"] as UserRole[] },
   { href: "/billing", label: "Billing", icon: Receipt, roles: ["owner", "manager", "staff"] as UserRole[] },
+  { href: "/orders", label: "Orders", icon: History, roles: ["owner", "manager"] as UserRole[], feature: "order_history" },
+  { href: "/customers", label: "Customers", icon: UserCircle, roles: ["owner", "manager"] as UserRole[], feature: "customers" },
+  { href: "/invoices", label: "Invoices", icon: FileText, roles: ["owner", "manager"] as UserRole[], feature: "gst_invoices" },
   { href: "/products", label: "Products", icon: Tag, roles: ["owner", "manager"] as UserRole[] },
   { href: "/categories", label: "Categories", icon: FolderOpen, roles: ["owner", "manager"] as UserRole[] },
   { href: "/units", label: "Units", icon: Gauge, roles: ["owner", "manager"] as UserRole[] },
@@ -35,7 +39,7 @@ const bottomNavItems = [
 ];
 
 function NavLink({ item, isActive, canAccess, compact = false }: {
-  item: typeof navItems[0]; isActive: boolean; canAccess: boolean; compact?: boolean;
+  item: (typeof navItems)[number]; isActive: boolean; canAccess: boolean; compact?: boolean;
 }) {
   const Icon = item.icon;
   if (!canAccess) {
@@ -65,6 +69,17 @@ export function SideNav() {
   const pathname = usePathname();
   const { user, impersonating } = useAuth();
   const role = (user?.role ?? "staff") as UserRole;
+  const hasOrderHistory = useFeature("order_history");
+  const hasCustomers = useFeature("customers");
+  const hasGstInvoices = useFeature("gst_invoices");
+
+  const featureEnabled = (feature?: string) => {
+    if (!feature) return true;
+    if (feature === "order_history") return hasOrderHistory;
+    if (feature === "customers") return hasCustomers;
+    if (feature === "gst_invoices") return hasGstInvoices;
+    return user?.enabledFeatures?.includes(feature) ?? false;
+  };
 
   if (role === "superadmin" && !impersonating) {
     const adminNavItems = [
@@ -115,8 +130,8 @@ export function SideNav() {
       <div className="mt-3 space-y-1">
         {coreItems.map((item) => (
           <NavLink key={item.href} item={item}
-            isActive={pathname === item.href}
-            canAccess={item.roles.includes(role)} />
+            isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+            canAccess={item.roles.includes(role) && featureEnabled(item.feature)} />
         ))}
       </div>
       <p className="mt-5 text-xs uppercase tracking-[0.2em] text-muted">Management</p>
@@ -124,7 +139,7 @@ export function SideNav() {
         {mgmtItems.map((item) => (
           <NavLink key={item.href} item={item}
             isActive={pathname.startsWith(item.href) && item.href !== "/"}
-            canAccess={item.roles.includes(role)} />
+            canAccess={item.roles.includes(role) && featureEnabled(item.feature)} />
         ))}
       </div>
     </nav>

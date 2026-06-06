@@ -4,7 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   TrendingUp, Calendar, Printer, Download, Store, DollarSign,
-  ShoppingBag, ClipboardCheck, AlertCircle, Sparkles
+  ShoppingBag, ClipboardCheck, AlertCircle, Sparkles, FileText, Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { StatsCard } from "@/components/ui/stats-card";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useFeature } from "@/hooks/useFeature";
 import { getJson } from "@/lib/api-client";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/format";
 
@@ -28,10 +29,20 @@ type ReportData = {
   bestSelling: { name: string; qty: number; total: number }[];
   remainingStock: { name: string; onHandQty: number; lowStockThreshold: number; unit: string }[];
   staffSales: { name: string; revenue: number; orders: number }[];
+  gstCollected?: number;
+  wholesaleSales?: number;
+  creditIssued?: number;
+  invoicesGenerated?: number;
+  igstCollected?: number;
+  cgstCollected?: number;
+  sgstCollected?: number;
 };
 
 export default function ReportsPage() {
   const { token, outletId } = useAuth();
+  const hasCreditKhata = useFeature("credit_khata");
+  const hasGstInvoices = useFeature("gst_invoices");
+  const hasWholesale = useFeature("wholesale_billing");
   const [selectedDate, setSelectedDate] = React.useState(new Date().toISOString().split("T")[0]);
 
   const { data, isLoading, refetch } = useQuery({
@@ -109,6 +120,46 @@ export default function ReportsPage() {
           color="success"
         />
       </div>
+
+      {(hasGstInvoices || hasCreditKhata || hasWholesale) && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {hasGstInvoices && (
+            <>
+              <StatsCard
+                label="GST Collected"
+                value={formatCurrency(report?.gstCollected || 0)}
+                hint={
+                  (report?.igstCollected ?? 0) > 0
+                    ? `IGST ${formatCurrency(report?.igstCollected ?? 0)}`
+                    : `CGST ${formatCurrency(report?.cgstCollected ?? 0)} · SGST ${formatCurrency(report?.sgstCollected ?? 0)}`
+                }
+                icon={<FileText className="h-5 w-5" />}
+              />
+              <StatsCard
+                label="GST Invoices"
+                value={formatNumber(report?.invoicesGenerated || 0)}
+                icon={<FileText className="h-5 w-5" />}
+              />
+            </>
+          )}
+          {hasWholesale && (
+            <StatsCard
+              label="Wholesale Sales"
+              value={formatCurrency(report?.wholesaleSales || 0)}
+              icon={<TrendingUp className="h-5 w-5" />}
+              color="primary"
+            />
+          )}
+          {hasCreditKhata && (
+            <StatsCard
+              label="Credit Issued"
+              value={formatCurrency(report?.creditIssued || 0)}
+              icon={<Wallet className="h-5 w-5" />}
+              color="warning"
+            />
+          )}
+        </div>
+      )}
 
       {/* Payment Split & Drawer Analysis */}
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">

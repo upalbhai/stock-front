@@ -13,8 +13,8 @@ import { getJson, apiFetch } from "@/lib/api-client";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const ALL_MODULES = ["billing","inventory","products","reports","expenses","users","outlets","roles","dashboard","settings","transactions","analytics","stock_transfers","audit_logs","categories"];
-const ALL_ACTIONS = ["create","read","update","delete","refund","print","export","approve"];
+const ALL_MODULES = ["billing","inventory","products","reports","expenses","users","outlets","roles","dashboard","settings","transactions","analytics","stock_transfers","audit_logs","categories","units","customers","invoices"];
+const ALL_ACTIONS = ["create","read","update","delete","refund","print","export","approve","void","collect"];
 
 const MODULE_ICONS: Record<string, string> = {
   billing: "🧾", inventory: "📦", products: "🏷️", reports: "📊", expenses: "💸",

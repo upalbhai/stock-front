@@ -32,6 +32,9 @@ export type AuthUser = {
   subscriptionStatus?: "trial" | "active" | "expired" | "cancelled" | null;
   trialEndsAt?: string | null;
   trialExpired?: boolean;
+  enabledFeatures?: string[];
+  businessProfile?: "retail" | "wholesale" | "hybrid";
+  planType?: "retail" | "wholesale" | "hybrid";
 };
 
 export type Plan = {
@@ -45,6 +48,8 @@ export type Plan = {
   maxStaff: number;
   maxProducts: number;
   features: string[];
+  planType?: "retail" | "wholesale" | "hybrid";
+  featureKeys?: string[];
   isPopular?: boolean;
   isActive: boolean;
 };
@@ -126,6 +131,14 @@ export type Unit = {
   updatedAt?: string;
 };
 
+export type PackagingUnit = {
+  unitId: string | Unit;
+  qtyPerUnit: number;
+  price?: number;
+  costPrice?: number;
+  isActive?: boolean;
+};
+
 export type Product = {
   _id: string;
   businessId: string;
@@ -136,10 +149,13 @@ export type Product = {
   sku?: string;
   barcode?: string;
   unit: string;
+  unitId?: string | Unit;
   price: number;
   costPrice?: number;
   taxRate: number;
   gstRate: number;
+  hsnCode?: string;
+  packagingUnits?: PackagingUnit[];
   onHandQty: number;
   lowStockThreshold: number;
   isActive: boolean;
@@ -154,9 +170,16 @@ export type OrderItem = {
   name: string;
   qty: number;
   unit?: string;
+  soldUnit?: string;
+  soldQty?: number;
+  hsnCode?: string;
   price: number;
   taxRate: number;
   discount?: number;
+  taxableAmount?: number;
+  cgst?: number;
+  sgst?: number;
+  igst?: number;
   lineTotal: number;
   taxTotal: number;
   notes?: string;
@@ -167,25 +190,42 @@ export type Order = {
   businessId: string;
   outletId: string;
   orderNumber: string;
-  billingMode: "takeaway" | "dine_in" | "parcel" | "quick";
+  invoiceNumber?: string;
+  invoiceGeneratedAt?: string;
+  billingMode: "takeaway" | "dine_in" | "parcel" | "quick" | "wholesale";
+  taxMode?: "exclusive" | "inclusive";
+  customerId?: string;
   customerName?: string;
   customerPhone?: string;
+  amountPaid?: number;
+  amountDue?: number;
   items: OrderItem[];
   subtotal: number;
   discount: number;
   tax: number;
+  taxableAmount?: number;
+  cgst?: number;
+  sgst?: number;
+  igst?: number;
+  supplyType?: "intra" | "inter";
   total: number;
   notes?: string;
-  status: "pending" | "completed" | "cancelled" | "refunded";
+  status: "pending" | "completed" | "cancelled" | "refunded" | "voided";
   paymentStatus: "paid" | "partial" | "pending";
   createdBy?: { name: string };
+  voidedBy?: { name: string };
+  voidedAt?: string;
+  voidReason?: string;
+  refundedBy?: { name: string };
+  refundedAt?: string;
+  refundReason?: string;
   createdAt: string;
 };
 
 export type Payment = {
   _id: string;
   orderId: string;
-  method: "cash" | "upi" | "card" | "wallet" | "split";
+  method: "cash" | "upi" | "card" | "wallet" | "split" | "credit";
   amount: number;
   split?: { cash?: number; upi?: number; card?: number; wallet?: number };
 };
@@ -199,6 +239,36 @@ export type Role = {
   outletScope: "all" | "restricted";
   outletIds: string[];
   isSystem: boolean;
+};
+
+export type Customer = {
+  _id: string;
+  businessId: string;
+  outletId?: string | null;
+  name: string;
+  phone?: string;
+  gstin?: string;
+  address?: string;
+  defaultTaxMode?: "exclusive" | "inclusive";
+  outstandingBalance: number;
+  creditLimit?: number;
+  isActive: boolean;
+  createdBy?: { name: string };
+  createdAt?: string;
+};
+
+export type CustomerTransaction = {
+  _id: string;
+  customerId: string;
+  type: "sale" | "payment" | "credit_note" | "opening_balance" | "void_reversal";
+  orderId?: { _id: string; orderNumber: string; total: number } | string;
+  debit: number;
+  credit: number;
+  balanceAfter: number;
+  note?: string;
+  status?: "active" | "voided";
+  createdBy?: { name: string };
+  createdAt: string;
 };
 
 export type StaffUser = {
@@ -221,6 +291,10 @@ export type Expense = {
   amount: number;
   note?: string;
   date: string;
+  status?: "active" | "voided";
+  voidedBy?: { name: string };
+  voidedAt?: string;
+  voidReason?: string;
   createdBy?: { name: string };
 };
 

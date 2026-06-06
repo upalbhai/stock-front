@@ -8,17 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/pagination";
 import { BarcodeScanner } from "@/components/ui/barcode-scanner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "react-hot-toast";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  addItem, removeItem, updateQty, setDiscount, setNotes,
-  setCustomer, setBillingMode, setPaymentMethod, setPaymentAmount, clearBill
+  addItem, removeItem, updateQty, updateLinePrice, setDiscount,
+  setBillingMode, setPaymentMethod, setPaymentAmount, clearBill,
+  setSaleMode, setTaxMode, setTaxEnabled, setTaxRate,
+  selectCustomer, setCreditSale, setAmountReceived, setGenerateGstInvoice
 } from "@/store/billingSlice";
+import { useFeature, useBusinessProfile } from "@/hooks/useFeature";
+import { useSettings } from "@/components/settings/settings-provider";
+import { UnitPickerModal, type UnitPickOption } from "@/components/billing/unit-picker";
+import { CustomerPicker } from "@/components/billing/customer-picker";
+import { calculateCartTotals, resolveSupplyType } from "@/lib/taxCalculator";
+import { getProductUnitLabel, getWholesalePriceHint, getActivePackagingUnits } from "@/lib/productUtils";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/error";
-import type { Product, Category } from "@/lib/types";
+import type { Product, Category, Outlet, Customer, Business } from "@/lib/types";
 
 const BILLING_MODES = [
   { value: "quick", label: "Quick", icon: "⚡" },
@@ -32,14 +42,31 @@ const PAYMENT_METHODS = [
   { value: "upi", label: "UPI", icon: "📱" },
   { value: "card", label: "Card", icon: "💳" },
   { value: "wallet", label: "Wallet", icon: "👛" },
-  { value: "split", label: "Split", icon: "✂️" }
+  { value: "split", label: "Split", icon: "✂️" },
+  { value: "credit", label: "Khata", icon: "📒" }
 ] as const;
 
 export default function BillingPage() {
   const { token, outletId } = useAuth();
+  const businessProfile = useBusinessProfile();
+  const hasWholesale = useFeature("wholesale_billing");
+  const hasRetail = useFeature("retail_billing");
+  const hasCustomers = useFeature("customers");
+  const hasCreditKhata = useFeature("credit_khata");
+  const hasGstInvoices = useFeature("gst_invoices");
+  const { settings } = useSettings();
+  const showSaleModeTabs = businessProfile === "hybrid" && hasRetail && hasWholesale;
   const dispatch = useAppDispatch();
   const qc = useQueryClient();
   const billing = useAppSelector((s) => s.billing);
+  const isWholesale = billing.saleMode === "wholesale";
+  const isKhataPayment = billing.paymentMethod === "credit" || billing.creditSale;
+  const showCustomerSection =
+    (hasCustomers || hasCreditKhata) &&
+    (isWholesale || isKhataPayment || billing.generateGstInvoice);
+  const paymentMethods = hasCreditKhata
+    ? PAYMENT_METHODS
+    : PAYMENT_METHODS.filter((m) => m.value !== "credit");
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const catScrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -53,7 +80,19 @@ export default function BillingPage() {
   const [prodLimit, setProdLimit] = React.useState(12);
   const [prodIsRefetching, setProdIsRefetching] = React.useState(false);
   const [prodCooldownSeconds, setProdCooldownSeconds] = React.useState(0);
+  const [unitPickProduct, setUnitPickProduct] = React.useState<Product | null>(null);
+  const [editingPriceId, setEditingPriceId] = React.useState<string | null>(null);
+  const [editPriceValue, setEditPriceValue] = React.useState("");
   const [catPage, setCatPage] = React.useState(0);
+  const [pendingSaleMode, setPendingSaleMode] = React.useState<"retail" | "wholesale" | null>(null);
+  const saleModeInitialized = React.useRef(false);
+
+  const { data: outletsData } = useQuery({
+    queryKey: ["outlets"],
+    queryFn: () => getJson<{ data: { outlets: Outlet[] } }>("/outlets", token),
+    enabled: Boolean(token)
+  });
+  const currentOutlet = outletsData?.data?.outlets?.find((o) => o._id === outletId);
 
   const { data: catData } = useQuery({
     queryKey: ["categories", outletId],
@@ -74,16 +113,74 @@ export default function BillingPage() {
     enabled: Boolean(token)
   });
 
+  const { data: bizData } = useQuery({
+    queryKey: ["business-mine"],
+    queryFn: () => getJson<{ business: Business }>("/businesses/mine", token),
+    enabled: Boolean(token)
+  });
+
+  const { data: selectedCustomerData } = useQuery({
+    queryKey: ["customer", billing.customerId],
+    queryFn: () => getJson<{ customer: Customer }>(`/customers/${billing.customerId}`, token),
+    enabled: Boolean(token && billing.customerId)
+  });
+
+  const supplyType = resolveSupplyType(
+    bizData?.business?.gstNumber,
+    selectedCustomerData?.customer?.gstin
+  );
+  const isInterState = supplyType === "inter";
+
+  const cartTotals = calculateCartTotals(billing.items, {
+    taxEnabled: billing.taxEnabled,
+    taxRate: billing.taxRate,
+    taxMode: billing.taxMode,
+    discount: billing.discount,
+    supplyType
+  });
+  const { subtotal, tax: taxAmount, cgst, sgst, igst, total } = cartTotals;
+  const amountDuePreview = isKhataPayment ? Math.max(0, total - (billing.amountReceived || 0)) : 0;
+
   const submitOrder = useMutation({
     mutationFn: (body: unknown) => apiFetch("/orders", { method: "POST", body, token }),
     onSuccess: () => {
       dispatch(clearBill());
       setShowSuccess(true);
+      toast.success("Bill placed successfully");
       setTimeout(() => setShowSuccess(false), 3000);
       qc.invalidateQueries({ queryKey: ["report"] });
       qc.invalidateQueries({ queryKey: ["stock-alerts"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, "Failed to place order"));
     }
   });
+
+  React.useEffect(() => {
+    if (saleModeInitialized.current) return;
+    if (businessProfile === "wholesale" && hasWholesale) {
+      dispatch(setSaleMode("wholesale"));
+    } else if (businessProfile === "retail" && hasRetail) {
+      dispatch(setSaleMode("retail"));
+    }
+    saleModeInitialized.current = true;
+  }, [businessProfile, hasWholesale, hasRetail, dispatch]);
+
+  React.useEffect(() => {
+    if (!currentOutlet) return;
+    dispatch(setTaxEnabled(currentOutlet.taxEnabled ?? false));
+    dispatch(setTaxRate(currentOutlet.defaultTaxRate ?? 0));
+  }, [currentOutlet?._id, currentOutlet?.taxEnabled, currentOutlet?.defaultTaxRate, dispatch]);
+
+  React.useEffect(() => {
+    if (isWholesale && currentOutlet?.taxEnabled) {
+      dispatch(setTaxEnabled(true));
+    }
+  }, [isWholesale, currentOutlet?.taxEnabled, dispatch]);
 
   const rawCat = catData as any;
   const categories: Category[] = (rawCat && (rawCat.categories ?? rawCat.data)) ?? [];
@@ -91,8 +188,6 @@ export default function BillingPage() {
   const rawProd = prodData as any;
   const products: Product[] = (rawProd && (rawProd.products ?? rawProd.data)) ?? [];
   const prodMeta = (rawProd)?.meta?.pagination;
-  console.log("Billing categories query:", { token, categories: categories.length, catData: rawCat });
-  console.log("Billing products query:", { token, outletId, selectedCategoryId, search, productsLength: products.length, prodData: rawProd });
 
   // Cleanup timeout ref
   React.useEffect(() => {
@@ -130,15 +225,19 @@ export default function BillingPage() {
       const exactMatch = prods.find((p) => p.barcode === scannedBarcode || p.sku === scannedBarcode);
       
       if (exactMatch) {
-        dispatch(addItem({
-          id: exactMatch._id,
-          name: exactMatch.name,
-          price: exactMatch.price,
-          taxRate: exactMatch.taxRate,
-          unit: exactMatch.unit,
-          image: exactMatch.image,
-          categoryId: typeof exactMatch.categoryId === "object" ? exactMatch.categoryId?._id : exactMatch.categoryId ?? undefined
-        }));
+        if (isWholesale && (exactMatch.packagingUnits?.length ?? 0) > 0) {
+          setUnitPickProduct(exactMatch);
+        } else {
+          dispatch(addItem({
+            id: exactMatch._id,
+            name: exactMatch.name,
+            price: exactMatch.price,
+            taxRate: exactMatch.gstRate || exactMatch.taxRate,
+            unit: exactMatch.unit,
+            image: exactMatch.image,
+            categoryId: typeof exactMatch.categoryId === "object" ? exactMatch.categoryId?._id : exactMatch.categoryId ?? undefined
+          }));
+        }
         setSearch("");
         setShowScanner(false);
       } else {
@@ -148,7 +247,7 @@ export default function BillingPage() {
     } catch (err) {
       console.error("Barcode scan failed", err);
     }
-  }, [token, outletId, dispatch]);
+  }, [token, outletId, dispatch, isWholesale]);
 
   // Hardware Scanner Global Listener
   React.useEffect(() => {
@@ -210,56 +309,146 @@ export default function BillingPage() {
     }
   };
 
-  const subtotal = billing.items.reduce((s, i) => s + i.price * i.qty, 0);
-  const taxAmount = billing.taxEnabled ? subtotal * billing.taxRate : 0;
-  const total = Math.max(0, subtotal + taxAmount - billing.discount);
-
-  const handleAddProduct = (product: Product) => {
+  const addProductToCart = (product: Product, option?: UnitPickOption, qty = 1) => {
+    const taxRate = product.gstRate || product.taxRate || 0;
+    if (option) {
+      dispatch(addItem({
+        id: product._id,
+        name: product.name,
+        price: option.price,
+        taxRate,
+        unit: option.soldUnit,
+        soldUnit: option.soldUnit,
+        soldQty: qty,
+        baseQty: qty * option.conversionFactor,
+        conversionFactor: option.conversionFactor,
+        packagingUnitId: option.packagingUnitId,
+        image: product.image,
+        categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId ?? undefined,
+        qty
+      }));
+      return;
+    }
     dispatch(addItem({
       id: product._id,
       name: product.name,
       price: product.price,
-      taxRate: product.taxRate,
+      taxRate,
       unit: product.unit,
       image: product.image,
       categoryId: typeof product.categoryId === "object" ? product.categoryId?._id : product.categoryId ?? undefined
     }));
   };
 
+  const handleAddProduct = (product: Product) => {
+    if (isWholesale && (product.packagingUnits?.length ?? 0) > 0) {
+      setUnitPickProduct(product);
+      return;
+    }
+    addProductToCart(product);
+  };
+
   const handleCheckout = () => {
     if (billing.items.length === 0) return;
     if (!outletId) {
-      alert("Please select an outlet before placing an order");
+      toast.error("Please select an outlet before placing an order");
       return;
     }
+
     const paymentSplit = billing.paymentMethod === "split"
       ? { cash: billing.payment.cash, upi: billing.payment.upi, card: billing.payment.card }
       : undefined;
+
+    let amountReceived = total;
+    if (isKhataPayment) {
+      amountReceived = billing.amountReceived ?? 0;
+    } else if (billing.paymentMethod === "split" && paymentSplit) {
+      amountReceived = Object.values(paymentSplit).reduce((s, v) => s + (Number(v) || 0), 0);
+    }
+
+    const amountDue = Math.max(0, total - amountReceived);
+
+    if ((amountDue > 0 || isKhataPayment) && !billing.customerId) {
+      toast.error("Select a customer — required for khata / partial payment");
+      return;
+    }
+
+    if (billing.generateGstInvoice) {
+      if (!billing.customerId) {
+        toast.error("Select a customer with GSTIN for GST invoice");
+        return;
+      }
+      if (!billing.taxEnabled || taxAmount <= 0) {
+        toast.error("Enable GST on the bill to generate a tax invoice");
+        return;
+      }
+    }
+
+    const payMethod = isKhataPayment && amountReceived === 0
+      ? "credit"
+      : isKhataPayment && amountReceived > 0
+        ? "cash"
+        : billing.paymentMethod;
+
     submitOrder.mutate({
       outletId,
-      billingMode: billing.billingMode,
+      billingMode: isWholesale ? "wholesale" : billing.billingMode,
+      taxMode: billing.taxMode,
+      customerId: billing.customerId || undefined,
+      customerName: billing.customerName || undefined,
+      customerPhone: billing.customerPhone || undefined,
+      amountPaid: amountReceived,
+      amountDue,
+      generateGstInvoice: billing.generateGstInvoice && hasGstInvoices,
       items: billing.items.map((i) => ({
         productId: i.id,
         name: i.name,
-        qty: i.qty,
+        qty: i.soldQty ?? i.qty,
+        soldQty: i.soldQty ?? i.qty,
+        soldUnit: i.soldUnit ?? i.unit,
+        baseQty: i.baseQty ?? i.qty,
+        conversionFactor: i.conversionFactor ?? 1,
+        packagingUnitId: i.packagingUnitId,
         price: i.price,
         taxRate: i.taxRate,
-        lineTotal: i.price * i.qty,
-        taxTotal: i.price * i.qty * i.taxRate
+        unit: i.soldUnit ?? i.unit,
+        lineTotal: i.price * (i.soldQty ?? i.qty),
+        taxTotal: calculateCartTotals([i], {
+          taxEnabled: billing.taxEnabled,
+          taxRate: billing.taxRate,
+          taxMode: billing.taxMode,
+          discount: 0,
+          supplyType
+        }).tax
       })),
       subtotal,
       discount: billing.discount,
       tax: taxAmount,
+      taxableAmount: cartTotals.taxableAmount,
+      cgst,
+      sgst,
+      igst,
+      supplyType,
       total,
       notes: billing.notes,
-      customerName: billing.customerName || undefined,
       payment: {
-        method: billing.paymentMethod,
-        amount: total,
+        method: payMethod,
+        amount: amountReceived,
         split: paymentSplit
       }
     });
   };
+
+  const handleSaleModeChange = (mode: "retail" | "wholesale") => {
+    if (mode === billing.saleMode) return;
+    if (billing.items.length > 0) {
+      setPendingSaleMode(mode);
+      return;
+    }
+    dispatch(setSaleMode(mode));
+  };
+
+  const cartItemCount = billing.items.reduce((acc, i) => acc + (i.soldQty ?? i.qty), 0);
 
   const activeSubcategories = selectedParentId
     ? categories.filter((c) => c.parentId === selectedParentId)
@@ -270,7 +459,45 @@ export default function BillingPage() {
   const totalCatPages = Math.ceil((topCategories.length + 1) / catItemsPerPage); // +1 for "All" button
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] gap-2 overflow-hidden relative">
+    <div className="flex h-[calc(100vh-120px)] flex-col gap-2 overflow-hidden">
+      {/* Sale mode header */}
+      {(showSaleModeTabs || isWholesale) && (
+        <div className="flex shrink-0 items-center justify-between gap-3 px-0.5">
+          {showSaleModeTabs ? (
+            <div className="flex w-full max-w-xs rounded-xl border border-border bg-surface p-0.5">
+              <button
+                type="button"
+                onClick={() => handleSaleModeChange("retail")}
+                className={cn(
+                  "flex-1 rounded-lg py-1.5 text-xs font-semibold transition",
+                  !isWholesale ? "bg-primary text-white" : "text-muted hover:text-text"
+                )}
+              >
+                Retail
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaleModeChange("wholesale")}
+                className={cn(
+                  "flex-1 rounded-lg py-1.5 text-xs font-semibold transition",
+                  isWholesale ? "bg-primary text-white" : "text-muted hover:text-text"
+                )}
+              >
+                Wholesale
+              </button>
+            </div>
+          ) : (
+            <Badge variant="soft" className="text-xs">Wholesale billing</Badge>
+          )}
+          {isWholesale && billing.taxEnabled && (
+            <span className="hidden text-[10px] text-muted sm:inline">
+              GST {billing.taxMode === "inclusive" ? "included in prices" : "added on top"}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="relative flex min-h-0 flex-1 flex-col gap-2 overflow-hidden lg:flex-row">
       {/* LEFT: Product Panel */}
       <div className="flex flex-1 flex-col gap-2 overflow-hidden pb-16 lg:pb-0">
         {/* Search */}
@@ -399,31 +626,55 @@ export default function BillingPage() {
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
               {products.map((product) => {
-                const cartItem = billing.items.find((i) => i.id === product._id);
+                const cartQty = billing.items
+                  .filter((i) => i.id === product._id)
+                  .reduce((s, i) => s + (i.soldQty ?? i.qty), 0);
+                const unitLabel = getProductUnitLabel(product);
+                const packHint = isWholesale ? getWholesalePriceHint(product) : null;
+                const hasPackaging = getActivePackagingUnits(product).length > 0;
                 return (
                   <button
                     key={product._id}
                     onClick={() => handleAddProduct(product)}
                     className={cn(
-                      "group relative rounded-2xl border p-3 text-left transition active:scale-95",
+                      "group relative flex flex-col rounded-2xl border p-3 text-left transition active:scale-95",
                       "bg-surface hover:border-primary/50 hover:shadow-soft",
-                      cartItem ? "border-primary/40 bg-primary/5" : "border-border"
+                      cartQty > 0 ? "border-primary/40 bg-primary/5" : "border-border"
                     )}
                   >
-                    {cartItem && (
-                      <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white shadow">
-                        {cartItem.qty}
+                    {cartQty > 0 && (
+                      <div className="absolute -right-1 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white shadow">
+                        {cartQty}
                       </div>
                     )}
                     {product.image && (
                       <img src={product.image} alt={product.name}
                         className="mb-2 h-14 w-full rounded-lg object-cover" />
                     )}
-                    <p className="text-[12px] font-semibold leading-tight line-clamp-2">{product.name}</p>
-                    <p className="mt-0.5 text-[10px] text-muted">{product.unit}</p>
-                    <p className="mt-1 text-sm font-bold text-primary">{formatCurrency(product.price)}</p>
+                    <div className="flex items-start justify-between gap-1.5 min-w-0">
+                      <p className="text-[12px] font-semibold leading-tight line-clamp-2 flex-1 min-w-0">
+                        {product.name}
+                      </p>
+                      {isWholesale && hasPackaging && (
+                        <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-primary">
+                          Bulk
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[10px] text-muted">
+                      {unitLabel} · {product.onHandQty} in stock
+                    </p>
+                    <p className="mt-1.5 text-sm font-bold text-primary leading-none">
+                      {formatCurrency(product.price)}
+                      <span className="text-[10px] font-normal text-muted">/{unitLabel}</span>
+                    </p>
+                    {packHint && (
+                      <p className="mt-1.5 text-[9px] leading-snug text-muted line-clamp-2 border-t border-border/40 pt-1.5">
+                        {packHint}
+                      </p>
+                    )}
                     {product.onHandQty <= product.lowStockThreshold && (
-                      <Badge variant="warning" className="mt-1 text-[9px]">Low Stock</Badge>
+                      <Badge variant="warning" className="mt-1.5 w-fit text-[9px]">Low Stock</Badge>
                     )}
                   </button>
                 );
@@ -462,22 +713,29 @@ export default function BillingPage() {
             <Button variant="ghost" size="sm" onClick={() => setShowMobileCart(false)}>Close</Button>
           </div>
           
-          {/* Billing Mode */}
-          <div className="flex gap-0.5 border-b border-border/60 p-2">
-            {BILLING_MODES.map((mode) => (
-              <button
-                key={mode.value}
-                onClick={() => dispatch(setBillingMode(mode.value))}
-                className={cn(
-                  "flex-1 rounded-lg py-1 text-[10px] font-medium transition",
-                  billing.billingMode === mode.value
-                    ? "bg-primary text-white" : "text-muted hover:bg-border/40"
-                )}
-              >
-                {mode.icon} {mode.label}
-              </button>
-            ))}
-          </div>
+          {/* Billing Mode — retail only */}
+          {!isWholesale && (
+            <div className="flex gap-0.5 border-b border-border/60 p-2">
+              {BILLING_MODES.map((mode) => (
+                <button
+                  key={mode.value}
+                  onClick={() => dispatch(setBillingMode(mode.value))}
+                  className={cn(
+                    "flex-1 rounded-lg py-1 text-[10px] font-medium transition",
+                    billing.billingMode === mode.value
+                      ? "bg-primary text-white" : "text-muted hover:bg-border/40"
+                  )}
+                >
+                  {mode.icon} {mode.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {isWholesale && (
+            <div className="border-b border-border/60 px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Wholesale Bill</p>
+            </div>
+          )}
 
           {/* Cart Items */}
           <div className="flex-1 overflow-y-auto p-2">
@@ -490,27 +748,72 @@ export default function BillingPage() {
             ) : (
               <div className="space-y-1">
                 {billing.items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-1.5 rounded-lg bg-surface/60 p-1.5">
+                  <div key={item.cartLineId} className="flex items-center gap-1.5 rounded-lg bg-surface/60 p-1.5">
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-medium leading-tight truncate">{item.name}</p>
-                      <p className="text-[9px] text-muted">{formatCurrency(item.price)} × {item.qty}</p>
+                      <p className="text-[9px] text-muted">
+                        {item.soldQty ?? item.qty} {item.soldUnit ?? item.unit}
+                        {item.conversionFactor && item.conversionFactor > 1
+                          ? ` (${item.baseQty ?? item.qty * item.conversionFactor} base)`
+                          : ""}
+                      </p>
+                      {isWholesale && editingPriceId === item.cartLineId ? (
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          autoFocus
+                          value={editPriceValue}
+                          onChange={(e) => setEditPriceValue(e.target.value)}
+                          onBlur={() => {
+                            const newPrice = Number(editPriceValue) || item.price;
+                            dispatch(updateLinePrice({ cartLineId: item.cartLineId, price: newPrice }));
+                            setEditingPriceId(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              const newPrice = Number(editPriceValue) || item.price;
+                              dispatch(updateLinePrice({ cartLineId: item.cartLineId, price: newPrice }));
+                              setEditingPriceId(null);
+                            }
+                            if (e.key === "Escape") setEditingPriceId(null);
+                          }}
+                          className="mt-0.5 w-24 rounded border border-primary bg-surface px-1 py-0.5 text-[10px]"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className={cn(
+                            "text-[9px] mt-0.5",
+                            isWholesale && "underline decoration-dotted hover:text-primary"
+                          )}
+                          onClick={() => {
+                            if (!isWholesale) return;
+                            setEditingPriceId(item.cartLineId);
+                            setEditPriceValue(String(item.price));
+                          }}
+                        >
+                          {formatCurrency(item.price)} / {item.soldUnit ?? item.unit}
+                          {item.priceOverride && " *"}
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => dispatch(updateQty({ id: item.id, qty: item.qty - 1 }))}
+                      <button onClick={() => dispatch(updateQty({ cartLineId: item.cartLineId, qty: item.qty - 1 }))}
                         className="flex h-5 w-5 items-center justify-center rounded-md bg-border/60 hover:bg-border transition">
                         <Minus className="h-2.5 w-2.5" />
                       </button>
                       <span className="w-4 text-center text-[10px] font-semibold">{item.qty}</span>
-                      <button onClick={() => dispatch(updateQty({ id: item.id, qty: item.qty + 1 }))}
+                      <button onClick={() => dispatch(updateQty({ cartLineId: item.cartLineId, qty: item.qty + 1 }))}
                         className="flex h-5 w-5 items-center justify-center rounded-md bg-border/60 hover:bg-border transition">
                         <Plus className="h-2.5 w-2.5" />
                       </button>
-                      <button onClick={() => dispatch(removeItem(item.id))}
+                      <button onClick={() => dispatch(removeItem(item.cartLineId))}
                         className="flex h-5 w-5 items-center justify-center rounded-md text-danger/70 hover:bg-danger/10 transition">
                         <Trash2 className="h-2.5 w-2.5" />
                       </button>
                     </div>
-                    <span className="shrink-0 text-[10px] font-bold">{formatCurrency(item.price * item.qty)}</span>
+                    <span className="shrink-0 text-[10px] font-bold">{formatCurrency(item.price * (item.soldQty ?? item.qty))}</span>
                   </div>
                 ))}
               </div>
@@ -531,17 +834,90 @@ export default function BillingPage() {
                 placeholder="0"
               />
             </div>
+
+            {/* GST controls — wholesale or when tax enabled */}
+            {(isWholesale || billing.taxEnabled) && (
+              <div className="rounded-lg bg-surface/60 p-2 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-1.5 text-[10px]">
+                    <input
+                      type="checkbox"
+                      checked={billing.taxEnabled}
+                      onChange={(e) => dispatch(setTaxEnabled(e.target.checked))}
+                    />
+                    GST
+                  </label>
+                  {billing.taxEnabled && (
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={billing.taxRate || ""}
+                      onChange={(e) => dispatch(setTaxRate(Number(e.target.value)))}
+                      className="w-12 rounded border border-border px-1 py-0.5 text-[10px] text-right"
+                      placeholder="%"
+                    />
+                  )}
+                </div>
+                {isWholesale && billing.taxEnabled && (
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => dispatch(setTaxMode("exclusive"))}
+                      className={cn(
+                        "flex-1 rounded py-1 text-[9px] font-medium",
+                        billing.taxMode === "exclusive" ? "bg-primary text-white" : "bg-border/40 text-muted"
+                      )}
+                    >
+                      GST Extra
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dispatch(setTaxMode("inclusive"))}
+                      className={cn(
+                        "flex-1 rounded py-1 text-[9px] font-medium",
+                        billing.taxMode === "inclusive" ? "bg-primary text-white" : "bg-border/40 text-muted"
+                      )}
+                    >
+                      GST Included
+                    </button>
+                  </div>
+                )}
+                {billing.taxEnabled && taxAmount > 0 && (settings.gstEnabled || isWholesale) && (
+                  <div className="text-[9px] text-muted space-y-0.5 pt-0.5 border-t border-border/40">
+                    <div className="flex justify-between"><span>Taxable</span><span>{formatCurrency(cartTotals.taxableAmount)}</span></div>
+                    {isInterState ? (
+                      <div className="flex justify-between"><span>IGST</span><span>{formatCurrency(igst)}</span></div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between"><span>CGST</span><span>{formatCurrency(cgst)}</span></div>
+                        <div className="flex justify-between"><span>SGST</span><span>{formatCurrency(sgst)}</span></div>
+                      </>
+                    )}
+                    {isInterState && billing.customerId && (
+                      <p className="text-[8px] text-amber-700 pt-0.5">Inter-state supply (IGST)</p>
+                    )}
+                    <div className="flex justify-between font-medium text-text"><span>Tax</span><span>{formatCurrency(taxAmount)}</span></div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-between text-xs font-bold border-t border-border/60 pt-1">
               <span>Total</span>
               <span className="text-primary text-sm">{formatCurrency(total)}</span>
             </div>
 
-            {/* Payment Methods */}
-            <div className="grid grid-cols-5 gap-0.5 pt-1">
-              {PAYMENT_METHODS.map((pm) => (
+            {/* Payment Methods — pick before customer on khata so flow is clear */}
+            <div className={cn("grid gap-0.5 pt-1", paymentMethods.length > 5 ? "grid-cols-6" : "grid-cols-5")}>
+              {paymentMethods.map((pm) => (
                 <button
                   key={pm.value}
-                  onClick={() => dispatch(setPaymentMethod(pm.value))}
+                  type="button"
+                  onClick={() => {
+                    dispatch(setPaymentMethod(pm.value));
+                    if (pm.value === "credit") dispatch(setCreditSale(true));
+                  }}
                   className={cn(
                     "flex flex-col items-center rounded-lg py-1 text-[9px] font-medium transition",
                     billing.paymentMethod === pm.value
@@ -554,8 +930,76 @@ export default function BillingPage() {
               ))}
             </div>
 
-            {/* Split payment inputs */}
-            {billing.paymentMethod === "split" && (
+            {isKhataPayment && hasCreditKhata && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
+                <p className="text-[10px] font-semibold text-primary">Khata / credit bill</p>
+                {!billing.customerId && (
+                  <p className="text-[9px] text-warning">Select a customer below — required for khata</p>
+                )}
+                <div>
+                  <label className="text-[10px] font-medium text-muted">Amount receiving now (₹)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={total}
+                    value={billing.amountReceived || ""}
+                    onChange={(e) => dispatch(setAmountReceived(Number(e.target.value)))}
+                    className="mt-1 h-8 text-[11px]"
+                    placeholder={`Leave 0 for full khata (${formatCurrency(total)})`}
+                  />
+                </div>
+                {amountDuePreview > 0 && (
+                  <p className="text-[9px] text-warning">
+                    On khata: {formatCurrency(amountDuePreview)}
+                  </p>
+                )}
+                {billing.customerId && amountDuePreview === total && (
+                  <p className="text-[9px] text-muted">Full amount will go on customer khata</p>
+                )}
+              </div>
+            )}
+
+            {showCustomerSection && (
+              <CustomerPicker
+                token={token}
+                outletId={outletId}
+                selectedId={billing.customerId}
+                required={isKhataPayment || billing.generateGstInvoice}
+                onSelect={(c: Customer | null) =>
+                  dispatch(
+                    selectCustomer(
+                      c
+                        ? {
+                            id: c._id,
+                            name: c.name,
+                            phone: c.phone,
+                            defaultTaxMode: c.defaultTaxMode
+                          }
+                        : null
+                    )
+                  )
+                }
+              />
+            )}
+
+            {hasGstInvoices && billing.taxEnabled && (
+              <label className="flex items-center gap-2 rounded-lg bg-surface/60 px-2 py-1.5 text-[10px] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={billing.generateGstInvoice}
+                  onChange={(e) => dispatch(setGenerateGstInvoice(e.target.checked))}
+                />
+                <span>
+                  Generate GST Invoice
+                  {!billing.customerId && billing.generateGstInvoice && (
+                    <span className="text-warning ml-1">(select customer with GSTIN)</span>
+                  )}
+                </span>
+              </label>
+            )}
+
+            {/* Split payment — only when split is selected, not for khata */}
+            {billing.paymentMethod === "split" && !isKhataPayment && (
               <div className="space-y-1 rounded-lg bg-surface/60 p-1.5">
                 {(["cash", "upi", "card"] as const).map((method) => (
                   <div key={method} className="flex items-center gap-1.5">
@@ -613,6 +1057,7 @@ export default function BillingPage() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Mobile Floating Cart Toggle */}
       <div className="fixed bottom-4 left-4 right-4 z-[60] lg:hidden">
@@ -621,11 +1066,33 @@ export default function BillingPage() {
           onClick={() => setShowMobileCart(!showMobileCart)}
         >
           <ShoppingBag className="h-5 w-5" />
-          {showMobileCart ? "Back to Products" : `View Cart (${billing.items.reduce((acc, i) => acc + i.qty, 0)}) — ${formatCurrency(total)}`}
+          {showMobileCart ? "Back to Products" : `View Cart (${cartItemCount}) — ${formatCurrency(total)}`}
         </Button>
       </div>
 
       <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={handleBarcodeScanned} />
+
+      <UnitPickerModal
+        open={Boolean(unitPickProduct)}
+        product={unitPickProduct}
+        onClose={() => setUnitPickProduct(null)}
+        onConfirm={(option, qty) => {
+          if (unitPickProduct) addProductToCart(unitPickProduct, option, qty);
+        }}
+      />
+
+      <ConfirmDialog
+        open={pendingSaleMode !== null}
+        onClose={() => setPendingSaleMode(null)}
+        onConfirm={() => {
+          if (pendingSaleMode) dispatch(setSaleMode(pendingSaleMode));
+          setPendingSaleMode(null);
+        }}
+        title="Switch billing mode?"
+        message="Your current cart will be cleared when switching between Retail and Wholesale."
+        confirmLabel="Switch & clear cart"
+        variant="warning"
+      />
     </div>
   );
 }
