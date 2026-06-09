@@ -1,8 +1,7 @@
-import { getJson, postJson, apiFetch } from "@/lib/api-client";
-import { ApiResponse, Product } from "@/lib/types";
+import { getJsonWithMeta, postJson, apiFetch } from "@/lib/api-client";
+import { Product } from "@/lib/types";
 
 export const productService = {
-  // Option 1: Standard Pagination (Page & Limit)
   getProductsWithOffset: async (
     token: string,
     params: {
@@ -13,10 +12,9 @@ export const productService = {
       limit?: number;
     }
   ) => {
-    return getJson<ApiResponse<Product[]>>("/products", token, params);
+    return getJsonWithMeta<Product[]>("/products", token, params);
   },
 
-  // Option 2: Pro cursor-based pagination (Infinite Scroll)
   getProductsWithCursor: async (
     token: string,
     params: {
@@ -24,16 +22,13 @@ export const productService = {
       categoryId?: string;
       search?: string;
       limit?: number;
-      cursor?: string; // e.g. the _id of the last item
+      cursor?: string;
     }
   ) => {
-    return getJson<ApiResponse<Product[]>>("/products", token, params);
+    return getJsonWithMeta<Product[]>("/products", token, params);
   },
 
-  // Create a product
-  createProduct: async (token: string, data: any) => {
-    return postJson<ApiResponse<Product>>("/products", data, token);
+  createProduct: async (token: string, data: unknown) => {
+    return postJson<{ product: Product }>("/products", data, token);
   },
-
-  // Add more as needed...
 };

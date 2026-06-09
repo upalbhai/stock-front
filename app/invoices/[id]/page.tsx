@@ -12,6 +12,12 @@ import { GstInvoicePrint, printGstInvoice } from "@/components/invoices/gst-invo
 import { exportInvoicePdf } from "@/lib/exportInvoicePdf";
 import type { Order, Customer } from "@/lib/types";
 
+type InvoicePayload = {
+  order: Order & { customerId?: Customer | null };
+  business?: { name?: string; gstNumber?: string; address?: string; phone?: string };
+  outlet?: { name?: string; address?: string; phone?: string };
+};
+
 export default function InvoiceDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -21,12 +27,7 @@ export default function InvoiceDetailPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["invoice", id],
-    queryFn: () =>
-      getJson<{
-        order: Order & { customerId?: Customer | null };
-        business?: { name?: string; gstNumber?: string; address?: string; phone?: string };
-        outlet?: { name?: string; address?: string; phone?: string };
-      }>(`/invoices/${id}`, token),
+    queryFn: () => getJson<InvoicePayload>(`/invoices/${id}`, token),
     enabled: Boolean(token && id)
   });
 

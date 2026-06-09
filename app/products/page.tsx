@@ -15,7 +15,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { BarcodeScanner } from "@/components/ui/barcode-scanner";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { getJson, getJsonWithMeta, apiFetch, apiFetchData } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import type { Product, Category, Unit } from "@/lib/types";
 import { getErrorMessage } from "@/lib/error";
@@ -31,10 +31,7 @@ async function loadUnits(
   outletId: string | null | undefined,
   { page, limit, q }: { page: number; limit: number; q?: string }
 ) {
-  const res = await getJson<{
-    data: Unit[];
-    meta?: { pagination?: { page: number; limit: number; total: number; totalPages: number } };
-  }>("/units", token, {
+  const res = await getJsonWithMeta<Unit[]>("/units", token, {
     flat: "true",
     page,
     limit,
@@ -49,17 +46,14 @@ async function loadUnits(
     label: u.abbreviation && u.abbreviation !== u.name ? `${u.abbreviation} (${u.name})` : u.name
   }));
 
-  return { data: items, meta: res.meta };
+  return { data: items, meta: res.meta ?? undefined };
 }
 
 async function loadCategories(
   token: string | null,
   { page, limit, q }: { page: number; limit: number; q?: string }
 ) {
-  const res = await getJson<{
-    data: Category[];
-    meta?: { pagination?: { page: number; limit: number; total: number; totalPages: number } };
-  }>("/categories", token, { flat: "true", page, limit });
+  const res = await getJsonWithMeta<Category[]>("/categories", token, { flat: "true", page, limit });
 
   let items = (res.data ?? []).map((c) => ({
     ...c,
@@ -73,7 +67,7 @@ async function loadCategories(
     items = items.filter((c) => c.name.toLowerCase().includes(lower));
   }
 
-  return { data: items, meta: res.meta };
+  return { data: items, meta: res.meta ?? undefined };
 }
 
 export default function ProductsPage() {
@@ -100,7 +94,7 @@ export default function ProductsPage() {
 
   const { data: prodData, isLoading, isError, error, refetch: refetchProducts } = useQuery({
     queryKey: ["products", outletId, catFilter, search, page, limit],
-    queryFn: () => getJson<any>("/products", token, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, page, limit }),
+    queryFn: () => getJsonWithMeta<Product[]>("/products", token, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, page, limit }),
     enabled: Boolean(token)
   });
 
@@ -127,11 +121,8 @@ export default function ProductsPage() {
   };
 
   const { data: catData } = useQuery({
-    queryKey: ["categories", outletId],
-    queryFn: async () => {
-      const res = await getJson<{ data?: Category[]; categories?: Category[] }>("/categories", token, { flat: "true", limit: 200 });
-      return { categories: res.data ?? res.categories ?? [] };
-    },
+    queryKey: ["categories", "flat", outletId],
+    queryFn: () => getJson<Category[]>("/categories", token, { flat: "true", limit: 200 }),
     enabled: Boolean(token)
   });
 
@@ -148,11 +139,11 @@ export default function ProductsPage() {
     onError: (err) => { toast.error(getErrorMessage(err, "Failed to delete product")); }
   });
 
-  // normalize response which may use `data` or `products` + extract pagination
-  const raw = prodData as any;
-  const products: Product[] = (raw && (raw.products ?? raw.data)) ?? [];
-  const pagination = raw?.meta?.pagination ?? raw?.meta ?? { page: 1, limit, total: products.length, totalPages: 1 };
-  const categories = catData?.categories ?? [];
+  const products: Product[] = prodData?.data ?? [];
+  const pagination = prodData?.meta?.pagination ?? { page: 1, limit, total: products.length, totalPages: 1 };
+  const categories = Array.isArray(catData)
+    ? catData
+    : ((catData as { categories?: Category[] } | undefined)?.categories ?? []);
 
   const loadCategoryFilterOptions = React.useCallback(
     async (params: { page: number; limit: number; q?: string }) => {
@@ -190,12 +181,12 @@ export default function ProductsPage() {
       if (String(opt.id).startsWith("new_")) {
         const name = (opt.name ?? opt.label ?? "").trim();
         if (!name || !token) return null;
-        const res = await apiFetch<{ data: { unit: Unit } }>("/units", {
+        const res = await apiFetchData<{ unit: Unit }>("/units", {
           method: "POST",
           body: { name, abbreviation: name, outletId: outletId ?? undefined },
           token
         });
-        const unit = res.data?.unit;
+        const unit = res?.unit;
         if (unit) {
           qc.invalidateQueries({ queryKey: ["units"] });
           return { unitId: unit._id, unitName: unitLabel(unit) };
@@ -363,10 +354,16 @@ export default function ProductsPage() {
         )}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Product" : "Add Product"} size="lg">
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editId ? "Edit Product" : "Add Product"}
+        size="full"
+        className="max-w-3xl md:max-w-4xl lg:max-w-5xl"
+      >
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2"><label className="mb-1 block text-xs font-medium text-muted">Product Name *</label><Input id="product-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Mango Lassi" /></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2"><label className="mb-1 block text-xs font-medium text-muted">Product Name *</label><Input id="product-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Mango Lassi" /></div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">Category</label>
               <AsyncSelect
@@ -409,7 +406,7 @@ export default function ProductsPage() {
             </div>
             <div><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} value={form.gstRate} onChange={(e) => setForm((f) => ({ ...f, gstRate: e.target.value }))} /></div>
             {hasPackaging && (
-              <div className="col-span-2 space-y-2 rounded-xl border border-border/60 p-3">
+              <div className="sm:col-span-2 space-y-2 rounded-xl border border-border/60 p-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-muted uppercase tracking-wide">Packaging Units (Peti/Crate)</label>
                   <Button type="button" variant="soft" size="sm" onClick={() => setPackagingUnits((rows) => [...rows, { unitId: "", unitName: "", qtyPerUnit: "", price: "", costPrice: "" }])}>
@@ -479,7 +476,7 @@ export default function ProductsPage() {
               <div><label className="mb-1 block text-xs font-medium text-muted">HSN Code</label><Input value={form.hsnCode} onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))} placeholder="e.g. 2202" /></div>
             )}
           </div>
-          <div className="flex gap-3 pt-2">
+          <div className="sticky bottom-0 -mx-5 flex gap-3 border-t border-border/60 bg-surface px-5 py-4 sm:-mx-6 sm:px-6">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" className="flex-1" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Product")}</Button>
           </div>

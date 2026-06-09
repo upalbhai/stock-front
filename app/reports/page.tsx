@@ -47,11 +47,11 @@ export default function ReportsPage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["reports-daily", outletId, selectedDate],
-    queryFn: () => getJson<{ data: ReportData }>("/reports/daily", token, { outletId: outletId ?? undefined, date: selectedDate }),
+    queryFn: () => getJson<ReportData>("/reports/daily", token, { outletId: outletId ?? undefined, date: selectedDate }),
     enabled: Boolean(token && outletId)
   });
 
-  const report = data?.data;
+  const report = data;
 
   const handlePrint = () => {
     window.print();

@@ -20,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Platform Stats Query
   const { data: statsData } = useQuery({
     queryKey: ["admin-stats"],
-    queryFn: () => getJson<{ data: { totalBusinesses: number; activeBusinesses: number; totalUsers: number } }>("/admin/stats", token),
+    queryFn: () => getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number }>("/admin/stats", token),
     enabled: Boolean(token && user?.role === "superadmin")
   });
 
@@ -39,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  const stats = statsData?.data;
+  const stats = statsData;
 
   const tabsConfig = [
     { id: "businesses", label: "Businesses", icon: Store, path: "/admin/businesses" },

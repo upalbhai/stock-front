@@ -4,6 +4,11 @@ import { ApiResponse } from "./types";
 
 export type QueueResult = { queued: true };
 
+export type ApiDataWithMeta<T> = {
+  data: T;
+  meta: ApiResponse<T>["meta"];
+};
+
 type ApiOptions = {
   method?: string;
   body?: unknown;
@@ -43,6 +48,33 @@ function buildQuery(
   return query ? `?${query}` : "";
 }
 
+/** True when the backend returned `{ success, data, ... }`. */
+export function isApiEnvelope(value: unknown): value is ApiResponse<unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "success" in value &&
+    "data" in value &&
+    (value as ApiResponse<unknown>).success === true
+  );
+}
+
+/** Unwrap `{ success, data }` → `data`. Passes through already-unwrapped values. */
+export function unwrapApiData<T>(response: unknown): T {
+  if (isApiEnvelope(response)) {
+    return response.data as T;
+  }
+  return response as T;
+}
+
+/** Unwrap envelope and preserve top-level `meta` (pagination, cursor, etc.). */
+export function unwrapApiDataWithMeta<T>(response: unknown): ApiDataWithMeta<T> {
+  if (isApiEnvelope(response)) {
+    return { data: response.data as T, meta: response.meta ?? null };
+  }
+  return { data: response as T, meta: null };
+}
+
 export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
   const { method = "GET", body, headers, token } = options;
   const requestHeaders: Record<string, string> = {
@@ -77,12 +109,30 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
   return data as T;
 }
 
+/** GET helper — returns unwrapped `data` from the standard API envelope. */
 export async function getJson<T>(
   path: string,
   token?: string | null,
   params?: Record<string, string | number | boolean | undefined | null>
 ) {
-  return apiFetch<T>(`${path}${buildQuery(params)}`, { token });
+  const raw = await apiFetch<unknown>(`${path}${buildQuery(params)}`, { token });
+  return unwrapApiData<T>(raw);
+}
+
+/** GET helper — returns `{ data, meta }` when pagination/cursor meta is needed. */
+export async function getJsonWithMeta<T>(
+  path: string,
+  token?: string | null,
+  params?: Record<string, string | number | boolean | undefined | null>
+) {
+  const raw = await apiFetch<unknown>(`${path}${buildQuery(params)}`, { token });
+  return unwrapApiDataWithMeta<T>(raw);
+}
+
+/** Mutation helper — returns unwrapped `data` from the standard API envelope. */
+export async function apiFetchData<T>(path: string, options: ApiOptions = {}) {
+  const raw = await apiFetch<unknown>(path, options);
+  return unwrapApiData<T>(raw);
 }
 
 export async function postJson<T>(
@@ -100,5 +150,6 @@ export async function postJson<T>(
     return { queued: true };
   }
 
-  return apiFetch<T>(path, { method: "POST", body, token });
+  const raw = await apiFetch<unknown>(path, { method: "POST", body, token });
+  return unwrapApiData<T>(raw);
 }

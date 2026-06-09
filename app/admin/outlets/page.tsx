@@ -22,7 +22,7 @@ export default function AdminOutletsPage() {
 
   const { data: outletsData, isLoading: loadingOutlets } = useQuery({
     queryKey: ["admin-outlets", search, statusFilter],
-    queryFn: () => getJson<{ data: { outlets: any[] } }>("/admin/outlets", token, { search: search || undefined, status: statusFilter || undefined }),
+    queryFn: () => getJson<{ outlets: any[] }>("/admin/outlets", token, { search: search || undefined, status: statusFilter || undefined }),
     enabled: Boolean(token)
   });
 
@@ -38,7 +38,7 @@ export default function AdminOutletsPage() {
     onError: (err) => toast.error(getErrorMessage(err))
   });
 
-  const outlets = outletsData?.data?.outlets ?? [];
+  const outlets = outletsData?.outlets ?? [];
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">

@@ -10,7 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { getJsonWithMeta, apiFetch } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import Pagination from "@/components/ui/pagination";
@@ -34,7 +34,7 @@ export default function CategoriesPage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["categories", page, limit],
-    queryFn: () => getJson<{ data?: Category[]; categories?: Category[]; meta?: { pagination?: { page: number; limit: number; total: number; totalPages: number } } }>("/categories", token, { flat: "true", page, limit }),
+    queryFn: () => getJsonWithMeta<Category[]>("/categories", token, { flat: "true", page, limit }),
     enabled: Boolean(token)
   });
 
@@ -86,7 +86,7 @@ export default function CategoriesPage() {
     }
   });
 
-  const allCategories = data?.data ?? data?.categories ?? [];
+  const allCategories = data?.data ?? [];
   const topLevel = allCategories.filter((c) => !c.parentId);
   const pagination = data?.meta?.pagination ?? { page: 1, limit, total: allCategories.length, totalPages: 1 };
 

@@ -28,7 +28,7 @@ export default function AdminPlansPage() {
 
   const { data: plansData, isLoading: loadingPlans } = useQuery({
     queryKey: ["admin-plans"],
-    queryFn: () => getJson<{ data: { plans: Plan[] } }>("/plans/all", token),
+    queryFn: () => getJson<{ plans: Plan[] }>("/plans/all", token),
     enabled: Boolean(token)
   });
 
@@ -50,7 +50,7 @@ export default function AdminPlansPage() {
     onError: (err) => toast.error(getErrorMessage(err, "Failed to delete plan"))
   });
 
-  const plans = plansData?.data?.plans || [];
+  const plans = plansData?.plans || [];
 
   const openCreatePlan = () => {
     setEditPlanId(null);

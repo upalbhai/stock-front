@@ -8,7 +8,7 @@ import { CheckCircle2, Sparkles, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/components/auth/auth-provider";
-import { apiFetch, getJson } from "@/lib/api-client";
+import { apiFetch, apiFetchData, getJson } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
 import { formatCurrency } from "@/lib/format";
 import type { Plan } from "@/lib/types";
@@ -49,7 +49,7 @@ export default function SubscribePage() {
 
     try {
       // 1. Create order
-      const orderData = await apiFetch<any>("/payments/create-order", {
+      const orderData = await apiFetchData<{ orderId: string; keyId: string; amount: number; currency: string }>("/payments/create-order", {
         method: "POST",
         body: { planId: plan._id, billingCycle },
         token

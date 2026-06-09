@@ -10,7 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { getJsonWithMeta, apiFetch } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
 import type { Unit } from "@/lib/types";
 
@@ -27,7 +27,7 @@ export default function UnitsPage() {
 
   const { data, isLoading, refetch: refetchUnits } = useQuery({
     queryKey: ["units"],
-    queryFn: () => getJson<{ data?: any[]; meta?: any }>("/units", token, { flat: "true", page: 1, limit: 100 }),
+    queryFn: () => getJsonWithMeta<Unit[]>("/units", token, { flat: "true", page: 1, limit: 100 }),
     enabled: Boolean(token)
   });
 

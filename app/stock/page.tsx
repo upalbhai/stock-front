@@ -17,7 +17,7 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { getJson, getJsonWithMeta, apiFetch } from "@/lib/api-client";
 import { formatNumber, formatDate, formatDateTime } from "@/lib/format";
 import { getErrorMessage } from "@/lib/error";
 import { buildStockUnitOptions, formatStockMovementQty, getProductUnitLabel } from "@/lib/productUtils";
@@ -234,21 +234,21 @@ export default function StockPage() {
   // API Queries
   const { data: prodData, isLoading: loadingProds, refetch: refetchProducts } = useQuery({
     queryKey: ["products", outletId, prodSearch, prodPage, prodLimit],
-    queryFn: () => getJson<{ data: Product[]; meta?: any }>("/products", token, { outletId: outletId ?? undefined, search: prodSearch || undefined, page: prodPage, limit: prodLimit }),
+    queryFn: () => getJsonWithMeta<Product[]>("/products", token, { outletId: outletId ?? undefined, search: prodSearch || undefined, page: prodPage, limit: prodLimit }),
     // enable when we have a token — outletId is optional on the API
     enabled: Boolean(token)
   });
 
   const { data: summaryData } = useQuery({
     queryKey: ["stock-summary", outletId],
-    queryFn: () => getJson<{ data: StockSummary }>("/stock/summary", token, { outletId: outletId ?? undefined }),
+    queryFn: () => getJson<StockSummary>("/stock/summary", token, { outletId: outletId ?? undefined }),
     enabled: Boolean(token && outletId)
   });
 
   const { data: historyData, isLoading: loadingHistory, refetch: refetchHistory } = useQuery({
     queryKey: ["stock-history", outletId, historySearch, historyDirection, historyTypeFilter, historyStartDate, historyEndDate, historyPage, historyLimit],
     queryFn: () =>
-      getJson<{ data: { entries: StockHistoryEntry[]; total: number; summary: StockHistorySummary } }>("/stock/history", token, {
+      getJson<{ entries: StockHistoryEntry[]; total: number; summary: StockHistorySummary }>("/stock/history", token, {
         outletId: outletId ?? undefined,
         search: historySearch || undefined,
         direction: historyDirection === "all" ? undefined : historyDirection,
@@ -263,7 +263,7 @@ export default function StockPage() {
 
   const { data: transfersData, isLoading: loadingTransfers, refetch: refetchTransfers } = useQuery({
     queryKey: ["stock-transfers", transferSearch, transferPage, transferLimit],
-    queryFn: () => getJson<{ data: StockTransfer[]; meta?: any }>("/stock/transfers", token, { search: transferSearch || undefined, page: transferPage, limit: transferLimit }),
+    queryFn: () => getJson<{ transfers: StockTransfer[]; total: number }>("/stock/transfers", token, { search: transferSearch || undefined, page: transferPage, limit: transferLimit }),
     enabled: Boolean(token)
   });
 
@@ -341,22 +341,21 @@ export default function StockPage() {
     }
   });
 
-  const rawProd = prodData as any;
-  const products: Product[] = (rawProd && (rawProd.products ?? rawProd.data)) ?? [];
-  const summary = summaryData?.data;
-  const history = historyData?.data?.entries ?? [];
-  const historyTotal = historyData?.data?.total ?? 0;
-  const historySummary = historyData?.data?.summary;
+  const products: Product[] = prodData?.data ?? [];
+  const summary = summaryData;
+  const history = historyData?.entries ?? [];
+  const historyTotal = historyData?.total ?? 0;
+  const historySummary = historyData?.summary;
   const historyTotalPages = Math.ceil(historyTotal / historyLimit) || 1;
   const historyColumns = React.useMemo(() => buildHistoryColumns(), []);
   const historyInEntries = history.filter((e) => e.qty > 0);
   const historyOutEntries = history.filter((e) => e.qty < 0);
 
-  const transfers = (transfersData as any)?.data?.transfers ?? (transfersData as any)?.transfers ?? [];
-  const transferTotal = (transfersData as any)?.data?.total ?? (transfersData as any)?.total ?? 0;
+  const transfers = transfersData?.transfers ?? [];
+  const transferTotal = transfersData?.total ?? 0;
   const transferTotalPages = Math.ceil(transferTotal / transferLimit) || 1;
 
-  const prodMeta = (prodData as any)?.meta?.pagination;
+  const prodMeta = prodData?.meta?.pagination;
   const outlets = (outletsData?.outlets ?? []).filter((o) => o._id !== outletId);
 
   // Cleanup effect for timeout ref

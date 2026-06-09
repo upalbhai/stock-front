@@ -47,13 +47,13 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
   const { data, isLoading } = useQuery({
     queryKey: ["reports-summary", outletId],
     queryFn: () =>
-      getJson<{ data: SummaryData }>("/reports/summary", token, {
+      getJson<SummaryData>("/reports/summary", token, {
         outletId: outletId ?? undefined
       }),
     enabled: Boolean(token)
   });
 
-  const summary = data?.data;
+  const summary = data;
 
   return (
     <div className="space-y-6">

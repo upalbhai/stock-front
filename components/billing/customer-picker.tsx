@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { getJson, apiFetch, apiFetchData } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import type { Customer } from "@/lib/types";
 
@@ -45,12 +45,12 @@ export function CustomerPicker({ token, outletId, selectedId, required, onSelect
 
   const createCustomer = useMutation({
     mutationFn: (body: unknown) =>
-      apiFetch<{ data: { customer: Customer } }>("/customers", { method: "POST", body, token }),
+      apiFetchData<{ customer: Customer }>("/customers", { method: "POST", body, token }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["customers"] });
       setShowAdd(false);
       setForm({ name: "", phone: "", gstin: "" });
-      const c = res?.data?.customer;
+      const c = res?.customer;
       if (c) {
         onSelect(c);
         setOpen(false);

@@ -17,11 +17,11 @@ export function OutletSwitcher({ className }: { className?: string }) {
 
   const { data } = useQuery({
     queryKey: ["outlets"],
-    queryFn: () => getJson<{ data: { outlets: Outlet[] } }>("/outlets", token),
+    queryFn: () => getJson<{ outlets: Outlet[] }>("/outlets", token),
     enabled: Boolean(token)
   });
 
-  const outlets = data?.data?.outlets ?? [];
+  const outlets = data?.outlets ?? [];
 
   React.useEffect(() => {
     if (!outletId && outlets.length) {

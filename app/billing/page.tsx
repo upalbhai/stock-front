@@ -24,7 +24,7 @@ import { UnitPickerModal, type UnitPickOption } from "@/components/billing/unit-
 import { CustomerPicker } from "@/components/billing/customer-picker";
 import { calculateCartTotals, resolveSupplyType } from "@/lib/taxCalculator";
 import { getProductUnitLabel, getWholesalePriceHint, getActivePackagingUnits } from "@/lib/productUtils";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { getJson, getJsonWithMeta, apiFetch } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/error";
@@ -89,20 +89,20 @@ export default function BillingPage() {
 
   const { data: outletsData } = useQuery({
     queryKey: ["outlets"],
-    queryFn: () => getJson<{ data: { outlets: Outlet[] } }>("/outlets", token),
+    queryFn: () => getJson<{ outlets: Outlet[] }>("/outlets", token),
     enabled: Boolean(token)
   });
-  const currentOutlet = outletsData?.data?.outlets?.find((o) => o._id === outletId);
+  const currentOutlet = outletsData?.outlets?.find((o) => o._id === outletId);
 
   const { data: catData } = useQuery({
-    queryKey: ["categories", outletId],
-    queryFn: () => getJson<{ categories?: Category[]; data?: Category[] }>("/categories", token, { flat: "true" }),
+    queryKey: ["categories", "flat", outletId],
+    queryFn: () => getJson<Category[]>("/categories", token, { flat: "true", limit: 200 }),
     enabled: Boolean(token)
   });
 
   const { data: prodData, refetch: refetchProducts } = useQuery({
     queryKey: ["products", outletId, selectedCategoryId, search, prodPage, prodLimit],
-    queryFn: () => getJson<{ data: Product[]; meta?: any }>("/products", token, {
+    queryFn: () => getJsonWithMeta<Product[]>("/products", token, {
       outletId: outletId ?? undefined,
       categoryId: selectedCategoryId ?? undefined,
       search: search || undefined,
@@ -182,12 +182,12 @@ export default function BillingPage() {
     }
   }, [isWholesale, currentOutlet?.taxEnabled, dispatch]);
 
-  const rawCat = catData as any;
-  const categories: Category[] = (rawCat && (rawCat.categories ?? rawCat.data)) ?? [];
+  const categories: Category[] = Array.isArray(catData)
+    ? catData
+    : ((catData as { categories?: Category[] } | undefined)?.categories ?? []);
   const topCategories = categories.filter((c) => !c.parentId);
-  const rawProd = prodData as any;
-  const products: Product[] = (rawProd && (rawProd.products ?? rawProd.data)) ?? [];
-  const prodMeta = (rawProd)?.meta?.pagination;
+  const products: Product[] = prodData?.data ?? [];
+  const prodMeta = prodData?.meta?.pagination;
 
   // Cleanup timeout ref
   React.useEffect(() => {
@@ -216,12 +216,12 @@ export default function BillingPage() {
   const handleBarcodeScanned = React.useCallback(async (scannedBarcode: string) => {
     if (!token) return;
     try {
-      const res = await getJson<{ data: Product[]; products?: Product[] }>("/products", token, {
+      const res = await getJsonWithMeta<Product[]>("/products", token, {
         outletId: outletId ?? undefined,
         search: scannedBarcode,
         limit: 2
       });
-      const prods = res.data || res.products || [];
+      const prods = res.data ?? [];
       const exactMatch = prods.find((p) => p.barcode === scannedBarcode || p.sku === scannedBarcode);
       
       if (exactMatch) {

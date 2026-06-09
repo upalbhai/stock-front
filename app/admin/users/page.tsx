@@ -15,11 +15,11 @@ export default function AdminUsersPage() {
 
   const { data: allUsersData, isLoading: loadingAllUsers } = useQuery({
     queryKey: ["admin-all-users", search],
-    queryFn: () => getJson<{ data: { users: any[] } }>("/users", token, { search: search || undefined }),
+    queryFn: () => getJson<{ users: any[] }>("/users", token, { search: search || undefined }),
     enabled: Boolean(token)
   });
 
-  const allUsers = allUsersData?.data?.users ?? [];
+  const allUsers = allUsersData?.users ?? [];
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">

@@ -38,19 +38,19 @@ export default function AdminBusinessesPage() {
 
   const { data: bizData, isLoading: loadingBiz } = useQuery({
     queryKey: ["admin-businesses", search, statusFilter],
-    queryFn: () => getJson<{ data: { businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[] } }>("/admin/businesses", token, { search: search || undefined, status: statusFilter || undefined }),
+    queryFn: () => getJson<{ businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[] }>("/admin/businesses", token, { search: search || undefined, status: statusFilter || undefined }),
     enabled: Boolean(token)
   });
 
   const { data: plansData } = useQuery({
     queryKey: ["admin-plans"],
-    queryFn: () => getJson<{ data: { plans: Plan[] } }>("/plans/all", token),
+    queryFn: () => getJson<{ plans: Plan[] }>("/plans/all", token),
     enabled: Boolean(token)
   });
 
   const { data: usersData, isLoading: loadingUsers } = useQuery({
     queryKey: ["admin-business-users", impersonateTargetBusiness?._id],
-    queryFn: () => getJson<{ data: { users: StaffUser[] } }>("/users", token, { businessId: impersonateTargetBusiness?._id }),
+    queryFn: () => getJson<{ users: StaffUser[] }>("/users", token, { businessId: impersonateTargetBusiness?._id }),
     enabled: Boolean(token && impersonateTargetBusiness?._id)
   });
 
@@ -97,10 +97,10 @@ export default function AdminBusinessesPage() {
     onError: (err) => toast.error("Cancellation failed: " + getErrorMessage(err))
   });
 
-  const businesses = bizData?.data?.businesses ?? [];
-  const plans = plansData?.data?.plans || [];
+  const businesses = bizData?.businesses ?? [];
+  const plans = plansData?.plans || [];
   const PLAN_OPTIONS = plans.map(p => ({ value: p._id, label: p.name }));
-  const bizUsers = (usersData?.data?.users ?? []).filter((u) =>
+  const bizUsers = (usersData?.users ?? []).filter((u) =>
     !userSearch || u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.phone.includes(userSearch)
   );
 

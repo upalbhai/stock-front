@@ -14,11 +14,11 @@ export default function AdminAuditLogsPage() {
 
   const { data: auditData, isLoading: loadingAudit } = useQuery({
     queryKey: ["admin-audit-logs"],
-    queryFn: () => getJson<{ data: { logs: AuditLog[]; total: number } }>("/audit-logs", token),
+    queryFn: () => getJson<{ logs: AuditLog[]; total: number }>("/audit-logs", token),
     enabled: Boolean(token)
   });
 
-  const auditLogs = auditData?.data?.logs ?? [];
+  const auditLogs = auditData?.logs ?? [];
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
