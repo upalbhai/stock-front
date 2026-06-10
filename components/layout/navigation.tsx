@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Package, Receipt, LineChart, Settings, Lock,
-  Store, Users, Shield, DollarSign, ArrowLeftRight, ClipboardList, Tag, FolderOpen, Gauge, History, UserCircle, FileText
+  Store, Users, Shield, DollarSign, ArrowLeftRight, ClipboardList, Tag, FolderOpen, Gauge, History, UserCircle, FileText, TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, type UserRole } from "@/components/auth/auth-provider";
@@ -20,6 +20,7 @@ const navItems = [
   { href: "/categories", label: "Categories", icon: FolderOpen, roles: ["owner", "manager"] as UserRole[] },
   { href: "/units", label: "Units", icon: Gauge, roles: ["owner", "manager"] as UserRole[] },
   { href: "/stock", label: "Inventory", icon: Package, roles: ["owner", "manager"] as UserRole[] },
+  { href: "/profit", label: "Profit & Loss", icon: TrendingUp, roles: ["owner", "manager"] as UserRole[] },
   { href: "/stock/transfers", label: "Transfers", icon: ArrowLeftRight, roles: ["owner", "manager"] as UserRole[] },
   { href: "/reports", label: "Reports", icon: LineChart, roles: ["owner", "manager"] as UserRole[] },
   { href: "/expenses", label: "Expenses", icon: DollarSign, roles: ["owner", "manager"] as UserRole[] },

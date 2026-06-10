@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/format";
-import { getProductUnitLabel, getActivePackagingUnits } from "@/lib/productUtils";
+import { getProductUnitLabel, getActivePackagingUnits, getUnitDisplayLabel } from "@/lib/productUtils";
 import type { Product, Unit } from "@/lib/types";
 
 export type UnitPickOption = {
   key: string;
   label: string;
+  unitDetail?: string;
   soldUnit: string;
   conversionFactor: number;
   packagingUnitId?: string;
@@ -20,12 +21,17 @@ export type UnitPickOption = {
 };
 
 function buildUnitOptions(product: Product): UnitPickOption[] {
-  const baseUnit = getProductUnitLabel(product);
+  const baseUnitMeta =
+    typeof product.unitId === "object" && product.unitId
+      ? getUnitDisplayLabel(product.unitId, product.unit || "pcs")
+      : { label: product.unit || "pcs", detail: undefined };
+  const baseUnit = baseUnitMeta.label;
 
   const options: UnitPickOption[] = [
     {
       key: "base",
       label: baseUnit,
+      unitDetail: baseUnitMeta.detail,
       soldUnit: baseUnit,
       conversionFactor: 1,
       price: product.price,
@@ -35,7 +41,7 @@ function buildUnitOptions(product: Product): UnitPickOption[] {
 
   for (const pkg of getActivePackagingUnits(product)) {
     const unit = typeof pkg.unitId === "object" ? (pkg.unitId as Unit) : null;
-    const abbr = unit?.abbreviation || unit?.name || "unit";
+    const { label: abbr, detail: unitDetail } = getUnitDisplayLabel(unit, "unit");
     const price = pkg.price ?? product.price * pkg.qtyPerUnit;
     const cost = pkg.costPrice ?? (product.costPrice ?? 0) * pkg.qtyPerUnit;
     const margin = price - cost;
@@ -44,6 +50,7 @@ function buildUnitOptions(product: Product): UnitPickOption[] {
     options.push({
       key: typeof pkg.unitId === "object" ? pkg.unitId._id : String(pkg.unitId),
       label: abbr,
+      unitDetail,
       soldUnit: abbr,
       conversionFactor: pkg.qtyPerUnit,
       packagingUnitId: typeof pkg.unitId === "object" ? pkg.unitId._id : pkg.unitId,
@@ -107,7 +114,10 @@ export function UnitPickerModal({ open, product, onClose, onConfirm }: UnitPicke
                   : "border-border hover:border-primary/40"
               }`}
             >
-              <p className="font-semibold capitalize">{opt.label}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold capitalize">{opt.unitDetail}</p>
+
+              </div>
               <p className="text-xs text-muted mt-0.5">{opt.description}</p>
             </button>
           ))}

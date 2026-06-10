@@ -18,9 +18,10 @@ import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
 import { getJson, getJsonWithMeta, apiFetch } from "@/lib/api-client";
-import { formatNumber, formatDate, formatDateTime } from "@/lib/format";
+import { formatNumber, formatDate, formatDateTime, formatCurrency } from "@/lib/format";
 import { getErrorMessage } from "@/lib/error";
-import { buildStockUnitOptions, formatStockMovementQty, getProductUnitLabel } from "@/lib/productUtils";
+import { buildStockUnitOptions, formatStockMovementQty, getProductUnitLabel, getStockPriceDefaults, calcStockEntryProfit } from "@/lib/productUtils";
+import { Switch } from "@/components/ui/switch";
 import type { Product, StockTransfer, Outlet } from "@/lib/types";
 
 type StockHistoryEntry = {
@@ -35,6 +36,14 @@ type StockHistoryEntry = {
   conversionFactor?: number;
   baseUnit?: string;
   packagingUnitId?: { name?: string; abbreviation?: string };
+  soldUnitCost?: number;
+  soldUnitPrice?: number;
+  costValue?: number;
+  sellValue?: number;
+  expectedProfit?: number;
+  costLoss?: number;
+  realizedProfit?: number;
+  lossReason?: string;
   referenceType?: string;
   note?: string;
   createdAt: string;
@@ -46,6 +55,9 @@ type StockHistorySummary = {
   totalOutQty: number;
   entriesIn: number;
   entriesOut: number;
+  totalCostValue?: number;
+  totalSellValue?: number;
+  totalExpectedProfit?: number;
 };
 
 type StockSummary = { totalSkus: number; onHandTotal: number; lowStock: number };
@@ -131,6 +143,50 @@ function buildHistoryColumns(): Parameters<typeof DataTable<StockHistoryEntry>>[
       )
     },
     {
+      key: "profit",
+      header: "Potential margin",
+      render: (e: StockHistoryEntry) =>
+        e.qty > 0 && e.expectedProfit != null ? (
+          <span className="text-xs text-muted">{formatCurrency(e.expectedProfit)}</span>
+        ) : (
+          <span className="text-xs text-muted">—</span>
+        )
+    },
+    {
+      key: "loss",
+      header: "Loss",
+      render: (e: StockHistoryEntry) =>
+        e.qty > 0 && e.costLoss != null && e.costLoss > 0 ? (
+          <span className="text-xs font-semibold text-danger">{formatCurrency(e.costLoss)}</span>
+        ) : (
+          <span className="text-xs text-muted">—</span>
+        )
+    },
+    {
+      key: "profit",
+      header: "Real profit",
+      render: (e: StockHistoryEntry) =>
+        e.type === "sale" && e.realizedProfit != null ? (
+          <span className={`text-xs font-semibold ${e.realizedProfit >= 0 ? "text-green-600" : "text-danger"}`}>
+            {formatCurrency(e.realizedProfit)}
+          </span>
+        ) : (
+          <span className="text-xs text-muted">—</span>
+        )
+    },
+    {
+      key: "value",
+      header: "Cost / Sell",
+      render: (e: StockHistoryEntry) =>
+        e.qty > 0 && (e.costValue != null || e.sellValue != null) ? (
+          <span className="text-[10px] text-muted whitespace-nowrap">
+            {formatCurrency(e.costValue ?? 0)} → {formatCurrency(e.sellValue ?? 0)}
+          </span>
+        ) : (
+          <span className="text-xs text-muted">—</span>
+        )
+    },
+    {
       key: "by",
       header: "By",
       render: (e: StockHistoryEntry) => (
@@ -187,6 +243,10 @@ export default function StockPage() {
   const [adjustUnitKey, setAdjustUnitKey] = React.useState("base");
   const [adjustNote, setAdjustNote] = React.useState("");
   const [adjustError, setAdjustError] = React.useState<string | null>(null);
+  const [adjustSellPrice, setAdjustSellPrice] = React.useState("");
+  const [adjustCostPrice, setAdjustCostPrice] = React.useState("");
+  const [adjustUpdateProductPrices, setAdjustUpdateProductPrices] = React.useState(false);
+  const [adjustLossReason, setAdjustLossReason] = React.useState("spoilage");
 
   // Transfer Dialog State
   const [showTransferModal, setShowTransferModal] = React.useState(false);
@@ -427,7 +487,12 @@ export default function StockPage() {
     setAdjustType("add");
     setAdjustEntryType("purchase");
     setAdjustUnitKey("base");
+    setAdjustUpdateProductPrices(false);
+    setAdjustLossReason("spoilage");
     setAdjustError(null);
+    const defaults = getStockPriceDefaults(product, "base");
+    setAdjustSellPrice(String(defaults.sellPrice || ""));
+    setAdjustCostPrice(String(defaults.costPrice || ""));
     setShowAdjustModal(true);
   };
 
@@ -440,6 +505,45 @@ export default function StockPage() {
   const adjustCount = Number(adjustQty) || 0;
   const adjustBaseUnit = selectedProduct ? getProductUnitLabel(selectedProduct) : "pcs";
   const adjustBaseAmount = adjustCount * (selectedAdjustUnit?.conversionFactor ?? 1);
+  const isStockInEntry = usePackagingEntry
+    ? adjustEntryType === "purchase"
+    : adjustType === "add" && Number(adjustQty) > 0;
+  const isLossEntry = usePackagingEntry
+    ? adjustEntryType === "wastage"
+    : adjustType === "add" && Number(adjustQty) < 0;
+  const adjustPriceUnit = selectedAdjustUnit?.soldUnit ?? adjustBaseUnit;
+  const adjustSellNum = Number(adjustSellPrice) || 0;
+  const adjustCostNum = Number(adjustCostPrice) || 0;
+  const adjustEntryCount = usePackagingEntry ? adjustCount : Math.abs(Number(adjustQty) || 0);
+  const adjustProfitPreview = isStockInEntry && adjustEntryCount > 0
+    ? calcStockEntryProfit(adjustEntryCount, adjustCostNum, adjustSellNum)
+    : null;
+
+  React.useEffect(() => {
+    if (!selectedProduct || !showAdjustModal) return;
+    const defaults = getStockPriceDefaults(selectedProduct, adjustUnitKey);
+    setAdjustSellPrice(String(defaults.sellPrice || ""));
+    setAdjustCostPrice(String(defaults.costPrice || ""));
+  }, [selectedProduct, adjustUnitKey, showAdjustModal]);
+
+  const buildPricePayload = () => {
+    if (isLossEntry && adjustEntryCount > 0) {
+      return {
+        soldUnitCost: adjustCostNum,
+        lossReason: adjustLossReason,
+        ...(usePackagingEntry && selectedAdjustUnit?.key !== "base" ? { soldQty: adjustCount } : {})
+      };
+    }
+    if (!isStockInEntry || adjustEntryCount <= 0) return {};
+    return {
+      soldUnitCost: adjustCostNum,
+      soldUnitPrice: adjustSellNum,
+      updateProductPrices: adjustUpdateProductPrices,
+      ...(usePackagingEntry && selectedAdjustUnit?.key !== "base"
+        ? { soldQty: adjustCount }
+        : {})
+    };
+  };
 
   const handleAdjustSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -467,7 +571,8 @@ export default function StockPage() {
         qty: apiQty,
         type: apiType,
         note: adjustNote || `${adjustEntryType === "purchase" ? "Stock received" : adjustEntryType === "wastage" ? "Stock removed" : "Stock count set"}${selectedAdjustUnit.key !== "base" ? ` — ${adjustCount} ${selectedAdjustUnit.soldUnit}` : ""}`,
-        ...packagingMeta
+        ...packagingMeta,
+        ...buildPricePayload()
       });
       return;
     }
@@ -479,7 +584,8 @@ export default function StockPage() {
       qty: qtyVal,
       type: adjustType === "set" ? "adjustment" : "purchase",
       note: adjustNote || "Manual stock adjustment",
-      ...packagingMeta
+      ...packagingMeta,
+      ...buildPricePayload()
     });
   };
 
@@ -711,7 +817,7 @@ export default function StockPage() {
           </div>
 
           {/* Summary cards for filtered period */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <StatsCard
               label="Stock In"
               value={formatNumber(historySummary?.totalInQty ?? 0)}
@@ -731,6 +837,24 @@ export default function StockPage() {
               value={formatNumber((historySummary?.totalInQty ?? 0) - (historySummary?.totalOutQty ?? 0))}
               hint={historyStartDate || historyEndDate ? `${historyStartDate || "…"} → ${historyEndDate || "…"}` : "All time in filter"}
               icon={<History className="h-5 w-5" />}
+            />
+            <StatsCard
+              label="Stock Cost"
+              value={formatCurrency(historySummary?.totalCostValue ?? 0)}
+              hint="Money spent on stock in"
+              color="warning"
+            />
+            <StatsCard
+              label="Expected Revenue"
+              value={formatCurrency(historySummary?.totalSellValue ?? 0)}
+              hint="If all stock in sells at entry price"
+              color="primary"
+            />
+            <StatsCard
+              label="Potential margin"
+              value={formatCurrency(historySummary?.totalExpectedProfit ?? 0)}
+              hint="If stock-in sells at entry price — NOT profit yet"
+              color={(historySummary?.totalExpectedProfit ?? 0) >= 0 ? "success" : "danger"}
             />
           </div>
 
@@ -953,7 +1077,7 @@ export default function StockPage() {
       )}
 
       {/* MODAL: Quick Adjust Stock */}
-      <Modal open={showAdjustModal} onClose={() => setShowAdjustModal(false)} title="Adjust Stock Inventory" size={usePackagingEntry ? "md" : "sm"}>
+      <Modal open={showAdjustModal} onClose={() => setShowAdjustModal(false)} title="Adjust Stock Inventory" size={isStockInEntry ? "lg" : usePackagingEntry ? "md" : "sm"}>
         <form onSubmit={handleAdjustSubmit} className="space-y-4">
           <div>
             <p className="text-sm font-semibold">{selectedProduct?.name}</p>
@@ -1053,6 +1177,119 @@ export default function StockPage() {
                 <Input id="adjust-qty" required type="number" value={adjustQty} onChange={(e) => setAdjustQty(e.target.value)} placeholder="e.g. 50 or -10" />
               </div>
             </>
+          )}
+
+          {isStockInEntry && (
+            <div className="space-y-3 rounded-xl border border-border/60 bg-surface/40 p-3">
+              <div>
+                <p className="text-xs font-semibold text-text">Pricing for this stock batch</p>
+                <p className="text-[10px] text-muted mt-0.5">
+                  Prefilled from product defaults — change if supplier rates went up or down.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">
+                    Cost price per {adjustPriceUnit} (₹)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={adjustCostPrice}
+                    onChange={(e) => setAdjustCostPrice(e.target.value)}
+                    placeholder="What you paid"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted">
+                    Sell price per {adjustPriceUnit} (₹)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={adjustSellPrice}
+                    onChange={(e) => setAdjustSellPrice(e.target.value)}
+                    placeholder="What you will sell at"
+                  />
+                </div>
+              </div>
+
+              {adjustProfitPreview && adjustEntryCount > 0 && (
+                <div className="rounded-lg border border-border/50 bg-surface/60 p-2.5 text-xs space-y-1">
+                  <div className="flex justify-between text-muted">
+                    <span>Total cost ({adjustEntryCount} {adjustPriceUnit})</span>
+                    <span>{formatCurrency(adjustProfitPreview.costValue)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted">
+                    <span>Expected revenue</span>
+                    <span>{formatCurrency(adjustProfitPreview.sellValue)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold pt-1 border-t border-border/40">
+                    <span>Potential margin</span>
+                    <span className={adjustProfitPreview.expectedProfit >= 0 ? "text-muted" : "text-danger"}>
+                      {formatCurrency(adjustProfitPreview.expectedProfit)}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted">Not real profit until items are sold</p>
+                </div>
+              )}
+
+              <label className="flex items-center justify-between gap-3 rounded-lg border border-border/50 px-3 py-2">
+                <div>
+                  <p className="text-xs font-medium">Update product default prices</p>
+                  <p className="text-[10px] text-muted">Save these as the new default sell &amp; cost price</p>
+                </div>
+                <Switch
+                  checked={adjustUpdateProductPrices}
+                  onCheckedChange={setAdjustUpdateProductPrices}
+                />
+              </label>
+            </div>
+          )}
+
+          {isLossEntry && (
+            <div className="space-y-3 rounded-xl border border-danger/30 bg-danger/5 p-3">
+              <div>
+                <p className="text-xs font-semibold text-text">Record loss (not a sale)</p>
+                <p className="text-[10px] text-muted mt-0.5">
+                  This reduces net profit on the Profit &amp; Loss page.
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Loss reason</label>
+                <Select
+                  value={adjustLossReason}
+                  onValueChange={setAdjustLossReason}
+                  options={[
+                    { value: "spoilage", label: "Spoilage" },
+                    { value: "expiry", label: "Expired" },
+                    { value: "damage", label: "Damaged" },
+                    { value: "customer_return_spoiled", label: "Customer return (spoiled)" },
+                    { value: "owner_replacement", label: "Owner replacement" },
+                    { value: "other", label: "Other" }
+                  ]}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">
+                  Cost per {adjustPriceUnit} (₹) — for loss calculation
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={adjustCostPrice}
+                  onChange={(e) => setAdjustCostPrice(e.target.value)}
+                />
+              </div>
+              {adjustEntryCount > 0 && adjustCostNum > 0 && (
+                <p className="text-sm font-semibold text-danger">
+                  Loss: {formatCurrency(adjustEntryCount * adjustCostNum)}
+                </p>
+              )}
+            </div>
           )}
 
           <div>
