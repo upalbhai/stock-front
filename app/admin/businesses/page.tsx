@@ -142,7 +142,7 @@ export default function AdminBusinessesPage() {
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input className="pl-9" placeholder="Search businesses..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <div className="w-48">
@@ -167,8 +167,8 @@ export default function AdminBusinessesPage() {
             render: (b) => (
               <div>
                 <p className="font-semibold text-sm">{b.name}</p>
-                <p className="text-xs text-muted">Owner: {b.ownerId?.name || "No owner"} ({b.ownerId?.phone || "No phone"})</p>
-                {b.ownerId?.email && <p className="text-[10px] text-muted font-mono">{b.ownerId.email}</p>}
+                <p className="text-xs text-muted-foreground">Owner: {b.ownerId?.name || "No owner"} ({b.ownerId?.phone || "No phone"})</p>
+                {b.ownerId?.email && <p className="text-[10px] text-muted-foreground font-mono">{b.ownerId.email}</p>}
               </div>
             )
           },
@@ -180,8 +180,8 @@ export default function AdminBusinessesPage() {
                   <Badge variant="soft" className="capitalize text-[10px]">{typeof b.planId === "object" ? (b.planId as any).name : b.planId || b.plan}</Badge>
                   <Badge variant={b.subscriptionStatus === "active" ? "default" : b.subscriptionStatus === "trial" ? "soft" : "danger"} className="capitalize text-[10px]">{b.subscriptionStatus || "unknown"}</Badge>
                 </div>
-                {b.subscriptionStatus === "trial" && b.trialEndsAt && <span className="text-[10px] text-muted block">Trial ends: {new Date(b.trialEndsAt).toLocaleDateString()}</span>}
-                {b.subscriptionStatus === "active" && b.currentPeriodEnd && <span className="text-[10px] text-muted block">Period ends: {new Date(b.currentPeriodEnd).toLocaleDateString()}</span>}
+                {b.subscriptionStatus === "trial" && b.trialEndsAt && <span className="text-[10px] text-muted-foreground block">Trial ends: {new Date(b.trialEndsAt).toLocaleDateString()}</span>}
+                {b.subscriptionStatus === "active" && b.currentPeriodEnd && <span className="text-[10px] text-muted-foreground block">Period ends: {new Date(b.currentPeriodEnd).toLocaleDateString()}</span>}
               </div>
             )
           },
@@ -225,12 +225,12 @@ export default function AdminBusinessesPage() {
         <form onSubmit={(e) => { e.preventDefault(); if (selectedBusiness) planMutation.mutate({ id: selectedBusiness._id, body: { planId: planForm.plan, maxOutlets: Number(planForm.maxOutlets), subscriptionStatus: planForm.subscriptionStatus, currentPeriodEnd: planForm.planExpiresAt ? new Date(planForm.planExpiresAt).toISOString() : undefined } }); }} className="space-y-4">
           <div>
             <p className="text-sm font-semibold">{selectedBusiness?.name}</p>
-            <p className="text-xs text-muted">Customize account features level and boundaries.</p>
+            <p className="text-xs text-muted-foreground">Customize account features level and boundaries.</p>
           </div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Plan tier *</label><Select id="plan-level" value={planForm.plan} onValueChange={(v) => setPlanForm(f => ({ ...f, plan: v }))} options={PLAN_OPTIONS} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Max Outlets permitted</label><Input id="max-outlets" type="number" min={1} max={100} value={planForm.maxOutlets} onChange={(e) => setPlanForm(f => ({ ...f, maxOutlets: Number(e.target.value) }))} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Status</label><Select id="sub-status" value={planForm.subscriptionStatus} onValueChange={(v) => setPlanForm(f => ({ ...f, subscriptionStatus: v }))} options={[{ value: "trial", label: "Free Trial" }, { value: "active", label: "Active subscription" }, { value: "past_due", label: "Past Due" }, { value: "unpaid", label: "Unpaid / Suspended" }]} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Plan Expiry Date</label><Input id="plan-expires" type="date" value={planForm.planExpiresAt} onChange={(e) => setPlanForm(f => ({ ...f, planExpiresAt: e.target.value }))} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Plan tier *</label><Select id="plan-level" value={planForm.plan} onValueChange={(v) => setPlanForm(f => ({ ...f, plan: v }))} options={PLAN_OPTIONS} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Max Outlets permitted</label><Input id="max-outlets" type="number" min={1} max={100} value={planForm.maxOutlets} onChange={(e) => setPlanForm(f => ({ ...f, maxOutlets: Number(e.target.value) }))} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label><Select id="sub-status" value={planForm.subscriptionStatus} onValueChange={(v) => setPlanForm(f => ({ ...f, subscriptionStatus: v }))} options={[{ value: "trial", label: "Free Trial" }, { value: "active", label: "Active subscription" }, { value: "past_due", label: "Past Due" }, { value: "unpaid", label: "Unpaid / Suspended" }]} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Plan Expiry Date</label><Input id="plan-expires" type="date" value={planForm.planExpiresAt} onChange={(e) => setPlanForm(f => ({ ...f, planExpiresAt: e.target.value }))} /></div>
           <div className="flex gap-3 pt-2"><Button variant="outline" type="button" className="flex-1" onClick={() => setShowPlanModal(false)}>Cancel</Button><Button type="submit" className="flex-1" disabled={planMutation.isPending}>{planMutation.isPending ? "Updating..." : "Save Settings"}</Button></div>
         </form>
       </Modal>
@@ -238,27 +238,27 @@ export default function AdminBusinessesPage() {
       <Modal open={showManualSubModal} onClose={() => setShowManualSubModal(false)} title="Create Manual Subscription" size="sm">
         <form onSubmit={(e) => { e.preventDefault(); if(selectedBusiness) manualSubMutation.mutate({ businessId: selectedBusiness._id, planId: manualSubForm.planId, billingCycle: manualSubForm.billingCycle, amount: manualSubForm.amount ? Number(manualSubForm.amount) : undefined, paymentReference: manualSubForm.paymentReference || undefined, endDate: manualSubForm.endDate || undefined, notes: manualSubForm.notes || undefined }); }} className="space-y-4">
           <div><p className="text-sm font-semibold">{selectedBusiness?.name}</p></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Plan tier *</label><Select id="manual-plan-id" value={manualSubForm.planId} onValueChange={(v) => setManualSubForm(f => ({ ...f, planId: v }))} options={PLAN_OPTIONS} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Billing Cycle</label><Select id="manual-cycle" value={manualSubForm.billingCycle} onValueChange={(v) => setManualSubForm(f => ({ ...f, billingCycle: v }))} options={[{ value: "monthly", label: "Monthly" }, { value: "yearly", label: "Yearly" }]} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Amount Paid (INR)</label><Input id="manual-amount" type="number" placeholder="Optional." value={manualSubForm.amount} onChange={(e) => setManualSubForm(f => ({ ...f, amount: e.target.value }))} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Payment Reference</label><Input id="manual-ref" placeholder="e.g. CASH_01" value={manualSubForm.paymentReference} onChange={(e) => setManualSubForm(f => ({ ...f, paymentReference: e.target.value }))} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Expiry Date</label><Input id="manual-expires" type="date" value={manualSubForm.endDate} onChange={(e) => setManualSubForm(f => ({ ...f, endDate: e.target.value }))} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">Internal Notes</label><Input id="manual-notes" value={manualSubForm.notes} onChange={(e) => setManualSubForm(f => ({ ...f, notes: e.target.value }))} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Plan tier *</label><Select id="manual-plan-id" value={manualSubForm.planId} onValueChange={(v) => setManualSubForm(f => ({ ...f, planId: v }))} options={PLAN_OPTIONS} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Billing Cycle</label><Select id="manual-cycle" value={manualSubForm.billingCycle} onValueChange={(v) => setManualSubForm(f => ({ ...f, billingCycle: v }))} options={[{ value: "monthly", label: "Monthly" }, { value: "yearly", label: "Yearly" }]} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Amount Paid (INR)</label><Input id="manual-amount" type="number" placeholder="Optional." value={manualSubForm.amount} onChange={(e) => setManualSubForm(f => ({ ...f, amount: e.target.value }))} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Payment Reference</label><Input id="manual-ref" placeholder="e.g. CASH_01" value={manualSubForm.paymentReference} onChange={(e) => setManualSubForm(f => ({ ...f, paymentReference: e.target.value }))} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Expiry Date</label><Input id="manual-expires" type="date" value={manualSubForm.endDate} onChange={(e) => setManualSubForm(f => ({ ...f, endDate: e.target.value }))} /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Internal Notes</label><Input id="manual-notes" value={manualSubForm.notes} onChange={(e) => setManualSubForm(f => ({ ...f, notes: e.target.value }))} /></div>
           <div className="flex gap-3 pt-2"><Button variant="outline" type="button" className="flex-1" onClick={() => setShowManualSubModal(false)}>Cancel</Button><Button type="submit" className="flex-1 bg-indigo-600 text-white hover:bg-indigo-700" disabled={manualSubMutation.isPending}>{manualSubMutation.isPending ? "Creating..." : "Apply Subscription"}</Button></div>
         </form>
       </Modal>
 
       <Modal open={showImpersonateModal} onClose={() => setShowImpersonateModal(false)} title={`Impersonate ${impersonateTargetBusiness?.name}`} size="md">
         <div className="space-y-4">
-          <p className="text-xs text-muted">Select a staff member or owner to temporarily log into their portal session.</p>
+          <p className="text-xs text-muted-foreground">Select a staff member or owner to temporarily log into their portal session.</p>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="pl-9" placeholder="Search by name or phone..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} />
           </div>
           <div className="max-h-60 overflow-y-auto space-y-2">
-            {loadingUsers ? <p className="text-xs text-muted animate-pulse">Loading...</p> : bizUsers.map((u) => (
-              <div key={u._id} className="flex justify-between items-center bg-surface border border-border p-3 rounded-2xl">
-                <div><p className="font-semibold text-sm">{u.name}</p><p className="text-xs text-muted capitalize">{u.role} — {u.phone}</p></div>
+            {loadingUsers ? <p className="text-xs text-muted-foreground animate-pulse">Loading...</p> : bizUsers.map((u) => (
+              <div key={u._id} className="flex justify-between items-center bg-card border border-border p-3 rounded-2xl">
+                <div><p className="font-semibold text-sm">{u.name}</p><p className="text-xs text-muted-foreground capitalize">{u.role} — {u.phone}</p></div>
                 <Button size="sm" onClick={() => executeImpersonation(u._id)} disabled={impersonatingId !== null}>{impersonatingId === u._id ? "Logging In..." : "Log In"}</Button>
               </div>
             ))}

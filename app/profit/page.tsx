@@ -241,7 +241,7 @@ export default function ProfitPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-primary" /> Profit &amp; Loss Ledger
           </h1>
-          <p className="text-sm text-muted mt-1 max-w-2xl">
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Separates <strong>potential margin</strong> (stock bought, not sold yet) from{" "}
             <strong>real profit</strong> (actual sales) and <strong>losses</strong> (spoilage, spoiled returns, replacements).
           </p>
@@ -256,25 +256,25 @@ export default function ProfitPage() {
         <p className="font-semibold flex items-center gap-2">
           <Info className="h-4 w-4 text-primary" /> How to read this page
         </p>
-        <ul className="text-muted text-xs space-y-1 list-disc pl-5">
-          <li><span className="text-text font-medium">Stock received</span> — shows potential margin if everything sells. This is NOT profit yet.</li>
-          <li><span className="text-text font-medium">Sales</span> — real profit only when a customer pays.</li>
-          <li><span className="text-text font-medium">Spoilage / spoiled return</span> — money lost on unsold or bad stock.</li>
-          <li><span className="text-text font-medium">Owner replacement</span> — you gave a free replacement; counts as your cost.</li>
+        <ul className="text-muted-foreground text-xs space-y-1 list-disc pl-5">
+          <li><span className="text-foreground font-medium">Stock received</span> — shows potential margin if everything sells. This is NOT profit yet.</li>
+          <li><span className="text-foreground font-medium">Sales</span> — real profit only when a customer pays.</li>
+          <li><span className="text-foreground font-medium">Spoilage / spoiled return</span> — money lost on unsold or bad stock.</li>
+          <li><span className="text-foreground font-medium">Owner replacement</span> — you gave a free replacement; counts as your cost.</li>
         </ul>
       </div>
 
       {/* Date filter */}
       <div className="flex flex-wrap items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted" />
+        <Calendar className="h-4 w-4 text-muted-foreground" />
         <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-36" />
-        <span className="text-xs text-muted">to</span>
+        <span className="text-xs text-muted-foreground">to</span>
         <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-36" />
       </div>
 
       {/* Real profit section */}
       <div>
-        <p className="text-xs uppercase tracking-wide text-muted mb-3 font-semibold">Real money (sold &amp; lost)</p>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3 font-semibold">Real money (sold &amp; lost)</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             label="Sales revenue"
@@ -307,7 +307,7 @@ export default function ProfitPage() {
 
       {/* Losses breakdown */}
       <div>
-        <p className="text-xs uppercase tracking-wide text-muted mb-3 font-semibold">Losses &amp; shrinkage</p>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3 font-semibold">Losses &amp; shrinkage</p>
         <div className="grid gap-4 sm:grid-cols-3">
           <StatsCard
             label="Spoilage / damage"
@@ -335,7 +335,7 @@ export default function ProfitPage() {
 
       {/* Unrealized / on hand */}
       <div>
-        <p className="text-xs uppercase tracking-wide text-muted mb-3 font-semibold">Not sold yet (potential only)</p>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3 font-semibold">Not sold yet (potential only)</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             label="Stock invested (period)"
@@ -376,7 +376,7 @@ export default function ProfitPage() {
             {
               key: "time",
               header: "Time",
-              render: (m) => <span className="text-xs text-muted whitespace-nowrap">{formatDateTime(m.createdAt)}</span>
+              render: (m) => <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(m.createdAt)}</span>
             },
             {
               key: "category",
@@ -390,7 +390,7 @@ export default function ProfitPage() {
                     {m.categoryLabel}
                   </Badge>
                   {m.categoryHint && (
-                    <p className="text-[10px] text-muted mt-0.5 max-w-[200px]">{m.categoryHint}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 max-w-[200px]">{m.categoryHint}</p>
                   )}
                 </div>
               )
@@ -415,15 +415,15 @@ export default function ProfitPage() {
               header: "Cost → Sell",
               render: (m) =>
                 m.costValue > 0 || m.sellValue > 0 ? (
-                  <span className="text-[10px] text-muted whitespace-nowrap">
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                     {formatCurrency(m.costValue)} → {formatCurrency(m.sellValue)}
                   </span>
                 ) : m.realizedRevenue > 0 ? (
-                  <span className="text-[10px] text-muted whitespace-nowrap">
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                     COGS {formatCurrency(m.realizedCost)} / Rev {formatCurrency(m.realizedRevenue)}
                   </span>
                 ) : (
-                  <span className="text-xs text-muted">—</span>
+                  <span className="text-xs text-muted-foreground">—</span>
                 )
             },
             {
@@ -439,13 +439,13 @@ export default function ProfitPage() {
                           ? "text-green-600"
                           : impact.tone === "loss"
                             ? "text-danger"
-                            : "text-muted"
+                            : "text-muted-foreground"
                       }`}
                     >
                       {impact.value === 0 ? "—" : formatCurrency(Math.abs(impact.value))}
                       {impact.tone === "loss" && impact.value !== 0 ? " −" : ""}
                     </span>
-                    <p className="text-[10px] text-muted">{impact.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{impact.label}</p>
                   </div>
                 );
               }
@@ -454,7 +454,7 @@ export default function ProfitPage() {
               key: "note",
               header: "Note",
               render: (m) => (
-                <span className="text-xs text-muted truncate max-w-[140px] block" title={m.note}>
+                <span className="text-xs text-muted-foreground truncate max-w-[140px] block" title={m.note}>
                   {m.note || "—"}
                 </span>
               )
@@ -473,19 +473,19 @@ export default function ProfitPage() {
       >
         <form className="space-y-4" onSubmit={handleRecordIssue}>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Issue type *</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Issue type *</label>
             <Select
               value={issueType}
               onValueChange={setIssueType}
               options={ISSUE_TYPES.map((t) => ({ value: t.value, label: t.label }))}
             />
-            <p className="text-[10px] text-muted mt-1">{issueConfig.hint}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">{issueConfig.hint}</p>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Search product</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Search product</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-9"
                 placeholder="Product name..."
@@ -504,16 +504,16 @@ export default function ProfitPage() {
                   }`}
                 >
                   <span className="font-medium">{p.name}</span>
-                  <span className="text-xs text-muted ml-2">Stock: {p.onHandQty}</span>
+                  <span className="text-xs text-muted-foreground ml-2">Stock: {p.onHandQty}</span>
                 </button>
               ))}
-              {!products.length && <p className="text-xs text-muted text-center py-2">Search for a product</p>}
+              {!products.length && <p className="text-xs text-muted-foreground text-center py-2">Search for a product</p>}
             </div>
           </div>
 
           {selectedProduct && unitOptions.length > 1 && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Unit</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Unit</label>
               <div className="flex flex-wrap gap-2">
                 {unitOptions.map((opt) => (
                   <button
@@ -521,7 +521,7 @@ export default function ProfitPage() {
                     type="button"
                     onClick={() => setIssueUnitKey(opt.key)}
                     className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                      issueUnitKey === opt.key ? "bg-primary text-white" : "bg-border/40 text-muted"
+                      issueUnitKey === opt.key ? "bg-primary text-white" : "bg-border/40 text-muted-foreground"
                     }`}
                   >
                     {opt.label}
@@ -533,13 +533,13 @@ export default function ProfitPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
                 Quantity ({selectedUnit?.soldUnit ?? "units"}) *
               </label>
               <Input type="number" min={1} required value={issueQty} onChange={(e) => setIssueQty(e.target.value)} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
                 Cost per unit (₹) {isGoodReturn ? "" : "— for loss calc"}
               </label>
               <Input type="number" min={0} step="0.01" value={issueCost} onChange={(e) => setIssueCost(e.target.value)} />
@@ -551,18 +551,18 @@ export default function ProfitPage() {
               <p className="text-danger font-semibold flex items-center gap-1">
                 <TrendingDown className="h-4 w-4" /> Loss: {formatCurrency(lossPreview)}
               </p>
-              <p className="text-[10px] text-muted mt-1">This reduces your net profit — not potential margin.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">This reduces your net profit — not potential margin.</p>
             </div>
           )}
 
           {isGoodReturn && (
-            <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-3 text-xs text-muted">
+            <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-3 text-xs text-muted-foreground">
               Good returns are restocked. No loss recorded unless you refund the customer separately.
             </div>
           )}
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Note</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Note</label>
             <Input value={issueNote} onChange={(e) => setIssueNote(e.target.value)} placeholder="Optional details" />
           </div>
 

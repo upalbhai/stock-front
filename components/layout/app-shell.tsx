@@ -1,16 +1,107 @@
 "use client";
 
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { SideNav, BottomNav } from "@/components/layout/navigation";
+import {
+  Bell,
+  ChevronRight,
+  Clock,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  RefreshCw,
+  Search,
+  User,
+} from "lucide-react";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { BottomNav } from "@/components/layout/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/auth/auth-provider";
 import { OutletSwitcher } from "@/components/layout/outlet-switcher";
 import { useOnlineStatus } from "@/hooks/use-online";
-import React from "react";
-import Link from "next/link";
+import { useVisibleSidebarGroups } from "@/components/layout/use-visible-sidebar";
+import { allSidebarItems } from "@/components/layout/navigation-config";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+function useBreadcrumbs(pathname: string) {
+  return useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments.length === 0) return [{ label: "Dashboard", href: "/" }];
+
+    const breadcrumbs: { label: string; href: string }[] = [
+      { label: "Home", href: "/" },
+    ];
+
+    for (let i = 0; i < segments.length; i++) {
+      const href = "/" + segments.slice(0, i + 1).join("/");
+      const matchingItem = allSidebarItems.find((item) => item.path === href);
+      const segment = segments[i];
+      const label =
+        matchingItem?.title ??
+        segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
+      if (href !== "/") {
+        breadcrumbs.push({ label, href });
+      }
+    }
+    return breadcrumbs;
+  }, [pathname]);
+}
+
+function LastUpdated() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    setTime(
+      new Date().toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    );
+  }, []);
+  return (
+    <span className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+      <Clock className="h-3 w-3" />
+      {time ? `Updated ${time}` : "Loading..."}
+    </span>
+  );
+}
+
+function NotificationBell() {
+  return (
+    <button
+      className="relative rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label="Notifications"
+    >
+      <Bell className="h-4 w-4" />
+    </button>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -18,85 +109,293 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout, impersonating, exitImpersonation } = useAuth();
   const isAuthRoute = pathname.startsWith("/login");
   const isOnline = useOnlineStatus();
+  const [commandOpen, setCommandOpen] = useState(false);
+  const visibleSidebarGroups = useVisibleSidebarGroups();
+  const breadcrumbs = useBreadcrumbs(pathname);
+  const pageTitle = breadcrumbs[breadcrumbs.length - 1]?.label ?? "Dashboard";
 
-  React.useEffect(() => {
-    if (user?.role === "superadmin" && !impersonating && pathname !== "/admin" && !pathname.startsWith("/admin") && !isAuthRoute) {
+  const isSuperAdmin = user?.role === "superadmin";
+  const displayName = user?.name ?? "User";
+  const userRole = user?.role?.toUpperCase() ?? "STAFF";
+
+  useEffect(() => {
+    if (
+      user?.role === "superadmin" &&
+      !impersonating &&
+      pathname !== "/admin" &&
+      !pathname.startsWith("/admin") &&
+      !isAuthRoute
+    ) {
       router.push("/admin");
     }
   }, [user, impersonating, pathname, isAuthRoute, router]);
 
-  if (isAuthRoute) {
-    return <main className="min-h-screen px-4 py-10">{children}</main>;
-  }
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCommandOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
-  const isSuperAdmin = user?.role === "superadmin";
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
+
+  const handleNavigate = (path: string) => {
+    setCommandOpen(false);
+    router.push(path);
+  };
+
+  if (isAuthRoute) {
+    return <main className="min-h-svh px-4 py-10">{children}</main>;
+  }
 
   return (
     <RequireAuth>
-      <div className="min-h-screen">
-        {user?.subscriptionStatus === "trial" && user.trialEndsAt && (
-          <div className="bg-primary/10 text-primary py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-4 animate-fade border-b border-primary/20">
-            <span>
-              ⭐ Free Trial Active: {Math.max(0, Math.ceil((new Date(user.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 3600 * 24)))} days remaining
-            </span>
-            <Button size="xs" variant="default" className="rounded-xl px-3 py-1 font-bold shadow-sm" asChild>
-              <Link href="/subscribe">Upgrade Now</Link>
-            </Button>
-          </div>
-        )}
-        {impersonating && (
-          <div className="bg-danger text-white py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-4 animate-fade">
-            <span>⚠️ Impersonation active: Viewing session as {user?.name}. All actions are audited.</span>
-            <Button size="xs" variant="outline" className="border-white text-white hover:bg-white hover:text-danger rounded-xl px-3 py-1 font-bold shadow-sm"
-              onClick={exitImpersonation}>
-              Exit Session
-            </Button>
-          </div>
-        )}
-        <header className="sticky top-0 z-40 border-b border-border/60 bg-surface/85 backdrop-blur">
-          <div className="mx-auto flex w-full items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-4 xl:px-8">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-primary text-xs sm:text-base font-bold text-white shadow-soft">
-                RO
+      <SidebarProvider defaultOpen className="h-svh overflow-hidden">
+        <AppSidebar />
+
+        <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {user?.subscriptionStatus === "trial" && user.trialEndsAt && (
+            <div className="flex shrink-0 animate-fade items-center justify-center gap-4 border-b border-primary/20 bg-primary/10 px-4 py-2 text-center text-xs font-semibold text-primary">
+              <span>
+                Free Trial Active:{" "}
+                {Math.max(
+                  0,
+                  Math.ceil(
+                    (new Date(user.trialEndsAt).getTime() - Date.now()) / (1000 * 3600 * 24)
+                  )
+                )}{" "}
+                days remaining
+              </span>
+              <Button size="xs" variant="default" className="rounded-xl px-3 py-1 font-bold shadow-sm" asChild>
+                <Link href="/subscribe">Upgrade Now</Link>
+              </Button>
+            </div>
+          )}
+
+          {impersonating && (
+            <div className="flex shrink-0 animate-fade items-center justify-center gap-4 bg-destructive px-4 py-2 text-center text-xs font-semibold text-destructive-foreground">
+              <span>
+                Impersonation active: Viewing session as {user?.name}. All actions are audited.
+              </span>
+              <Button
+                size="xs"
+                variant="outline"
+                className="rounded-xl border-white px-3 py-1 font-bold text-white shadow-sm hover:bg-white hover:text-destructive"
+                onClick={exitImpersonation}
+              >
+                Exit Session
+              </Button>
+            </div>
+          )}
+
+          <header className="sticky top-0 z-30 shrink-0 border-b border-border bg-card/95 backdrop-blur-md">
+            <div className="flex h-14 items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4 lg:px-6">
+              <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                <SidebarTrigger className="shrink-0 text-foreground transition-colors hover:bg-accent" />
+
+                {/* Mobile: current page title only */}
+                <span className="truncate text-sm font-semibold text-foreground sm:hidden">
+                  {pageTitle}
+                </span>
+
+                {/* Tablet+: breadcrumb trail */}
+                <nav
+                  aria-label="Breadcrumb"
+                  className="hidden min-w-0 items-center gap-1 text-sm sm:flex"
+                >
+                  {breadcrumbs.map((crumb, idx) => (
+                    <React.Fragment key={`${crumb.href}-${idx}`}>
+                      {idx > 0 && (
+                        <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      )}
+                      {idx === breadcrumbs.length - 1 ? (
+                        <span className="truncate text-sm font-semibold text-foreground">
+                          {crumb.label}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => router.push(crumb.href)}
+                          className="truncate rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {crumb.label}
+                        </button>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </nav>
+
+                {!isOnline && (
+                  <Badge variant="warning" className="hidden shrink-0 px-1.5 py-0 text-[10px] md:inline-flex">
+                    Offline
+                  </Badge>
+                )}
               </div>
-              <div className="min-w-0">
-                <p className="text-sm sm:text-lg font-semibold leading-tight truncate">Outlet Pulse</p>
-                <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-xs text-muted mt-0.5">
-                  <span className="truncate max-w-[70px] sm:max-w-none">{user ? `Hi, ${user.name}` : ""}</span>
-                  {user && <Badge variant="soft" className="px-1 py-0 text-[9px] sm:text-xs">{user.role}</Badge>}
-                  {!isOnline && <Badge variant="warning" className="px-1 py-0 text-[9px] sm:text-xs">Offline</Badge>}
+
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+                {(!isSuperAdmin || impersonating) && (
+                  <OutletSwitcher className="hidden md:block" />
+                )}
+
+                {/* Search: icon on mobile, full on md+ */}
+                <button
+                  onClick={() => setCommandOpen(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground transition-all hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:w-auto md:justify-between md:gap-2 md:px-3"
+                  aria-label="Search menu items"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span className="hidden text-xs md:inline">Search Menu...</span>
+                  <kbd className="pointer-events-none hidden h-4 select-none items-center gap-0.5 rounded border border-border bg-muted px-1 font-mono text-[9px] font-bold text-muted-foreground lg:inline-flex">
+                    <span className="text-[10px]">⌘</span>K
+                  </kbd>
+                </button>
+
+                <div className="hidden lg:flex">
+                  <LastUpdated />
+                </div>
+
+                {(!isSuperAdmin || impersonating) && (
+                  <>
+                    <Button asChild size="icon-sm" className="sm:hidden">
+                      <Link href="/billing" aria-label="New Bill">
+                        <Plus className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" className="hidden h-8 gap-1.5 sm:flex">
+                      <Link href="/billing">New Bill</Link>
+                    </Button>
+                  </>
+                )}
+
+                {isSuperAdmin && !impersonating && (
+                  <Button asChild size="sm" variant="outline" className="hidden h-8 md:flex">
+                    <Link href="/admin">Portal</Link>
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="sm:hidden"
+                  aria-label="Refresh page"
+                  onClick={() => router.refresh()}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden h-8 gap-1.5 transition-all active:scale-95 sm:flex"
+                  aria-label="Refresh page"
+                  onClick={() => router.refresh()}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span className="hidden text-xs font-semibold md:inline">Refresh</span>
+                </Button>
+
+                <div className="hidden h-5 w-px bg-border md:block" />
+                <NotificationBell />
+                <ThemeToggle />
+
+                <div className="hidden md:block">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="rounded-full transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <Avatar name={displayName} size="md" className="cursor-pointer ring-2 ring-border" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" sideOffset={6} className="w-64">
+                      <DropdownMenuLabel className="font-normal">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={displayName} size="lg" />
+                          <div className="flex flex-col">
+                            <p className="text-sm font-bold text-foreground">{displayName}</p>
+                            <p className="mt-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                              {userRole}
+                            </p>
+                          </div>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
+                          <User className="mr-2 h-4 w-4" />
+                          Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push("/")} className="cursor-pointer">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          Dashboard
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout} variant="destructive" className="cursor-pointer">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              {(!isSuperAdmin || impersonating) && <OutletSwitcher className="hidden sm:block" />}
-              {isSuperAdmin && !impersonating && (
-                <Button asChild size="sm" variant="outline" className="h-8 px-2 text-xs sm:h-11 sm:px-8 sm:text-base border-primary/50 text-primary">
-                  <Link href="/admin">Portal</Link>
-                </Button>
-              )}
-              {(!isSuperAdmin || impersonating) && (
-                <Button asChild size="sm" className="hidden sm:flex h-11 px-8 text-base">
-                  <Link href="/billing">New Bill</Link>
-                </Button>
-              )}
-              <ThemeToggle />
-              <Button variant="ghost" size="sm" onClick={logout} className="h-8 px-2 text-xs sm:h-10 sm:px-4 sm:text-sm">
-                Logout
-              </Button>
-            </div>
-          </div>
-        </header>
+          </header>
 
-        <div className="mx-auto grid w-full grid-cols-1 gap-6 px-4 pb-24 pt-6 sm:px-6 xl:px-8 lg:grid-cols-[280px_minmax(0,1fr)] lg:pb-10">
-          <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
-            <SideNav />
-          </aside>
-          <main className="min-w-0 space-y-6">{children}</main>
-        </div>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6">
+            <div className="p-4 md:p-6 xl:p-8">{children}</div>
+          </div>
+        </SidebarInset>
+
+        <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+          <CommandInput placeholder="Search pages and actions..." />
+          <CommandList className="border-t border-border">
+            <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+              <Search className="mx-auto mb-2 h-8 w-8 opacity-30" />
+              No matching pages found.
+            </CommandEmpty>
+            {visibleSidebarGroups.map((group) => (
+              <CommandGroup key={group.label} heading={group.label}>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <CommandItem
+                      key={item.path}
+                      value={`${item.title} ${item.keywords.join(" ")}`}
+                      onSelect={() => handleNavigate(item.path)}
+                      className="flex cursor-pointer items-center gap-3 rounded-md px-4 py-2.5 hover:bg-accent aria-selected:bg-accent"
+                    >
+                      <Icon className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">{item.title}</span>
+                      <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                        {item.path}
+                      </span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            ))}
+            <CommandGroup heading="Actions">
+              <CommandItem
+                value="refresh page"
+                onSelect={() => {
+                  setCommandOpen(false);
+                  router.refresh();
+                }}
+                className="flex cursor-pointer items-center gap-3 rounded-md px-4 py-2.5 hover:bg-accent"
+              >
+                <RefreshCw className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Refresh Page</span>
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </CommandDialog>
 
         <BottomNav />
-      </div>
+      </SidebarProvider>
     </RequireAuth>
   );
 }

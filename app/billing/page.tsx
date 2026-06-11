@@ -464,13 +464,13 @@ export default function BillingPage() {
       {(showSaleModeTabs || isWholesale) && (
         <div className="flex shrink-0 items-center justify-between gap-3 px-0.5">
           {showSaleModeTabs ? (
-            <div className="flex w-full max-w-xs rounded-xl border border-border bg-surface p-0.5">
+            <div className="flex w-full max-w-xs rounded-xl border border-border bg-card p-0.5">
               <button
                 type="button"
                 onClick={() => handleSaleModeChange("retail")}
                 className={cn(
                   "flex-1 rounded-lg py-1.5 text-xs font-semibold transition",
-                  !isWholesale ? "bg-primary text-white" : "text-muted hover:text-text"
+                  !isWholesale ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Retail
@@ -480,7 +480,7 @@ export default function BillingPage() {
                 onClick={() => handleSaleModeChange("wholesale")}
                 className={cn(
                   "flex-1 rounded-lg py-1.5 text-xs font-semibold transition",
-                  isWholesale ? "bg-primary text-white" : "text-muted hover:text-text"
+                  isWholesale ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Wholesale
@@ -490,7 +490,7 @@ export default function BillingPage() {
             <Badge variant="soft" className="text-xs">Wholesale billing</Badge>
           )}
           {isWholesale && billing.taxEnabled && (
-            <span className="hidden text-[10px] text-muted sm:inline">
+            <span className="hidden text-[10px] text-muted-foreground sm:inline">
               GST {billing.taxMode === "inclusive" ? "included in prices" : "added on top"}
             </span>
           )}
@@ -503,7 +503,7 @@ export default function BillingPage() {
         {/* Search */}
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="product-search"
               className="pl-9 py-2.5"
@@ -538,7 +538,7 @@ export default function BillingPage() {
               onClick={() => { setSelectedCategoryId(null); setSelectedParentId(null); }}
               className={cn(
                 "shrink-0 rounded-xl px-3 py-1.5 text-xs font-medium transition",
-                !selectedCategoryId ? "bg-primary text-white" : "bg-surface border border-border text-muted hover:text-text"
+                !selectedCategoryId ? "bg-primary text-white" : "bg-card border border-border text-muted-foreground hover:text-foreground"
               )}
             >
               All
@@ -559,8 +559,8 @@ export default function BillingPage() {
                 className={cn(
                   "shrink-0 flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-medium transition",
                   selectedCategoryId === cat._id
-                    ? "text-white shadow-soft"
-                    : "bg-surface border border-border text-muted hover:text-text"
+                    ? "text-white shadow-sm"
+                    : "bg-card border border-border text-muted-foreground hover:text-foreground"
                 )}
                 style={selectedCategoryId === cat._id ? { backgroundColor: cat.color } : {}}
               >
@@ -594,7 +594,7 @@ export default function BillingPage() {
                   "shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-medium transition border",
                   selectedCategoryId === sub._id
                     ? "bg-primary/10 text-primary border-primary/30"
-                    : "bg-surface border-border text-muted hover:text-text"
+                    : "bg-card border-border text-muted-foreground hover:text-foreground"
                 )}
               >
                 {sub.icon} {sub.name}
@@ -610,7 +610,7 @@ export default function BillingPage() {
             {prodIsRefetching ? `${prodCooldownSeconds}s` : "Refetch"}
           </Button>
           {prodMeta && (
-            <div className="text-[10px] text-muted">
+            <div className="text-[10px] text-muted-foreground">
               Page {prodPage} of {prodMeta.totalPages || 1}
             </div>
           )}
@@ -621,7 +621,7 @@ export default function BillingPage() {
           {products.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <p className="text-4xl">🛍️</p>
-              <p className="mt-2 text-xs text-muted">No products found</p>
+              <p className="mt-2 text-xs text-muted-foreground">No products found</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
@@ -638,7 +638,7 @@ export default function BillingPage() {
                     onClick={() => handleAddProduct(product)}
                     className={cn(
                       "group relative flex flex-col rounded-2xl border p-3 text-left transition active:scale-95",
-                      "bg-surface hover:border-primary/50 hover:shadow-soft",
+                      "bg-card hover:border-primary/50 hover:shadow-sm",
                       cartQty > 0 ? "border-primary/40 bg-primary/5" : "border-border"
                     )}
                   >
@@ -661,15 +661,15 @@ export default function BillingPage() {
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 text-[10px] text-muted">
+                    <p className="mt-1 text-[10px] text-muted-foreground">
                       {unitLabel} · {product.onHandQty} in stock
                     </p>
                     <p className="mt-1.5 text-sm font-bold text-primary leading-none">
                       {formatCurrency(product.price)}
-                      <span className="text-[10px] font-normal text-muted">/{unitLabel}</span>
+                      <span className="text-[10px] font-normal text-muted-foreground">/{unitLabel}</span>
                     </p>
                     {packHint && (
-                      <p className="mt-1.5 text-[9px] leading-snug text-muted line-clamp-2 border-t border-border/40 pt-1.5">
+                      <p className="mt-1.5 text-[9px] leading-snug text-muted-foreground line-clamp-2 border-t border-border/40 pt-1.5">
                         {packHint}
                       </p>
                     )}
@@ -706,9 +706,9 @@ export default function BillingPage() {
         "fixed inset-0 z-[60] bg-background/95 backdrop-blur-md p-4 pt-16 pb-20 lg:z-auto",
         showMobileCart ? "flex translate-y-0" : "hidden lg:flex"
       )}>
-        <div className="glass-panel flex flex-1 flex-col overflow-hidden rounded-2xl border border-border/70 shadow-soft">
+        <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card/95 shadow-sm backdrop-blur-md">
           {/* Mobile Header */}
-          <div className="flex lg:hidden justify-between items-center px-4 py-2 border-b border-border/60 bg-surface">
+          <div className="flex lg:hidden justify-between items-center px-4 py-2 border-b border-border/60 bg-card">
             <span className="font-bold">Current Order</span>
             <Button variant="ghost" size="sm" onClick={() => setShowMobileCart(false)}>Close</Button>
           </div>
@@ -723,7 +723,7 @@ export default function BillingPage() {
                   className={cn(
                     "flex-1 rounded-lg py-1 text-[10px] font-medium transition",
                     billing.billingMode === mode.value
-                      ? "bg-primary text-white" : "text-muted hover:bg-border/40"
+                      ? "bg-primary text-white" : "text-muted-foreground hover:bg-border/40"
                   )}
                 >
                   {mode.icon} {mode.label}
@@ -741,17 +741,17 @@ export default function BillingPage() {
           <div className="flex-1 overflow-y-auto p-2">
             {billing.items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full py-6 text-center">
-                <ShoppingBag className="h-10 w-10 text-muted/30" />
-                <p className="mt-2 text-xs text-muted">Cart is empty</p>
-                <p className="text-[10px] text-muted/60">Tap a product to add it</p>
+                <ShoppingBag className="h-10 w-10 text-muted-foreground/30" />
+                <p className="mt-2 text-xs text-muted-foreground">Cart is empty</p>
+                <p className="text-[10px] text-muted-foreground/60">Tap a product to add it</p>
               </div>
             ) : (
               <div className="space-y-1">
                 {billing.items.map((item) => (
-                  <div key={item.cartLineId} className="flex items-center gap-1.5 rounded-lg bg-surface/60 p-1.5">
+                  <div key={item.cartLineId} className="flex items-center gap-1.5 rounded-lg bg-card/60 p-1.5">
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-medium leading-tight truncate">{item.name}</p>
-                      <p className="text-[9px] text-muted">
+                      <p className="text-[9px] text-muted-foreground">
                         {item.soldQty ?? item.qty} {item.soldUnit ?? item.unit}
                         {item.conversionFactor && item.conversionFactor > 1
                           ? ` (${item.baseQty ?? item.qty * item.conversionFactor} base)`
@@ -778,7 +778,7 @@ export default function BillingPage() {
                             }
                             if (e.key === "Escape") setEditingPriceId(null);
                           }}
-                          className="mt-0.5 w-24 rounded border border-primary bg-surface px-1 py-0.5 text-[10px]"
+                          className="mt-0.5 w-24 rounded border border-primary bg-card px-1 py-0.5 text-[10px]"
                         />
                       ) : (
                         <button
@@ -822,22 +822,22 @@ export default function BillingPage() {
 
           {/* Totals & Payment */}
           <div className="border-t border-border/60 p-2 space-y-1">
-            <div className="flex justify-between text-[10px] text-muted">
-              <span>Subtotal</span><span className="font-medium text-text">{formatCurrency(subtotal)}</span>
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>Subtotal</span><span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
             </div>
-            <div className="flex items-center justify-between text-[10px] text-muted gap-1">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground gap-1">
               <span>Discount (₹)</span>
               <input
                 type="number" min={0} value={billing.discount || ""}
                 onChange={(e) => dispatch(setDiscount(Number(e.target.value)))}
-                className="w-16 rounded-lg border border-border bg-surface px-1.5 py-1 text-right text-[10px] outline-none focus:border-primary"
+                className="w-16 rounded-lg border border-border bg-card px-1.5 py-1 text-right text-[10px] outline-none focus:border-primary"
                 placeholder="0"
               />
             </div>
 
             {/* GST controls — wholesale or when tax enabled */}
             {(isWholesale || billing.taxEnabled) && (
-              <div className="rounded-lg bg-surface/60 p-2 space-y-1.5">
+              <div className="rounded-lg bg-card/60 p-2 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <label className="flex items-center gap-1.5 text-[10px]">
                     <input
@@ -866,7 +866,7 @@ export default function BillingPage() {
                       onClick={() => dispatch(setTaxMode("exclusive"))}
                       className={cn(
                         "flex-1 rounded py-1 text-[9px] font-medium",
-                        billing.taxMode === "exclusive" ? "bg-primary text-white" : "bg-border/40 text-muted"
+                        billing.taxMode === "exclusive" ? "bg-primary text-white" : "bg-border/40 text-muted-foreground"
                       )}
                     >
                       GST Extra
@@ -876,7 +876,7 @@ export default function BillingPage() {
                       onClick={() => dispatch(setTaxMode("inclusive"))}
                       className={cn(
                         "flex-1 rounded py-1 text-[9px] font-medium",
-                        billing.taxMode === "inclusive" ? "bg-primary text-white" : "bg-border/40 text-muted"
+                        billing.taxMode === "inclusive" ? "bg-primary text-white" : "bg-border/40 text-muted-foreground"
                       )}
                     >
                       GST Included
@@ -884,7 +884,7 @@ export default function BillingPage() {
                   </div>
                 )}
                 {billing.taxEnabled && taxAmount > 0 && (settings.gstEnabled || isWholesale) && (
-                  <div className="text-[9px] text-muted space-y-0.5 pt-0.5 border-t border-border/40">
+                  <div className="text-[9px] text-muted-foreground space-y-0.5 pt-0.5 border-t border-border/40">
                     <div className="flex justify-between"><span>Taxable</span><span>{formatCurrency(cartTotals.taxableAmount)}</span></div>
                     {isInterState ? (
                       <div className="flex justify-between"><span>IGST</span><span>{formatCurrency(igst)}</span></div>
@@ -897,7 +897,7 @@ export default function BillingPage() {
                     {isInterState && billing.customerId && (
                       <p className="text-[8px] text-amber-700 pt-0.5">Inter-state supply (IGST)</p>
                     )}
-                    <div className="flex justify-between font-medium text-text"><span>Tax</span><span>{formatCurrency(taxAmount)}</span></div>
+                    <div className="flex justify-between font-medium text-foreground"><span>Tax</span><span>{formatCurrency(taxAmount)}</span></div>
                   </div>
                 )}
               </div>
@@ -921,7 +921,7 @@ export default function BillingPage() {
                   className={cn(
                     "flex flex-col items-center rounded-lg py-1 text-[9px] font-medium transition",
                     billing.paymentMethod === pm.value
-                      ? "bg-primary text-white" : "bg-border/40 text-muted hover:bg-border"
+                      ? "bg-primary text-white" : "bg-border/40 text-muted-foreground hover:bg-border"
                   )}
                 >
                   <span className="text-xs">{pm.icon}</span>
@@ -937,7 +937,7 @@ export default function BillingPage() {
                   <p className="text-[9px] text-warning">Select a customer below — required for khata</p>
                 )}
                 <div>
-                  <label className="text-[10px] font-medium text-muted">Amount receiving now (₹)</label>
+                  <label className="text-[10px] font-medium text-muted-foreground">Amount receiving now (₹)</label>
                   <Input
                     type="number"
                     min={0}
@@ -954,7 +954,7 @@ export default function BillingPage() {
                   </p>
                 )}
                 {billing.customerId && amountDuePreview === total && (
-                  <p className="text-[9px] text-muted">Full amount will go on customer khata</p>
+                  <p className="text-[9px] text-muted-foreground">Full amount will go on customer khata</p>
                 )}
               </div>
             )}
@@ -983,7 +983,7 @@ export default function BillingPage() {
             )}
 
             {hasGstInvoices && billing.taxEnabled && (
-              <label className="flex items-center gap-2 rounded-lg bg-surface/60 px-2 py-1.5 text-[10px] cursor-pointer">
+              <label className="flex items-center gap-2 rounded-lg bg-card/60 px-2 py-1.5 text-[10px] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={billing.generateGstInvoice}
@@ -1000,15 +1000,15 @@ export default function BillingPage() {
 
             {/* Split payment — only when split is selected, not for khata */}
             {billing.paymentMethod === "split" && !isKhataPayment && (
-              <div className="space-y-1 rounded-lg bg-surface/60 p-1.5">
+              <div className="space-y-1 rounded-lg bg-card/60 p-1.5">
                 {(["cash", "upi", "card"] as const).map((method) => (
                   <div key={method} className="flex items-center gap-1.5">
-                    <span className="w-8 text-[9px] text-muted capitalize">{method}</span>
+                    <span className="w-8 text-[9px] text-muted-foreground capitalize">{method}</span>
                     <input
                       type="number" min={0}
                       value={billing.payment[method] || ""}
                       onChange={(e) => dispatch(setPaymentAmount({ field: method, value: Number(e.target.value) }))}
-                      className="flex-1 rounded-lg border border-border bg-surface px-1.5 py-1 text-[10px] outline-none focus:border-primary"
+                      className="flex-1 rounded-lg border border-border bg-card px-1.5 py-1 text-[10px] outline-none focus:border-primary"
                       placeholder="0"
                     />
                   </div>

@@ -61,7 +61,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         <div>
           <Badge className="w-fit mb-2">Today&apos;s pulse</Badge>
           <h1 className="text-2xl font-bold tracking-tight">Operations dashboard</h1>
-          <p className="text-sm text-muted mt-1">Live snapshot for your outlet — sales, GST, and credit at a glance.</p>
+          <p className="text-sm text-muted-foreground mt-1">Live snapshot for your outlet — sales, GST, and credit at a glance.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild><Link href="/billing">Open Billing <ArrowRight className="h-4 w-4" /></Link></Button>
@@ -117,7 +117,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
       </div>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="border-border/70 shadow-soft">
+        <Card className="border-border/70 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Quick actions</CardTitle>
             <CardDescription>Jump into daily workflows</CardDescription>
@@ -136,7 +136,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         </Card>
 
         {hasGstInvoices && (
-          <Card className="border-border/70 shadow-soft">
+          <Card className="border-border/70 shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">GST today</CardTitle>
               <CardDescription>Tax invoices and collection</CardDescription>
@@ -152,7 +152,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         )}
 
         {hasCreditKhata && (
-          <Card className="border-border/70 shadow-soft">
+          <Card className="border-border/70 shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">Khata / credit</CardTitle>
               <CardDescription>Outstanding balances across customers</CardDescription>
@@ -173,7 +173,7 @@ function MarketingHome({ userName }: { userName?: string }) {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <Card className="border-border/70 shadow-soft">
+        <Card className="border-border/70 shadow-sm">
           <CardHeader>
             <Badge className="w-fit">Retail SaaS</Badge>
             <CardTitle className="text-3xl font-bold tracking-tight">Run billing, stock, outlets, and staff from one panel</CardTitle>
@@ -188,7 +188,7 @@ function MarketingHome({ userName }: { userName?: string }) {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 shadow-soft">
+        <Card className="border-border/70 shadow-sm">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Current access</CardTitle>
             <CardDescription>Simple status for the signed-in user</CardDescription>
@@ -204,7 +204,7 @@ function MarketingHome({ userName }: { userName?: string }) {
         {features.map((feature) => {
           const Icon = feature.icon;
           return (
-            <Card key={feature.title} className="border-border/70 shadow-soft">
+            <Card key={feature.title} className="border-border/70 shadow-sm">
               <CardHeader>
                 <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" />

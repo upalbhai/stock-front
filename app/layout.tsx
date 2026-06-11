@@ -1,31 +1,42 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Sora, Space_Mono } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { GeistMono } from "geist/font/mono";
 import { Providers } from "./providers";
 import { ServiceWorkerRegister } from "@/components/service-worker";
 import { AppShell } from "@/components/layout/app-shell";
+import { cn } from "@/lib/utils";
 
-const sora = Sora({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["400", "500", "600", "700"]
+  variable: "--font-inter",
 });
 
-const spaceMono = Space_Mono({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-mono",
-  weight: ["400", "700"]
+  variable: "--font-plus-jakarta-sans",
 });
 
 export const metadata: Metadata = {
   title: "Retail & Outlet Manager",
-  description: "Fast, mobile-first outlet operations"
+  description: "Fast, mobile-first outlet operations",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${sora.variable} ${spaceMono.variable} font-sans antialiased`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("font-sans", inter.variable, plusJakarta.variable, GeistMono.variable)}
+    >
+      <body
+        className={cn(
+          inter.variable,
+          plusJakarta.variable,
+          GeistMono.variable,
+          "font-sans antialiased"
+        )}
+      >
         <Providers>
           <ServiceWorkerRegister />
           <AppShell>{children}</AppShell>

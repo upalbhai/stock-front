@@ -15,11 +15,11 @@ type StatsCardProps = {
 };
 
 const colorMap = {
-  default: "text-text",
+  default: "text-foreground",
   primary: "text-primary",
-  success: "text-muted",
-  warning: "text-muted",
-  danger: "text-muted"
+  success: "text-info",
+  warning: "text-warning",
+  danger: "text-destructive",
 };
 
 export function StatsCard({ label, value, hint, trend, icon, className, color = "default" }: StatsCardProps) {
@@ -32,21 +32,27 @@ export function StatsCard({ label, value, hint, trend, icon, className, color = 
             <p className={cn("mt-1 text-2xl font-bold tracking-tight", colorMap[color])}>
               {value}
             </p>
-            {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+            {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
             {trend && (
-              <div className={cn("mt-2 flex items-center gap-1 text-xs font-medium",
-                trend.value >= 0 ? "text-text" : "text-muted"
-              )}>
-                {trend.value >= 0
-                  ? <TrendingUp className="h-3 w-3" />
-                  : <TrendingDown className="h-3 w-3" />
-                }
-                <span>{Math.abs(trend.value)}% {trend.label}</span>
+              <div
+                className={cn(
+                  "mt-2 flex items-center gap-1 text-xs font-medium",
+                  trend.value >= 0 ? "text-foreground" : "text-muted-foreground"
+                )}
+              >
+                {trend.value >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                <span>
+                  {Math.abs(trend.value)}% {trend.label}
+                </span>
               </div>
             )}
           </div>
           {icon && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-border/40 text-text">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
               {icon}
             </div>
           )}

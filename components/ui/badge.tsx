@@ -10,11 +10,11 @@ export function Badge({
 }: React.HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant }) {
   const styles: Record<BadgeVariant, string> = {
     default: "bg-primary text-primary-foreground",
-    soft: "bg-surface text-text border border-border",
-    warning: "bg-border/70 text-text",
-    danger: "bg-destructive text-destructive-foreground",
-    secondary: "bg-border/50 text-muted",
-    info: "bg-surface text-muted border border-border"
+    soft: "border border-border bg-secondary text-secondary-foreground",
+    warning: "bg-warning/15 text-warning",
+    danger: "bg-destructive/10 text-destructive",
+    secondary: "bg-muted text-muted-foreground",
+    info: "border border-border bg-accent text-accent-foreground",
   };
 
   return (

@@ -227,15 +227,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-10 px-4">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.15),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.08),rgba(0,0,0,0))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(0,102,204,0.12),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(0,136,255,0.08),rgba(0,0,0,0))]" />
 
-      <Card className="relative w-full max-w-md border border-border/70 shadow-soft backdrop-blur-md bg-surface/80 rounded-3xl animate-rise">
+      <Card className="relative w-full max-w-md border border-border/70 shadow-sm backdrop-blur-md bg-card/80 rounded-xl animate-rise">
         <CardHeader className="text-center pb-2">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-soft font-bold text-xl mb-3">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground shadow-sm">
             OP
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Outlet Pulse</CardTitle>
-          <CardDescription className="text-sm text-muted">
+          <CardDescription className="text-sm text-muted-foreground">
             {mode === "login" ? "Sign in to your account" : mode === "register" ? "Start your 7-day free trial" : mode === "forgot" ? "Reset your password" : "Create new password"}
           </CardDescription>
         </CardHeader>
@@ -294,23 +294,23 @@ export default function LoginPage() {
             {mode === "register" && (
               <div className="space-y-3 animate-fade">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Owner Name *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Owner Name *</label>
                   <Input required value={form.name} onChange={(e) => handleChange("name", e.target.value)} placeholder="John Doe" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Business Name *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Business Name *</label>
                   <Input required value={form.businessName} onChange={(e) => handleChange("businessName", e.target.value)} placeholder="My Super Store" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Outlet Name (Optional)</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Outlet Name (Optional)</label>
                   <Input value={form.outletName} onChange={(e) => handleChange("outletName", e.target.value)} placeholder="Main Branch" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Email *</label>
                   <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="john@example.com" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Phone (Optional)</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Phone (Optional)</label>
                   <Input type="tel" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="9876543210" />
                 </div>
               </div>
@@ -320,7 +320,7 @@ export default function LoginPage() {
             {mode === "login" && loginStep === "email" && (
               <div className="space-y-3 animate-fade">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Email *</label>
                   <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="you@company.com" />
                 </div>
               </div>
@@ -329,13 +329,13 @@ export default function LoginPage() {
             {/* LOGIN FORM - PASSWORD STEP */}
             {mode === "login" && loginStep === "password" && (
               <div className="space-y-3 animate-fade">
-                <div className="flex items-center gap-2 mb-2 text-sm text-muted">
+                <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
                   <button type="button" onClick={() => setLoginStep("email")} className="p-1 hover:bg-border/50 rounded-full transition"><ArrowLeft className="w-4 h-4" /></button>
-                  <span className="font-medium text-text">{form.email}</span>
+                  <span className="font-medium text-foreground">{form.email}</span>
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs font-medium text-muted">Password *</label>
+                    <label className="block text-xs font-medium text-muted-foreground">Password *</label>
                     <button type="button" onClick={() => setMode("forgot")} className="text-xs text-primary font-medium hover:underline">Forgot password?</button>
                   </div>
                   <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="��������" autoFocus />
@@ -346,13 +346,13 @@ export default function LoginPage() {
             {/* LOGIN FORM - OTP STEP */}
             {mode === "login" && loginStep === "otp" && (
               <div className="space-y-3 animate-fade">
-                <div className="flex items-center gap-2 mb-2 text-sm text-muted">
+                <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
                   <button type="button" onClick={() => setLoginStep("email")} className="p-1 hover:bg-border/50 rounded-full transition"><ArrowLeft className="w-4 h-4" /></button>
-                  <span className="font-medium text-text">{form.email}</span>
+                  <span className="font-medium text-foreground">{form.email}</span>
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="block text-xs font-medium text-muted">OTP Code *</label>
+                    <label className="block text-xs font-medium text-muted-foreground">OTP Code *</label>
                     <button type="button" onClick={handleSendOtp} disabled={loading} className="text-xs text-primary font-medium hover:underline">Resend Code</button>
                   </div>
                   <div className="flex gap-2 justify-between">
@@ -363,7 +363,7 @@ export default function LoginPage() {
                         value={digit}
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className="w-12 h-14 text-center text-xl font-bold rounded-xl bg-surface border-border shadow-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                        className="w-12 h-14 text-center text-xl font-bold rounded-xl bg-card border-border shadow-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                         maxLength={6}
                       />
                     ))}
@@ -376,11 +376,11 @@ export default function LoginPage() {
             {mode === "login" && loginStep === "phone" && (
               <div className="space-y-3 animate-fade">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Phone *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Phone *</label>
                   <Input required type="tel" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="9876543210" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Security PIN *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Security PIN *</label>
                   <Input required type="password" maxLength={6} value={form.pin} onChange={(e) => handleChange("pin", e.target.value)} placeholder="����" className="tracking-widest text-center text-lg font-bold" />
                 </div>
               </div>
@@ -389,9 +389,9 @@ export default function LoginPage() {
             {/* FORGOT PASSWORD FORM */}
             {mode === "forgot" && (
               <div className="space-y-3 animate-fade">
-                <p className="text-xs text-muted mb-4">Enter your email address and we'll send you a code to reset your password.</p>
+                <p className="text-xs text-muted-foreground mb-4">Enter your email address and we'll send you a code to reset your password.</p>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Email *</label>
                   <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="you@company.com" />
                 </div>
               </div>
@@ -401,25 +401,25 @@ export default function LoginPage() {
             {mode === "reset" && (
               <div className="space-y-3 animate-fade">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Email *</label>
                   <Input required type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="you@company.com" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Reset Code *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Reset Code *</label>
                   <Input required value={form.code} onChange={(e) => handleChange("code", e.target.value)} placeholder="Enter code from email" className="tracking-widest text-center text-lg font-bold" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">New Password *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">New Password *</label>
                   <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="��������" minLength={6} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted">Confirm New Password *</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Confirm New Password *</label>
                   <Input required type="password" value={form.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="��������" minLength={6} />
                 </div>
               </div>
             )}
 
-            <Button type="submit" className="w-full py-6 text-sm font-semibold rounded-2xl shadow-soft mt-4" disabled={loading}>
+            <Button type="submit" className="w-full py-6 text-sm font-semibold rounded-2xl shadow-sm mt-4" disabled={loading}>
               {loading ? "Processing..." : 
                mode === "login" && loginStep === "email" ? "Continue with Email" :
                mode === "login" ? "Sign In" : 
@@ -428,19 +428,19 @@ export default function LoginPage() {
             </Button>
             
             {mode === "login" && loginStep === "email" && (
-              <button type="button" onClick={() => { setLoginStep("phone"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted hover:text-text mt-2 block transition">
+              <button type="button" onClick={() => { setLoginStep("phone"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-2 block transition">
                 Sign in with Phone & PIN instead
               </button>
             )}
 
             {mode === "login" && loginStep === "phone" && (
-              <button type="button" onClick={() => { setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted hover:text-text mt-2 block transition">
+              <button type="button" onClick={() => { setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-2 block transition">
                 Back to Email login
               </button>
             )}
             
             {(mode === "forgot" || mode === "reset") && (
-              <button type="button" onClick={() => { setMode("login"); setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted hover:text-text mt-2 block transition">
+              <button type="button" onClick={() => { setMode("login"); setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-2 block transition">
                 Back to Sign In
               </button>
             )}

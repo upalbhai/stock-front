@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getJson } from "@/lib/api-client";
 import { useAuth } from "@/components/auth/auth-provider";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type Outlet = {
@@ -34,19 +35,16 @@ export function OutletSwitcher({ className }: { className?: string }) {
   }
 
   return (
-    <select
-      value={outletId ?? ""}
-      onChange={(event) => setOutletId(event.target.value)}
-      className={cn(
-        "rounded-2xl border border-border/70 bg-surface/70 px-3 py-2 text-sm",
-        className
-      )}
-    >
-      {outlets.map((outlet) => (
-        <option key={outlet._id} value={outlet._id}>
-          {outlet.name}
-        </option>
-      ))}
-    </select>
+    <Select
+      value={outletId ?? outlets[0]?._id ?? ""}
+      onValueChange={setOutletId}
+      placeholder="Select outlet"
+      size="sm"
+      options={outlets.map((outlet) => ({
+        value: outlet._id,
+        label: outlet.name,
+      }))}
+      className={cn("min-w-[8.5rem] max-w-[11rem]", className)}
+    />
   );
 }
