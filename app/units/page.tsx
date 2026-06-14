@@ -10,7 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJsonWithMeta, apiFetch } from "@/lib/api-client";
+import { unitService } from "@/services/unit.service";
 import { getErrorMessage } from "@/lib/error";
 import type { Unit } from "@/lib/types";
 
@@ -23,11 +23,12 @@ export default function UnitsPage() {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [isRefetching, setIsRefetching] = React.useState(false);
   const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
-  const [form, setForm] = React.useState({ name: "", key: "", abbreviation: "", sortOrder: "0" });
+  const emptyForm = { name: "", key: "", abbreviation: "", sortOrder: "0" };
+  const [form, setForm] = React.useState(emptyForm);
 
   const { data, isLoading, refetch: refetchUnits } = useQuery({
     queryKey: ["units"],
-    queryFn: () => getJsonWithMeta<Unit[]>("/units", token, { flat: "true", page: 1, limit: 100 }),
+    queryFn: () => unitService.getUnitsWithMeta(token, { flat: "true", page: 1, limit: 100 }),
     enabled: Boolean(token)
   });
 
@@ -53,34 +54,32 @@ export default function UnitsPage() {
     }, 1000);
   };
 
-  const save = useMutation({
-    mutationFn: (body: unknown) => editId
-      ? apiFetch(`/units/${editId}`, { method: "PATCH", body, token })
-      : apiFetch("/units", { method: "POST", body, token }),
+  const saveMutation = useMutation({
+    mutationFn: (body: unknown) =>
+      editId
+      ? unitService.updateUnit(editId, body, token)
+      : unitService.createUnit(body, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["units"] });
       setShowModal(false);
       setEditId(null);
+      setForm({ ...emptyForm });
       toast.success(editId ? "Unit updated" : "Unit created");
     },
-    onError: (err: any) => {
-      toast.error(getErrorMessage(err, "Failed to save unit"));
-    }
+    onError: (err: any) => toast.error(getErrorMessage(err, "Failed to save unit"))
   });
 
-  const remove = useMutation({
-    mutationFn: (id: string) => apiFetch(`/units/${id}`, { method: "DELETE", token }),
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => unitService.deleteUnit(id, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["units"] });
       setDeleteId(null);
       toast.success("Unit deleted");
     },
-    onError: (err: any) => {
-      toast.error(getErrorMessage(err, "Failed to delete unit"));
-    }
+    onError: (err: any) => toast.error(getErrorMessage(err, "Failed to delete unit"))
   });
 
-  const units = data?.data ?? [];
+  const units: Unit[] = data?.data ?? [];
 
   const openCreate = () => {
     setEditId(null);
@@ -96,7 +95,7 @@ export default function UnitsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    save.mutate({ ...form, sortOrder: Number(form.sortOrder) });
+    saveMutation.mutate({ ...form, sortOrder: Number(form.sortOrder) });
   };
 
   return (
@@ -213,8 +212,8 @@ export default function UnitsPage() {
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={save.isPending}>
-              {save.isPending ? "Saving..." : editId ? "Save Changes" : "Create Unit"}
+            <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? "Saving..." : editId ? "Save Changes" : "Create Unit"}
             </Button>
           </div>
         </form>
@@ -223,11 +222,11 @@ export default function UnitsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onClose={() => setDeleteId(null)}
-        onConfirm={() => deleteId && remove.mutate(deleteId)}
+        onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         title="Delete Unit?"
-        message="Products using this unit will retain the unit name but won't be linked to a new unit."
+        message="Are you sure you want to delete this unit? This might affect products that use it."
         confirmLabel="Delete"
-        loading={remove.isPending}
+        loading={deleteMutation.isPending}
       />
     </div>
   );

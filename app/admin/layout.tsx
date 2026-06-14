@@ -2,24 +2,21 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { ShieldAlertIcon, Sparkles, Store, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/ui/stats-card";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson } from "@/lib/api-client";
+import { adminService } from "@/services/admin.service";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const { data: statsData } = useQuery({
-    queryKey: ["admin-stats"],
-    queryFn: () =>
-      getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number }>(
-        "/admin/stats",
-        token
-      ),
+    queryKey: ["admin-dashboard-stats"],
+    queryFn: () => adminService.getDashboardStats(token),
     enabled: Boolean(token && user?.role === "superadmin"),
   });
 

@@ -13,9 +13,11 @@ import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { customerService } from "@/services/customer.service";
 import { formatCurrency } from "@/lib/format";
 import type { Customer } from "@/lib/types";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/error";
 
 export default function CustomersPage() {
   const { token, outletId } = useAuth();
@@ -23,8 +25,9 @@ export default function CustomersPage() {
   const hasCustomers = useFeature("customers");
   const [search, setSearch] = React.useState("");
   const [balanceFilter, setBalanceFilter] = React.useState("");
+  const [page, setPage] = React.useState(1);
   const [showModal, setShowModal] = React.useState(false);
-  const [form, setForm] = React.useState({
+  const emptyForm = {
     name: "",
     phone: "",
     gstin: "",
@@ -32,34 +35,30 @@ export default function CustomersPage() {
     creditLimit: "",
     openingBalance: "",
     defaultTaxMode: "exclusive"
-  });
+  };
+  const [form, setForm] = React.useState(emptyForm);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["customers", outletId, search, balanceFilter],
+    queryKey: ["customers", outletId, search, balanceFilter, page],
     queryFn: () =>
-      getJson<{ customers: Customer[]; total: number; totalOutstanding: number }>("/customers", token, {
+      customerService.getCustomers(token, {
         outletId: outletId ?? undefined,
         search: search || undefined,
-        hasBalance: balanceFilter === "due" ? "true" : undefined
+        hasBalance: balanceFilter === "due" ? "true" : undefined,
+        page
       }),
     enabled: Boolean(token) && hasCustomers
   });
 
-  const save = useMutation({
-    mutationFn: (body: unknown) => apiFetch("/customers", { method: "POST", body, token }),
+  const saveMutation = useMutation({
+    mutationFn: (body: unknown) => customerService.createCustomer(body, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["customers"] });
       setShowModal(false);
-      setForm({
-        name: "",
-        phone: "",
-        gstin: "",
-        address: "",
-        creditLimit: "",
-        openingBalance: "",
-        defaultTaxMode: "exclusive"
-      });
-    }
+      setForm({ ...emptyForm });
+      toast.success("Customer added successfully");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to add customer"))
   });
 
   if (!hasCustomers) {
@@ -72,7 +71,7 @@ export default function CustomersPage() {
     );
   }
 
-  const customers = data?.customers ?? [];
+  const customers: Customer[] = data?.customers ?? [];
   const totalOutstanding = data?.totalOutstanding ?? 0;
 
   return (
@@ -156,7 +155,7 @@ export default function CustomersPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            save.mutate({
+            saveMutation.mutate({
               outletId: outletId ?? undefined,
               name: form.name,
               phone: form.phone || undefined,
@@ -209,7 +208,7 @@ export default function CustomersPage() {
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={save.isPending}>{save.isPending ? "Saving..." : "Add Customer"}</Button>
+            <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : "Add Customer"}</Button>
           </div>
         </form>
       </Modal>

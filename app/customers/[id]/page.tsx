@@ -14,9 +14,11 @@ import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { customerService } from "@/services/customer.service";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import type { Customer, CustomerTransaction } from "@/lib/types";
+import { toast } from "react-hot-toast";
+import { getErrorMessage } from "@/lib/error";
 
 const TX_LABELS: Record<string, string> = {
   sale: "Credit sale",
@@ -36,28 +38,30 @@ export default function CustomerDetailPage() {
     hasCreditKhata &&
     (user?.role === "owner" || user?.role === "manager" || user?.role === "superadmin");
 
+  const EMPTY_FORM = { amount: "", method: "cash", note: "" };
   const [showPay, setShowPay] = React.useState(false);
-  const [payForm, setPayForm] = React.useState({ amount: "", method: "cash", note: "" });
+  const [payForm, setPayForm] = React.useState(EMPTY_FORM);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["customer-ledger", id],
-    queryFn: () =>
-      getJson<{ customer: Customer; transactions: CustomerTransaction[] }>(`/customers/${id}/ledger`, token),
+    queryKey: ["customer-details", id],
+    queryFn: () => customerService.getCustomerLedger(id, token),
     enabled: Boolean(token && id)
   });
 
-  const recordPayment = useMutation({
-    mutationFn: (body: unknown) => apiFetch(`/customers/${id}/payments`, { method: "POST", body, token }),
+  const saveMutation = useMutation({
+    mutationFn: (body: unknown) => customerService.addPayment(id, body, token),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["customer-ledger", id] });
+      qc.invalidateQueries({ queryKey: ["customer-details"] });
       qc.invalidateQueries({ queryKey: ["customers"] });
       setShowPay(false);
-      setPayForm({ amount: "", method: "cash", note: "" });
-    }
+      setPayForm(EMPTY_FORM);
+      toast.success("Payment recorded successfully");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to record payment"))
   });
 
   const customer = data?.customer;
-  const transactions = data?.transactions ?? [];
+  const transactions: CustomerTransaction[] = data?.transactions ?? [];
 
   if (isLoading) {
     return <p className="text-sm text-muted">Loading customer...</p>;
@@ -177,7 +181,7 @@ export default function CustomerDetailPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            recordPayment.mutate({
+            saveMutation.mutate({
               amount: Number(payForm.amount),
               method: payForm.method,
               note: payForm.note || undefined,
@@ -214,8 +218,8 @@ export default function CustomerDetailPage() {
           </div>
           <div className="flex gap-3">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowPay(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={recordPayment.isPending}>
-              {recordPayment.isPending ? "Saving..." : "Record Payment"}
+            <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? "Saving..." : "Record Payment"}
             </Button>
           </div>
         </form>

@@ -12,9 +12,12 @@ import { DataTable } from "@/components/ui/data-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { orderService } from "@/services/order.service";
+import { invoiceService } from "@/services/invoice.service";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import type { Order } from "@/lib/types";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/error";
 
 type RecordFilter = "active" | "voided" | "all";
 
@@ -40,29 +43,32 @@ export default function OrdersPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["orders", outletId, recordFilter],
     queryFn: () =>
-      getJson<{ orders: Order[]; total: number }>("/orders", token, {
+      orderService.getOrders(token, {
         outletId: outletId ?? undefined,
         recordStatus: recordFilter
       }),
     enabled: Boolean(token) && hasHistory
   });
 
-  const voidOrder = useMutation({
+  const voidMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      apiFetch(`/orders/${id}/void`, { method: "POST", body: { reason }, token }),
+      orderService.voidOrder(id, reason, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });
       setVoidTarget(null);
       setVoidReason("");
-    }
+      toast.success("Order voided successfully");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to void order"))
   });
 
-  const generateInvoice = useMutation({
-    mutationFn: (id: string) => apiFetch(`/invoices/${id}/generate`, { method: "POST", token }),
+  const generateInvoiceMutation = useMutation({
+    mutationFn: (id: string) => invoiceService.generateInvoice(id, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["invoices"] });
-    }
+      toast.success("Invoice generated");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to generate invoice"))
   });
 
   if (!hasHistory) {
@@ -171,8 +177,8 @@ export default function OrdersPage() {
                   variant="ghost"
                   size="sm"
                   className="text-[10px] h-7 gap-1"
-                  disabled={generateInvoice.isPending}
-                  onClick={() => generateInvoice.mutate(o._id)}
+                  disabled={generateInvoiceMutation.isPending}
+                  onClick={() => generateInvoiceMutation.mutate(o._id)}
                 >
                   <FileText className="h-3 w-3" /> GST
                 </Button>
@@ -215,10 +221,10 @@ export default function OrdersPage() {
             <Button
               className="flex-1"
               variant="destructive"
-              disabled={voidReason.trim().length < 2 || voidOrder.isPending}
-              onClick={() => voidTarget && voidOrder.mutate({ id: voidTarget._id, reason: voidReason.trim() })}
+              disabled={voidReason.trim().length < 2 || voidMutation.isPending}
+              onClick={() => voidTarget && voidMutation.mutate({ id: voidTarget._id, reason: voidReason.trim() })}
             >
-              {voidOrder.isPending ? "Voiding..." : "Void Bill"}
+              {voidMutation.isPending ? "Voiding..." : "Void Bill"}
             </Button>
           </div>
         </div>

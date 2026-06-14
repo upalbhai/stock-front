@@ -12,9 +12,11 @@ import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { expenseService } from "@/services/expense.service";
 import { formatCurrency } from "@/lib/format";
 import type { Expense } from "@/lib/types";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/error";
 
 const CATEGORIES = ["rent", "salary", "utilities", "supplies", "marketing", "maintenance", "other"];
 const catOptions = CATEGORIES.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }));
@@ -51,7 +53,7 @@ export default function ExpensesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["expenses", outletId, catFilter, recordFilter],
     queryFn: () =>
-      getJson<{ expenses: Expense[]; total: number; totalAmount: number }>("/expenses", token, {
+      expenseService.getExpenses(token, {
         outletId: outletId ?? undefined,
         category: catFilter || undefined,
         recordStatus: recordFilter
@@ -59,8 +61,8 @@ export default function ExpensesPage() {
     enabled: Boolean(token)
   });
 
-  const save = useMutation({
-    mutationFn: (body: unknown) => apiFetch("/expenses", { method: "POST", body, token }),
+  const saveMutation = useMutation({
+    mutationFn: (body: unknown) => expenseService.createExpense(body, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
       setShowModal(false);
@@ -71,17 +73,21 @@ export default function ExpensesPage() {
         date: new Date().toISOString().split("T")[0],
         outletId: outletId ?? ""
       });
-    }
+      toast.success("Expense recorded successfully");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to record expense"))
   });
 
-  const voidExpense = useMutation({
+  const voidMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      apiFetch(`/expenses/${id}/void`, { method: "POST", body: { reason }, token }),
+      expenseService.voidExpense(id, reason, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
       setVoidTarget(null);
       setVoidReason("");
-    }
+      toast.success("Expense voided");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to void expense"))
   });
 
   const expenses = data?.expenses ?? [];
@@ -215,7 +221,7 @@ export default function ExpensesPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            save.mutate({ ...form, amount: Number(form.amount) });
+            saveMutation.mutate({ ...form, amount: Number(form.amount) });
           }}
         >
           <div>
@@ -261,8 +267,8 @@ export default function ExpensesPage() {
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={save.isPending}>
-              {save.isPending ? "Saving..." : "Add Expense"}
+            <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? "Saving..." : "Add Expense"}
             </Button>
           </div>
         </form>
@@ -305,10 +311,10 @@ export default function ExpensesPage() {
             <Button
               className="flex-1"
               variant="destructive"
-              disabled={voidReason.trim().length < 2 || voidExpense.isPending}
-              onClick={() => voidTarget && voidExpense.mutate({ id: voidTarget._id, reason: voidReason.trim() })}
+              disabled={voidReason.trim().length < 2 || voidMutation.isPending}
+              onClick={() => voidTarget && voidMutation.mutate({ id: voidTarget._id, reason: voidReason.trim() })}
             >
-              {voidExpense.isPending ? "Voiding..." : "Void Expense"}
+              {voidMutation.isPending ? "Voiding..." : "Void Expense"}
             </Button>
           </div>
         </div>

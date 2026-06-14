@@ -14,7 +14,9 @@ import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, getJsonWithMeta, apiFetch } from "@/lib/api-client";
+import { reportService } from "@/services/report.service";
+import { productService } from "@/services/product.service";
+import { stockService } from "@/services/stock.service";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/format";
 import { getErrorMessage } from "@/lib/error";
 import { toast } from "react-hot-toast";
@@ -140,18 +142,19 @@ export default function ProfitPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["profit-ledger", outletId, from, to],
     queryFn: () =>
-      getJson<{ summary: LedgerSummary; movements: LedgerMovement[]; total: number }>(
-        "/reports/profit-ledger",
-        token,
-        { outletId: outletId ?? undefined, from, to, limit: 100 }
-      ),
+      reportService.getProfitLedger(token!, {
+        outletId: outletId ?? undefined,
+        from,
+        to,
+        limit: 100
+      }),
     enabled: Boolean(token)
   });
 
   const { data: prodData } = useQuery({
     queryKey: ["products-profit-picker", outletId, prodSearch],
     queryFn: () =>
-      getJsonWithMeta<Product[]>("/products", token, {
+      productService.getProductsWithOffset(token!, {
         outletId: outletId ?? undefined,
         search: prodSearch || undefined,
         limit: 30
@@ -161,7 +164,7 @@ export default function ProfitPage() {
 
   const products = prodData?.data ?? [];
   const summary = data?.summary;
-  const movements = data?.movements ?? [];
+  const movements: any[] = data?.movements ?? [];
 
   const issueConfig = ISSUE_TYPES.find((t) => t.value === issueType) ?? ISSUE_TYPES[0];
   const unitOptions = selectedProduct ? buildStockUnitOptions(selectedProduct) : [];
@@ -179,7 +182,7 @@ export default function ProfitPage() {
   }, [selectedProduct, issueUnitKey]);
 
   const recordIssue = useMutation({
-    mutationFn: (body: unknown) => apiFetch("/stock/adjust", { method: "POST", body, token }),
+    mutationFn: (body: unknown) => stockService.adjustStock(body, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["profit-ledger"] });
       qc.invalidateQueries({ queryKey: ["stock-history"] });

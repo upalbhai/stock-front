@@ -12,8 +12,12 @@ import { Avatar } from "@/components/ui/avatar";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { userService } from "@/services/user.service";
+import { roleService } from "@/services/role.service";
+import { outletService } from "@/services/outlet.service";
 import type { StaffUser, Role, Outlet } from "@/lib/types";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/error";
 
 export default function StaffPage() {
   const { token } = useAuth();
@@ -24,17 +28,27 @@ export default function StaffPage() {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState({ name: "", phone: "", email: "", role: "staff", roleId: "", outletIds: [] as string[], pin: "" });
 
-  const { data: staffData, isLoading } = useQuery({ queryKey: ["users"], queryFn: () => getJson<{ users: StaffUser[] }>("/users", token), enabled: Boolean(token) });
-  const { data: rolesData } = useQuery({ queryKey: ["roles"], queryFn: () => getJson<{ roles: Role[] }>("/roles", token), enabled: Boolean(token) });
-  const { data: outletsData } = useQuery({ queryKey: ["outlets"], queryFn: () => getJson<{ outlets: Outlet[] }>("/outlets", token), enabled: Boolean(token) });
+  const { data: staffData, isLoading } = useQuery({ queryKey: ["staff"], queryFn: () => userService.getUsers(token), enabled: Boolean(token) });
+  const { data: rolesData } = useQuery({ queryKey: ["roles"], queryFn: () => roleService.getRoles(token), enabled: Boolean(token) });
+  const { data: outletsData } = useQuery({ queryKey: ["outlets"], queryFn: () => outletService.getOutlets(token), enabled: Boolean(token) });
 
-  const save = useMutation({
-    mutationFn: (body: unknown) => editId ? apiFetch(`/users/${editId}`, { method: "PATCH", body, token }) : apiFetch("/users", { method: "POST", body, token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); setShowModal(false); setEditId(null); }
+  const saveMutation = useMutation({
+    mutationFn: (body: unknown) => editId ? userService.updateUser(editId, body, token) : userService.createUser(body, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff"] });
+      setShowModal(false);
+      toast.success(editId ? "Staff updated" : "Staff invited");
+    },
+    onError: (err: any) => toast.error(getErrorMessage(err, "Failed to save staff"))
   });
-  const deactivate = useMutation({
-    mutationFn: (id: string) => apiFetch(`/users/${id}`, { method: "DELETE", token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); setDeleteId(null); }
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => userService.deleteUser(id, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff"] });
+      toast.success("Staff deleted");
+    },
+    onError: (err: any) => toast.error(getErrorMessage(err, "Failed to delete staff"))
   });
 
   const users = (staffData?.users ?? []).filter((u) => !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.phone.includes(search));
@@ -61,7 +75,7 @@ export default function StaffPage() {
         ]} />
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Staff" : "Add Staff"} size="md">
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate(form); }}>
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }}>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="mb-1 block text-xs font-medium text-muted">Full Name *</label><Input id="staff-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Phone *</label><Input id="staff-phone" required value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
@@ -77,11 +91,11 @@ export default function StaffPage() {
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Staff")}</Button>
+            <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Staff")}</Button>
           </div>
         </form>
       </Modal>
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && deactivate.mutate(deleteId)} title="Deactivate Staff?" message="This user will lose access immediately." confirmLabel="Deactivate" loading={deactivate.isPending} />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && deleteMutation.mutate(deleteId)} title="Deactivate Staff?" message="This user will lose access immediately." confirmLabel="Deactivate" loading={deleteMutation.isPending} />
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { FeatureMultiSelect, type FeatureRegistryItem } from "@/components/ui/feature-multi-select";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { planService } from "@/services/plan.service";
 import { getErrorMessage } from "@/lib/error";
 import { formatNumber } from "@/lib/format";
 import type { Plan } from "@/lib/types";
@@ -40,41 +40,33 @@ export default function AdminPlansPage() {
 
   const { data: plansData, isLoading: loadingPlans } = useQuery({
     queryKey: ["admin-plans"],
-    queryFn: () => getJson<{ plans: Plan[] }>("/plans/all", token),
+    queryFn: () => planService.getAllPlans(token),
     enabled: Boolean(token),
   });
 
   const { data: featuresData, isLoading: loadingFeatures } = useQuery({
-    queryKey: ["feature-registry"],
-    queryFn: () =>
-      getJson<{ features: FeatureRegistryItem[] }>("/features", token),
+    queryKey: ["admin-features"],
+    queryFn: () => planService.getFeatures(token),
     enabled: Boolean(token),
   });
 
-  const createPlanMutation = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      apiFetch("/plans", { method: "POST", body, token }),
+  const savePlanMutation = useMutation({
+    mutationFn: (body: any) => {
+      if (editPlanId) {
+        return planService.updatePlan(editPlanId, body, token);
+      }
+      return planService.createPlan(body, token);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-plans"] });
+      toast.success(editPlanId ? "Plan updated successfully!" : "Plan created successfully!");
       setShowPlanCrudModal(false);
-      toast.success("Plan created successfully!");
     },
-    onError: (err) => toast.error(getErrorMessage(err, "Failed to create plan")),
-  });
-
-  const updatePlanMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
-      apiFetch(`/plans/${id}`, { method: "PATCH", body, token }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-plans"] });
-      setShowPlanCrudModal(false);
-      toast.success("Plan updated successfully!");
-    },
-    onError: (err) => toast.error(getErrorMessage(err, "Failed to update plan")),
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to save plan")),
   });
 
   const deletePlanMutation = useMutation({
-    mutationFn: (id: string) => apiFetch(`/plans/${id}`, { method: "DELETE", token }),
+    mutationFn: (id: string) => planService.deletePlan(id, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-plans"] });
       toast.success("Plan deleted successfully!");
@@ -137,11 +129,7 @@ export default function AdminPlansPage() {
       isPopular: planCrudForm.isPopular,
     };
 
-    if (editPlanId) {
-      updatePlanMutation.mutate({ id: editPlanId, body: payload });
-    } else {
-      createPlanMutation.mutate(payload);
-    }
+      savePlanMutation.mutate(payload);
   };
 
   return (
@@ -407,12 +395,11 @@ export default function AdminPlansPage() {
               type="submit"
               className="flex-1"
               disabled={
-                createPlanMutation.isPending ||
-                updatePlanMutation.isPending ||
+                savePlanMutation.isPending ||
                 planCrudForm.featureKeys.length === 0
               }
             >
-              {createPlanMutation.isPending || updatePlanMutation.isPending
+              {savePlanMutation.isPending
                 ? "Saving..."
                 : "Save Plan"}
             </Button>

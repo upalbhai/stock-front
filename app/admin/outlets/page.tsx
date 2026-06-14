@@ -10,31 +10,38 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { apiFetch } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
+import { adminService } from "@/services/admin.service";
 
 export default function AdminOutletsPage() {
   const { token } = useAuth();
   const qc = useQueryClient();
 
   const [search, setSearch] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
   const { data: outletsData, isLoading: loadingOutlets } = useQuery({
     queryKey: ["admin-outlets", search, statusFilter],
-    queryFn: () => getJson<{ outlets: any[] }>("/admin/outlets", token, { search: search || undefined, status: statusFilter || undefined }),
+    queryFn: () => adminService.getAdminOutlets(token, { search: search || undefined, status: statusFilter !== "all" ? statusFilter : undefined }),
     enabled: Boolean(token)
   });
 
-  const approveOutletMutation = useMutation({
-    mutationFn: (id: string) => apiFetch(`/admin/outlets/${id}/approve`, { method: "PATCH", token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-outlets"] }); toast.success("Outlet approved"); },
+  const approveOutlet = useMutation({
+    mutationFn: (id: string) => adminService.approveOutlet(id, token),
+    onSuccess: () => {
+      toast.success("Outlet approved successfully");
+      qc.invalidateQueries({ queryKey: ["admin-outlets"] });
+    },
     onError: (err) => toast.error(getErrorMessage(err))
   });
 
-  const setOutletStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => apiFetch(`/admin/outlets/${id}/status`, { method: "PATCH", body: { status }, token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-outlets"] }); toast.success("Status updated"); },
+  const updateStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => adminService.updateOutletStatus(id, status, token),
+    onSuccess: () => {
+      toast.success("Outlet status updated");
+      qc.invalidateQueries({ queryKey: ["admin-outlets"] });
+    },
     onError: (err) => toast.error(getErrorMessage(err))
   });
 
@@ -102,7 +109,7 @@ export default function AdminOutletsPage() {
             render: (o) => (
               <div className="flex gap-2 flex-wrap">
                 {o.status === "pending" && (
-                  <Button variant="default" size="xs" className="gap-1 bg-success hover:bg-success/90" onClick={() => approveOutletMutation.mutate(o._id)}>
+                  <Button variant="default" size="xs" className="gap-1 bg-success hover:bg-success/90" onClick={() => approveOutlet.mutate(o._id)}>
                     <CheckCircle2 className="h-3 w-3" /> Approve Outlet
                   </Button>
                 )}
@@ -110,7 +117,7 @@ export default function AdminOutletsPage() {
                   <Select
                     id={`set-outlet-status-${o._id}`}
                     value={o.status || "pending"}
-                    onValueChange={(status) => setOutletStatusMutation.mutate({ id: o._id, status })}
+                    onValueChange={(status) => updateStatus.mutate({ id: o._id, status })}
                     options={[
                       { value: "active", label: "Active" },
                       { value: "suspended", label: "Suspend" },

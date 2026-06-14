@@ -6,7 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson } from "@/lib/api-client";
+import { adminService } from "@/services/admin.service";
 import type { AuditLog } from "@/lib/types";
 
 export default function AdminAuditLogsPage() {
@@ -14,7 +14,7 @@ export default function AdminAuditLogsPage() {
 
   const { data: auditData, isLoading: loadingAudit } = useQuery({
     queryKey: ["admin-audit-logs"],
-    queryFn: () => getJson<{ logs: AuditLog[]; total: number }>("/audit-logs", token),
+    queryFn: () => adminService.getAuditLogs(token),
     enabled: Boolean(token)
   });
 

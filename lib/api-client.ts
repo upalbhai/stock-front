@@ -1,6 +1,8 @@
 import { API_BASE_URL } from "./constants";
 import { queueRequest } from "./offline-queue";
 import { ApiResponse } from "./types";
+import api from "./axiosInstance";
+import { AxiosRequestConfig } from "axios";
 
 export type QueueResult = { queued: true };
 
@@ -15,21 +17,6 @@ type ApiOptions = {
   headers?: Record<string, string>;
   token?: string | null;
 };
-
-async function parseJson(response: Response) {
-  if (response.status === 204) {
-    return null;
-  }
-  const contentType = response.headers.get("content-type") || "";
-  const text = await response.text();
-  if (!text) {
-    return null;
-  }
-  if (contentType.includes("application/json")) {
-    return JSON.parse(text) as unknown;
-  }
-  return text;
-}
 
 function buildQuery(
   params?: Record<string, string | number | boolean | undefined | null>
@@ -77,36 +64,41 @@ export function unwrapApiDataWithMeta<T>(response: unknown): ApiDataWithMeta<T> 
 
 export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
   const { method = "GET", body, headers, token } = options;
-  const requestHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(headers || {})
-  };
-  if (token) {
-    requestHeaders.Authorization = `Bearer ${token}`;
-  }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const config: AxiosRequestConfig = {
     method,
-    headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body)
-  });
+    url: path,
+    headers: headers || {},
+  };
 
-  const data = await parseJson(response);
-
-  if (!response.ok) {
-    const message =
-      typeof data === "object" && data && "message" in data
-        ? (data as { message: string }).message
-        : "Request failed";
-    const error = new Error(message);
-    (error as Error & { status?: number; errors?: any }).status = response.status;
-    if (typeof data === "object" && data && "errors" in data) {
-      (error as Error & { status?: number; errors?: any }).errors = (data as { errors?: any }).errors;
-    }
-    throw error;
+  if (body !== undefined) {
+    config.data = body;
   }
 
-  return data as T;
+  if (token) {
+    config.headers = {
+      ...config.headers,
+      Authorization: `Bearer ${token}`
+    };
+  }
+
+  try {
+    const response = await api.request(config);
+    return response.data as T;
+  } catch (error: any) {
+    const responseData = error.response?.data;
+    const message =
+      typeof responseData === "object" && responseData && "message" in responseData
+        ? (responseData as { message: string }).message
+        : error.message || "Request failed";
+    
+    const enhancedError = new Error(message);
+    (enhancedError as Error & { status?: number; errors?: any }).status = error.response?.status;
+    if (typeof responseData === "object" && responseData && "errors" in responseData) {
+      (enhancedError as Error & { status?: number; errors?: any }).errors = (responseData as { errors?: any }).errors;
+    }
+    throw enhancedError;
+  }
 }
 
 /** GET helper — returns unwrapped `data` from the standard API envelope. */

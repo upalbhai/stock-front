@@ -9,9 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Drawer } from "@/components/ui/drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { roleService } from "@/services/role.service";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/error";
+
+const emptyForm = { name: "", description: "", permissions: {} as Record<string, string[]> };
 
 const ALL_MODULES = ["billing","inventory","products","reports","expenses","users","outlets","roles","dashboard","settings","transactions","analytics","stock_transfers","audit_logs","categories","units","customers","invoices"];
 const ALL_ACTIONS = ["create","read","update","delete","refund","print","export","approve","void","collect"];
@@ -28,30 +32,44 @@ export default function RolesPage() {
   const [showModal, setShowModal] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const [form, setForm] = React.useState({ name: "", description: "", permissions: {} as Record<string, string[]> });
+  const [form, setForm] = React.useState(emptyForm);
 
   const { data, isLoading } = useQuery({
     queryKey: ["roles"],
-    queryFn: () => getJson<{ roles: Role[] }>("/roles", token),
+    queryFn: () => roleService.getRoles(token),
     enabled: Boolean(token)
   });
 
-  const save = useMutation({
-    mutationFn: (body: unknown) => editId
-      ? apiFetch(`/roles/${editId}`, { method: "PATCH", body, token })
-      : apiFetch("/roles", { method: "POST", body, token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["roles"] }); setShowModal(false); setEditId(null); }
+  const saveMutation = useMutation({
+    mutationFn: (body: unknown) =>
+      editId
+      ? roleService.updateRole(editId, body, token)
+      : roleService.createRole(body, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roles"] });
+      setShowModal(false);
+      setEditId(null);
+      setForm({ ...emptyForm });
+      toast.success(editId ? "Role updated" : "Role created");
+    },
+    onError: (err: any) => toast.error(getErrorMessage(err, "Failed to save role"))
   });
-  const remove = useMutation({
-    mutationFn: (id: string) => apiFetch(`/roles/${id}`, { method: "DELETE", token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["roles"] }); setDeleteId(null); }
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => roleService.deleteRole(id, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roles"] });
+      setDeleteId(null);
+      toast.success("Role deleted");
+    },
+    onError: (err: any) => toast.error(getErrorMessage(err, "Failed to delete role"))
   });
 
   const roles = data?.roles ?? [];
 
   const openCreate = () => {
     setEditId(null);
-    setForm({ name: "", description: "", permissions: {} });
+    setForm(emptyForm);
     setShowModal(true);
   };
   const openEdit = (role: Role) => {
@@ -75,7 +93,7 @@ export default function RolesPage() {
     const permissions = Object.entries(form.permissions)
       .filter(([, actions]) => actions.length > 0)
       .map(([module, actions]) => ({ module, actions }));
-    save.mutate({ name: form.name, description: form.description, permissions });
+    saveMutation.mutate({ name: form.name, description: form.description, permissions });
   };
 
   return (
@@ -169,13 +187,13 @@ export default function RolesPage() {
           {/* Sticky Footer */}
           <div className="p-6 border-t border-border/60 bg-surface flex gap-3">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Create Role")}</Button>
+            <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>{saveMutation.isPending ? "Saving..." : (editId ? "Save Changes" : "Create Role")}</Button>
           </div>
         </form>
       </Drawer>
 
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && remove.mutate(deleteId)}
-        title="Delete Role?" message="Any staff with this role will lose their permissions." confirmLabel="Delete" loading={remove.isPending} />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
+        title="Delete Role?" message="Any staff with this role will lose their permissions." confirmLabel="Delete" loading={deleteMutation.isPending} />
     </div>
   );
 }

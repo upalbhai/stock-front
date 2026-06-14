@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { getJson, apiFetch, apiFetchData } from "@/lib/api-client";
+import { customerService } from "@/services/customer.service";
 import { formatCurrency } from "@/lib/format";
 import type { Customer } from "@/lib/types";
 
@@ -29,7 +29,7 @@ export function CustomerPicker({ token, outletId, selectedId, required, onSelect
   const { data, isLoading } = useQuery({
     queryKey: ["customers", outletId, search],
     queryFn: () =>
-      getJson<{ customers: Customer[] }>("/customers", token, {
+      customerService.getCustomers(token, {
         outletId: outletId ?? undefined,
         search: search || undefined,
         limit: 20
@@ -39,13 +39,12 @@ export function CustomerPicker({ token, outletId, selectedId, required, onSelect
 
   const { data: selectedData } = useQuery({
     queryKey: ["customer", selectedId],
-    queryFn: () => getJson<{ customer: Customer }>(`/customers/${selectedId}`, token),
+    queryFn: () => customerService.getCustomer(selectedId!, token),
     enabled: Boolean(token && selectedId)
   });
 
   const createCustomer = useMutation({
-    mutationFn: (body: unknown) =>
-      apiFetchData<{ customer: Customer }>("/customers", { method: "POST", body, token }),
+    mutationFn: (body: unknown) => customerService.createCustomer(body, token),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["customers"] });
       setShowAdd(false);
@@ -140,7 +139,7 @@ export function CustomerPicker({ token, outletId, selectedId, required, onSelect
               ) : customers.length === 0 ? (
                 <p className="text-center text-xs text-muted py-4">No customers found</p>
               ) : (
-                customers.map((c) => (
+                customers.map((c: Customer) => (
                   <button
                     key={c._id}
                     type="button"

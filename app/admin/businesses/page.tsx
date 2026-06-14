@@ -11,7 +11,9 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { adminService } from "@/services/admin.service";
+import { planService } from "@/services/plan.service";
+import { userService } from "@/services/user.service";
 import { getErrorMessage } from "@/lib/error";
 import type { Business, StaffUser, Plan } from "@/lib/types";
 
@@ -38,63 +40,63 @@ export default function AdminBusinessesPage() {
 
   const { data: bizData, isLoading: loadingBiz } = useQuery({
     queryKey: ["admin-businesses", search, statusFilter],
-    queryFn: () => getJson<{ businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[] }>("/admin/businesses", token, { search: search || undefined, status: statusFilter || undefined }),
+    queryFn: () => adminService.getAdminBusinesses(token, { search: search || undefined, status: statusFilter !== "all" ? statusFilter : undefined }),
     enabled: Boolean(token)
   });
 
   const { data: plansData } = useQuery({
-    queryKey: ["admin-plans"],
-    queryFn: () => getJson<{ plans: Plan[] }>("/plans/all", token),
+    queryKey: ["plans", "all"],
+    queryFn: () => planService.getAllPlans(token),
     enabled: Boolean(token)
   });
 
   const { data: usersData, isLoading: loadingUsers } = useQuery({
-    queryKey: ["admin-business-users", impersonateTargetBusiness?._id],
-    queryFn: () => getJson<{ users: StaffUser[] }>("/users", token, { businessId: impersonateTargetBusiness?._id }),
-    enabled: Boolean(token && impersonateTargetBusiness?._id)
+    queryKey: ["business-users", impersonateTargetBusiness?._id],
+    queryFn: () => userService.getUsers(token, { businessId: impersonateTargetBusiness?._id }),
+    enabled: Boolean(token && impersonateTargetBusiness)
   });
 
   const approveBizMutation = useMutation({
-    mutationFn: (id: string) => apiFetch(`/admin/businesses/${id}/approve`, { method: "PATCH", token }),
+    mutationFn: (id: string) => adminService.approveBusiness(id, token),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-businesses"] }); toast.success("Business approved"); },
     onError: (err) => toast.error(getErrorMessage(err))
   });
 
   const setBizStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => apiFetch(`/admin/businesses/${id}/status`, { method: "PATCH", body: { status }, token }),
+    mutationFn: ({ id, status }: { id: string; status: string }) => adminService.updateBusinessStatus(id, status, token),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-businesses"] }); toast.success("Status updated"); },
     onError: (err) => toast.error(getErrorMessage(err))
   });
 
   const planMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: unknown }) => apiFetch(`/admin/businesses/${id}/plan`, { method: "PATCH", body, token }),
+    mutationFn: ({ id, body }: { id: string; body: unknown }) => adminService.updateBusinessPlan(id, body, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-businesses"] });
       setShowPlanModal(false);
       setSelectedBusiness(null);
-      toast.success("Plan updated");
+      toast.success("Plan updated successfully");
     },
     onError: (err) => toast.error(getErrorMessage(err))
   });
 
   const manualSubMutation = useMutation({
-    mutationFn: (body: any) => apiFetch("/admin/subscriptions/manual", { method: "POST", body, token }),
+    mutationFn: (body: any) => adminService.manualSubscription(body, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-businesses"] });
       setShowManualSubModal(false);
       setSelectedBusiness(null);
-      toast.success("Manual subscription applied");
+      toast.success("Manual subscription added");
     },
     onError: (err) => toast.error(getErrorMessage(err))
   });
 
   const cancelSubMutation = useMutation({
-    mutationFn: (businessId: string) => apiFetch("/admin/subscriptions/cancel", { method: "POST", body: { businessId }, token }),
+    mutationFn: (businessId: string) => adminService.cancelSubscription(businessId, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-businesses"] });
-      toast.success("Subscription cancelled successfully");
+      toast.success("Subscription cancelled");
     },
-    onError: (err) => toast.error("Cancellation failed: " + getErrorMessage(err))
+    onError: (err) => toast.error(getErrorMessage(err))
   });
 
   const businesses = bizData?.businesses ?? [];

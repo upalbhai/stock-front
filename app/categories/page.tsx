@@ -10,7 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJsonWithMeta, apiFetch } from "@/lib/api-client";
+import { categoryService } from "@/services/category.service";
 import { getErrorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import Pagination from "@/components/ui/pagination";
@@ -30,12 +30,13 @@ export default function CategoriesPage() {
   const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
+  const [search, setSearch] = React.useState("");
   const [form, setForm] = React.useState({ name: "", parentId: "", icon: "🍽️", color: "#6366f1", description: "", sortOrder: "0" });
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["categories", page, limit],
-    queryFn: () => getJsonWithMeta<Category[]>("/categories", token, { flat: "true", page, limit }),
-    enabled: Boolean(token)
+    queryKey: ["categories", page, limit, search],
+    queryFn: () => categoryService.getCategoriesWithMeta(token, { flat: "true", page, limit, search }),
+    enabled: Boolean(token),
   });
 
   React.useEffect(() => {
@@ -60,26 +61,30 @@ export default function CategoriesPage() {
     }, 1000);
   };
 
-  const save = useMutation({
-    mutationFn: (body: unknown) => editId
-      ? apiFetch(`/categories/${editId}`, { method: "PATCH", body, token })
-      : apiFetch("/categories", { method: "POST", body, token }),
+  const saveMutation = useMutation({
+    mutationFn: (body: unknown) => {
+      if (editId) {
+        return categoryService.updateCategory(editId, body, token);
+      }
+      return categoryService.createCategory(body, token);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["categories"] });
       setShowModal(false);
       setEditId(null);
-      toast.success(editId ? "Category updated successfully" : "Category created successfully");
+      toast.success(editId ? "Category updated" : "Category created");
     },
     onError: (err: any) => {
       toast.error(getErrorMessage(err, "Failed to save category"));
     }
   });
-  const remove = useMutation({
-    mutationFn: (id: string) => apiFetch(`/categories/${id}`, { method: "DELETE", token }),
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => categoryService.deleteCategory(id, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["categories"] });
       setDeleteId(null);
-      toast.success("Category deleted successfully");
+      toast.success("Category deleted");
     },
     onError: (err: any) => {
       toast.error(getErrorMessage(err, "Failed to delete category"));
@@ -170,7 +175,7 @@ export default function CategoriesPage() {
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Category" : "Create Category"} size="md">
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate({ ...form, parentId: form.parentId || null, sortOrder: Number(form.sortOrder) }); }}>
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); saveMutation.mutate({ ...form, parentId: form.parentId || null, sortOrder: Number(form.sortOrder) }); }}>
           <div><label className="mb-1 block text-xs font-medium text-muted">Category Name *</label><Input id="cat-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Lassi, Tea, Juice" /></div>
           <div><label className="mb-1 block text-xs font-medium text-muted">Parent Category</label><Select id="cat-parent" value={form.parentId} onValueChange={(v) => setForm((f) => ({ ...f, parentId: v }))} options={topLevelOptions} /></div>
           <div>
@@ -196,13 +201,13 @@ export default function CategoriesPage() {
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={save.isPending} style={{ backgroundColor: form.color }}>{save.isPending ? "Saving..." : (editId ? "Save" : "Create")}</Button>
+            <Button type="submit" className="flex-1" disabled={saveMutation.isPending} style={{ backgroundColor: form.color }}>{saveMutation.isPending ? "Saving..." : (editId ? "Save" : "Create")}</Button>
           </div>
         </form>
       </Modal>
 
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && remove.mutate(deleteId)}
-        title="Delete Category?" message="Products in this category will become uncategorized." confirmLabel="Delete" loading={remove.isPending} />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
+        title="Delete Category?" message="Products in this category will become uncategorized." confirmLabel="Delete" loading={deleteMutation.isPending} />
     </div>
   );
 }

@@ -12,8 +12,10 @@ import { Switch } from "@/components/ui/switch";
 import { DataTable } from "@/components/ui/data-table";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { outletService } from "@/services/outlet.service";
 import type { Outlet } from "@/lib/types";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/error";
 
 const emptyForm = {
   name: "", address: "", phone: "", email: "",
@@ -31,20 +33,33 @@ export default function OutletsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["outlets"],
-    queryFn: () => getJson<{ outlets: Outlet[] }>("/outlets", token),
+    queryFn: () => outletService.getOutlets(token),
     enabled: Boolean(token)
   });
 
-  const save = useMutation({
-    mutationFn: (body: unknown) => editId
-      ? apiFetch(`/outlets/${editId}`, { method: "PATCH", body, token })
-      : apiFetch("/outlets", { method: "POST", body, token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["outlets"] }); setShowModal(false); setEditId(null); setForm({ ...emptyForm }); }
+  const saveMutation = useMutation({
+    mutationFn: (body: unknown) => {
+      if (editId) return outletService.updateOutlet(editId, body, token);
+      return outletService.createOutlet(body, token);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["outlets"] });
+      setShowModal(false);
+      setEditId(null);
+      setForm({ ...emptyForm });
+      toast.success(editId ? "Outlet updated" : "Outlet created");
+    },
+    onError: (err: any) => toast.error(getErrorMessage(err, "Failed to save outlet"))
   });
 
-  const remove = useMutation({
-    mutationFn: (id: string) => apiFetch(`/outlets/${id}`, { method: "DELETE", token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["outlets"] }); setDeleteId(null); }
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => outletService.deleteOutlet(id, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["outlets"] });
+      setDeleteId(null);
+      toast.success("Outlet deleted");
+    },
+    onError: (err: any) => toast.error(getErrorMessage(err, "Failed to delete outlet"))
   });
 
   const outlets = data?.outlets ?? [];
@@ -107,7 +122,7 @@ export default function OutletsPage() {
 
       <Modal open={showModal} onClose={() => setShowModal(false)}
         title={editId ? "Edit Outlet" : "Create Outlet"} size="md">
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate(form); }}>
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }}>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted">Outlet Name *</label>
             <Input id="outlet-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Anand Outlet" />
@@ -142,18 +157,18 @@ export default function OutletsPage() {
           )}
           <div className="flex gap-3 pt-2">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={save.isPending}>
-              {save.isPending ? "Saving..." : (editId ? "Save Changes" : "Create Outlet")}
+            <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? "Saving..." : (editId ? "Save Changes" : "Create Outlet")}
             </Button>
           </div>
         </form>
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)}
-        onConfirm={() => deleteId && remove.mutate(deleteId)}
+        onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         title="Deactivate Outlet?"
         message="This outlet will be hidden from billing and operations. You can re-enable it later."
-        confirmLabel="Deactivate" loading={remove.isPending} />
+        confirmLabel="Deactivate" loading={deleteMutation.isPending} />
     </div>
   );
 }

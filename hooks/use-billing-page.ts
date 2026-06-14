@@ -28,10 +28,16 @@ import { useFeature, useBusinessProfile } from "@/hooks/useFeature";
 import { useSettings } from "@/components/settings/settings-provider";
 import type { UnitPickOption } from "@/components/billing/unit-picker";
 import { calculateCartTotals, resolveSupplyType } from "@/lib/taxCalculator";
-import { getJson, getJsonWithMeta, apiFetch } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
 import { PAYMENT_METHODS } from "@/components/billing/billing-constants";
 import type { Product, Category, Outlet, Customer, Business } from "@/lib/types";
+
+import { outletService } from "@/services/outlet.service";
+import { categoryService } from "@/services/category.service";
+import { productService } from "@/services/product.service";
+import { businessService } from "@/services/business.service";
+import { customerService } from "@/services/customer.service";
+import { orderService } from "@/services/order.service";
 
 export function useBillingPage() {
   const { token, outletId } = useAuth();
@@ -88,14 +94,14 @@ export function useBillingPage() {
 
   const { data: outletsData } = useQuery({
     queryKey: ["outlets"],
-    queryFn: () => getJson<{ outlets: Outlet[] }>("/outlets", token),
+    queryFn: () => outletService.getOutlets(token),
     enabled: Boolean(token),
   });
   const currentOutlet = outletsData?.outlets?.find((o) => o._id === outletId);
 
   const { data: catData } = useQuery({
     queryKey: ["categories", "flat", outletId],
-    queryFn: () => getJson<Category[]>("/categories", token, { flat: "true", limit: 200 }),
+    queryFn: () => categoryService.getCategories(token, { flat: "true", limit: 200 }),
     enabled: Boolean(token),
   });
 
@@ -106,7 +112,7 @@ export function useBillingPage() {
   } = useQuery({
     queryKey: ["products", outletId, selectedCategoryId, debouncedSearch, prodPage, prodLimit],
     queryFn: () =>
-      getJsonWithMeta<Product[]>("/products", token, {
+      productService.getProductsWithOffset(token || "", {
         outletId: outletId ?? undefined,
         categoryId: selectedCategoryId ?? undefined,
         search: debouncedSearch || undefined,
@@ -118,13 +124,13 @@ export function useBillingPage() {
 
   const { data: bizData } = useQuery({
     queryKey: ["business-mine"],
-    queryFn: () => getJson<{ business: Business }>("/businesses/mine", token),
+    queryFn: () => businessService.getMyBusiness(token),
     enabled: Boolean(token),
   });
 
   const { data: selectedCustomerData } = useQuery({
     queryKey: ["customer", billing.customerId],
-    queryFn: () => getJson<{ customer: Customer }>(`/customers/${billing.customerId}`, token),
+    queryFn: () => customerService.getCustomer(billing.customerId!, token),
     enabled: Boolean(token && billing.customerId),
   });
 
@@ -146,7 +152,7 @@ export function useBillingPage() {
   const cartItemCount = billing.items.reduce((acc, i) => acc + (i.soldQty ?? i.qty), 0);
 
   const submitOrder = useMutation({
-    mutationFn: (body: unknown) => apiFetch("/orders", { method: "POST", body, token }),
+    mutationFn: (body: unknown) => orderService.createOrder(body, token),
     onSuccess: () => {
       dispatch(clearBill());
       setShowSuccess(true);
@@ -215,7 +221,7 @@ export function useBillingPage() {
     async (scannedBarcode: string) => {
       if (!token) return;
       try {
-        const res = await getJsonWithMeta<Product[]>("/products", token, {
+        const res = await productService.getProductsWithOffset(token || "", {
           outletId: outletId ?? undefined,
           search: scannedBarcode,
           limit: 2,

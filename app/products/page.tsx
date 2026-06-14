@@ -20,6 +20,9 @@ import { formatCurrency } from "@/lib/format";
 import type { Product, Category, Unit } from "@/lib/types";
 import { getErrorMessage } from "@/lib/error";
 import { productService } from "@/services/product.service";
+import { unitService } from "@/services/unit.service";
+import { outletService } from "@/services/outlet.service";
+import { categoryService } from "@/services/category.service";
 import Pagination from "@/components/ui/pagination";
 
 function unitLabel(u: Pick<Unit, "name" | "abbreviation">) {
@@ -31,7 +34,7 @@ async function loadUnits(
   outletId: string | null | undefined,
   { page, limit, q }: { page: number; limit: number; q?: string }
 ) {
-  const res = await getJsonWithMeta<Unit[]>("/units", token, {
+  const res = await unitService.getUnitsWithMeta(token, {
     flat: "true",
     page,
     limit,
@@ -53,7 +56,7 @@ async function loadCategories(
   token: string | null,
   { page, limit, q }: { page: number; limit: number; q?: string }
 ) {
-  const res = await getJsonWithMeta<Category[]>("/categories", token, { flat: "true", page, limit });
+  const res = await categoryService.getCategoriesWithMeta(token, { flat: "true", page, limit });
 
   let items = (res.data ?? []).map((c) => ({
     ...c,
@@ -92,10 +95,34 @@ export default function ProductsPage() {
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
 
+  const { data: unitsData } = useQuery({
+    queryKey: ["units"],
+    queryFn: () => unitService.getUnits(token),
+    enabled: Boolean(token),
+  });
+
+  const { data: outletsData } = useQuery({
+    queryKey: ["outlets"],
+    queryFn: () => outletService.getOutlets(token),
+    enabled: Boolean(token),
+  });
+
+  const { data: catData } = useQuery({
+    queryKey: ["categories", "flat"],
+    queryFn: () => categoryService.getCategoriesWithMeta(token, { flat: "true", page: 1, limit: 100 }),
+    enabled: Boolean(token),
+  });
+
   const { data: prodData, isLoading, isError, error, refetch: refetchProducts } = useQuery({
     queryKey: ["products", outletId, catFilter, search, page, limit],
-    queryFn: () => getJsonWithMeta<Product[]>("/products", token, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, page, limit }),
+    queryFn: () => productService.getProductsWithOffset(token!, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, page, limit }),
     enabled: Boolean(token)
+  });
+
+  const { data: allCats } = useQuery({
+    queryKey: ["all-categories"],
+    queryFn: () => categoryService.getCategories(token, { flat: "true", limit: 200 }),
+    enabled: Boolean(token),
   });
 
   React.useEffect(() => {
@@ -120,21 +147,20 @@ export default function ProductsPage() {
     }, 1000);
   };
 
-  const { data: catData } = useQuery({
-    queryKey: ["categories", "flat", outletId],
-    queryFn: () => getJson<Category[]>("/categories", token, { flat: "true", limit: 200 }),
-    enabled: Boolean(token)
-  });
+
 
   const save = useMutation({
-    mutationFn: (body: unknown) => editId
-      ? apiFetch(`/products/${editId}`, { method: "PATCH", body, token })
-      : apiFetch("/products", { method: "POST", body, token }),
+    mutationFn: (body: unknown) => {
+      if (editId) {
+        return productService.updateProduct(editId, body, token);
+      }
+      return productService.createProduct(token!, body);
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setShowModal(false); setEditId(null); toast.success(editId ? "Product updated" : "Product created"); },
     onError: (err) => { toast.error(getErrorMessage(err, "Failed to save product")); }
   });
   const remove = useMutation({
-    mutationFn: (id: string) => apiFetch(`/products/${id}`, { method: "DELETE", token }),
+    mutationFn: (id: string) => productService.deleteProduct(id, token),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setDeleteId(null); toast.success("Product deleted"); },
     onError: (err) => { toast.error(getErrorMessage(err, "Failed to delete product")); }
   });
@@ -181,11 +207,7 @@ export default function ProductsPage() {
       if (String(opt.id).startsWith("new_")) {
         const name = (opt.name ?? opt.label ?? "").trim();
         if (!name || !token) return null;
-        const res = await apiFetchData<{ unit: Unit }>("/units", {
-          method: "POST",
-          body: { name, abbreviation: name, outletId: outletId ?? undefined },
-          token
-        });
+        const res = await unitService.createUnit({ name, abbreviation: name, outletId: outletId ?? undefined }, token);
         const unit = res?.unit;
         if (unit) {
           qc.invalidateQueries({ queryKey: ["units"] });

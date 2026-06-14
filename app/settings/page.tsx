@@ -12,10 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson, apiFetch } from "@/lib/api-client";
+import { businessService } from "@/services/business.service";
+import { outletService } from "@/services/outlet.service";
 import { useSettings } from "@/components/settings/settings-provider";
 import { RoleGate } from "@/components/auth/role-gate";
 import { SecuritySettings } from "@/components/settings/security-settings";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/error";
 
 export default function SettingsPage() {
   const { token, outletId, businessId } = useAuth();
@@ -26,36 +29,44 @@ export default function SettingsPage() {
   const [outletForm, setOutletForm] = React.useState({ name: "", phone: "", address: "", defaultTaxRate: 5 });
 
   // Get active business detail
-  const { data: bizData } = useQuery({
-    queryKey: ["business-settings", businessId],
-    queryFn: () => getJson<{ business: any }>("/businesses/mine", token),
-    enabled: Boolean(token && businessId)
+  const { data: businessData } = useQuery({
+    queryKey: ["business-mine"],
+    queryFn: () => businessService.getMyBusiness(token!),
+    enabled: Boolean(token)
   });
 
   // Get active outlet detail
   const { data: outletData } = useQuery({
-    queryKey: ["outlet-settings", outletId],
-    queryFn: () => getJson<{ outlet: any }>(`/outlets/${outletId}`, token),
+    queryKey: ["outlet-current", outletId],
+    queryFn: () => outletService.getOutlet(outletId!, token!),
     enabled: Boolean(token && outletId)
   });
 
   // Mutations
-  const updateBizMutation = useMutation({
-    mutationFn: (body: unknown) => apiFetch(`/businesses/${businessId}`, { method: "PATCH", body, token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["business-settings"] }); }
+  const saveBusinessMutation = useMutation({
+    mutationFn: (body: unknown) => businessService.updateBusiness(businessId!, body, token!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["business-mine"] });
+      toast.success("Business settings saved");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to save business settings"))
   });
 
-  const updateOutletMutation = useMutation({
-    mutationFn: (body: unknown) => apiFetch(`/outlets/${outletId}`, { method: "PATCH", body, token }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["outlet-settings"] }); }
+  const saveOutletMutation = useMutation({
+    mutationFn: (body: unknown) => outletService.updateOutlet(outletId!, body, token!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["outlet-current"] });
+      toast.success("Outlet settings saved");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to save outlet settings"))
   });
 
   React.useEffect(() => {
-    if (bizData?.business) {
-      const b = bizData.business;
+    if (businessData?.business) {
+      const b = businessData.business;
       setBizForm({ name: b.name || "", code: b.code || "", gstNumber: b.gstNumber || "", currency: b.currency || "INR" });
     }
-  }, [bizData]);
+  }, [businessData]);
 
   React.useEffect(() => {
     if (outletData?.outlet) {
@@ -66,12 +77,12 @@ export default function SettingsPage() {
 
   const handleBizSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateBizMutation.mutate(bizForm);
+    saveBusinessMutation.mutate(bizForm);
   };
 
   const handleOutletSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateOutletMutation.mutate(outletForm);
+    saveOutletMutation.mutate(outletForm);
   };
 
   return (
@@ -114,8 +125,8 @@ export default function SettingsPage() {
                       <Input value={bizForm.currency} onChange={(e) => setBizForm(f => ({ ...f, currency: e.target.value }))} />
                     </div>
                   </div>
-                  <Button type="submit" disabled={updateBizMutation.isPending} id="save-biz-btn">
-                    {updateBizMutation.isPending ? "Saving..." : "Save Brand Settings"}
+                  <Button type="submit" disabled={saveBusinessMutation.isPending} id="save-biz-btn">
+                    {saveBusinessMutation.isPending ? "Saving..." : "Save Brand Settings"}
                   </Button>
                 </form>
               </CardContent>
@@ -149,8 +160,8 @@ export default function SettingsPage() {
                       <Input type="number" min={0} max={100} value={outletForm.defaultTaxRate} onChange={(e) => setOutletForm(f => ({ ...f, defaultTaxRate: Number(e.target.value) }))} />
                     </div>
                   </div>
-                  <Button type="submit" disabled={updateOutletMutation.isPending} id="save-outlet-btn">
-                    {updateOutletMutation.isPending ? "Saving..." : "Save Outlet Settings"}
+                  <Button type="submit" disabled={saveOutletMutation.isPending} id="save-outlet-btn">
+                    {saveOutletMutation.isPending ? "Saving..." : "Save Outlet Settings"}
                   </Button>
                 </form>
               </CardContent>
@@ -205,7 +216,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted">Plan Level:</span>
-                  <Badge variant="soft" className="capitalize font-bold">{bizData?.business?.plan || "Starter"}</Badge>
+                  <Badge variant="soft" className="capitalize font-bold">{businessData?.business?.plan || "Starter"}</Badge>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted">Assigned License Limits:</span>

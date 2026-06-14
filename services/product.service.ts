@@ -31,4 +31,12 @@ export const productService = {
   createProduct: async (token: string, data: unknown) => {
     return postJson<{ product: Product }>("/products", data, token);
   },
+
+  updateProduct: async (id: string, data: unknown, token?: string | null) => {
+    return apiFetch(`/products/${id}`, { method: "PATCH", body: data, token });
+  },
+
+  deleteProduct: async (id: string, token?: string | null) => {
+    return apiFetch(`/products/${id}`, { method: "DELETE", token });
+  },
 };

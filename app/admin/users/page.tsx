@@ -7,19 +7,25 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson } from "@/lib/api-client";
+import { userService } from "@/services/user.service";
 
 export default function AdminUsersPage() {
   const { token } = useAuth();
   const [search, setSearch] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
 
-  const { data: allUsersData, isLoading: loadingAllUsers } = useQuery({
-    queryKey: ["admin-all-users", search],
-    queryFn: () => getJson<{ users: any[] }>("/users", token, { search: search || undefined }),
-    enabled: Boolean(token)
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-users", debouncedSearch],
+    queryFn: () => userService.getUsers(token, { search: debouncedSearch || undefined }),
+    enabled: Boolean(token),
   });
 
-  const allUsers = allUsersData?.users ?? [];
+  const allUsers = data?.users ?? [];
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -31,7 +37,7 @@ export default function AdminUsersPage() {
       </div>
 
       <DataTable
-        loading={loadingAllUsers}
+        loading={isLoading}
         data={allUsers}
         keyExtractor={(u) => u._id}
         emptyMessage="No system users matching search."

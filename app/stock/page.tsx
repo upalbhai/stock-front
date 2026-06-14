@@ -17,9 +17,11 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
-import { getJson, getJsonWithMeta, apiFetch } from "@/lib/api-client";
+import { getJson, getJsonWithMeta } from "@/lib/api-client";
+import { stockService } from "@/services/stock.service";
 import { formatNumber, formatDate, formatDateTime, formatCurrency } from "@/lib/format";
 import { getErrorMessage } from "@/lib/error";
+import toast from "react-hot-toast";
 import { buildStockUnitOptions, formatStockMovementQty, getProductUnitLabel, getStockPriceDefaults, calcStockEntryProfit } from "@/lib/productUtils";
 import { Switch } from "@/components/ui/switch";
 import type { Product, StockTransfer, Outlet } from "@/lib/types";
@@ -333,72 +335,58 @@ export default function StockPage() {
     enabled: Boolean(token)
   });
 
-  // API Mutations
-  const adjustMutation = useMutation({
-    mutationFn: (body: unknown) => apiFetch("/stock/adjust", { method: "POST", body, token }),
+  const adjustStockMutation = useMutation({
+    mutationFn: (body: unknown) => stockService.adjustStock(body, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
-      qc.invalidateQueries({ queryKey: ["stock-summary"] });
       qc.invalidateQueries({ queryKey: ["stock-history"] });
       setShowAdjustModal(false);
-      setAdjustQty("");
-      setAdjustNote("");
-      setAdjustError(null);
-    }
-    ,
-    onError: (err: unknown) => {
-      const msg = getErrorMessage(err, "Failed to adjust stock");
-      console.error("Adjust error:", err);
-      setAdjustError(msg);
-      // also show a quick alert so user notices immediately
-      alert(msg);
-    }
+      toast.success("Stock adjusted successfully");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to adjust stock"))
   });
 
-  const transferMutation = useMutation({
-    mutationFn: (body: unknown) => apiFetch("/stock/transfers", { method: "POST", body, token }),
+  const transferStockMutation = useMutation({
+    mutationFn: (body: unknown) => stockService.createTransfer(body, token),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["stock-transfers"] });
       setShowTransferModal(false);
-      setTransferTargetOutlet("");
-      setTransferItems([]);
-      setTransferNote("");
-    }
-    , onError: (err: unknown) => {
-      const msg = getErrorMessage(err, "Failed to create transfer request");
-      console.error("Transfer error:", err);
-      alert(msg);
-    }
+      toast.success("Transfer request submitted");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to transfer stock"))
   });
 
   const approveTransferMutation = useMutation({
-    mutationFn: (id: string) => apiFetch(`/stock/transfers/${id}/approve`, { method: "POST", token }),
+    mutationFn: (id: string) => stockService.approveTransfer(id, token),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["stock-transfers"] });
       qc.invalidateQueries({ queryKey: ["products"] });
-      qc.invalidateQueries({ queryKey: ["stock-summary"] });
-      qc.invalidateQueries({ queryKey: ["stock-history"] });
-    }
-    , onError: (err: unknown) => {
-      const msg = getErrorMessage(err, "Failed to approve transfer");
-      console.error("Approve transfer error:", err);
-      alert(msg);
-    }
+      qc.invalidateQueries({ queryKey: ["stock-transfers"] });
+      toast.success("Transfer approved");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to approve transfer"))
+  });
+
+  const resolveDiffMutation = useMutation({
+    mutationFn: (body: unknown) => stockService.adjustStock(body, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["stock-audits"] });
+      toast.success("Discrepancy resolved");
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to resolve discrepancy"))
   });
 
   const saveOpeningStockMutation = useMutation({
-    mutationFn: (body: unknown) => apiFetch("/stock/adjust", { method: "POST", body, token }),
+    mutationFn: (body: unknown) => stockService.adjustStock(body, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["stock-summary"] });
       qc.invalidateQueries({ queryKey: ["stock-history"] });
       setActiveTab("overview");
-    }
-    , onError: (err: unknown) => {
-      const msg = getErrorMessage(err, "Failed to save opening stock");
-      console.error("Save opening stock error:", err);
-      alert(msg);
-    }
+      toast.success("Opening stock saved");
+    },
+    onError: (err: unknown) => toast.error(getErrorMessage(err, "Failed to save opening stock"))
   });
 
   const products: Product[] = prodData?.data ?? [];
@@ -565,7 +553,7 @@ export default function StockPage() {
       let apiQty = adjustBaseAmount;
       let apiType = adjustEntryType;
       if (adjustEntryType === "wastage") apiQty = -adjustBaseAmount;
-      adjustMutation.mutate({
+      adjustStockMutation.mutate({
         productId: selectedProduct._id,
         outletId: outletId ?? undefined,
         qty: apiQty,
@@ -578,7 +566,7 @@ export default function StockPage() {
     }
 
     const qtyVal = Number(adjustQty);
-    adjustMutation.mutate({
+    adjustStockMutation.mutate({
       productId: selectedProduct._id,
       outletId: outletId ?? undefined,
       qty: qtyVal,
@@ -592,7 +580,7 @@ export default function StockPage() {
   const handleTransferSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!transferTargetOutlet || transferItems.length === 0) return;
-    transferMutation.mutate({
+    transferStockMutation.mutate({
       fromOutletId: outletId,
       toOutletId: transferTargetOutlet,
       items: transferItems.map((item) => {
@@ -1299,8 +1287,8 @@ export default function StockPage() {
           {adjustError && <p className="text-xs text-danger">{adjustError}</p>}
           <div className="flex gap-3 pt-2">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowAdjustModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={adjustMutation.isPending || !adjustQty}>
-              {adjustMutation.isPending ? "Adjusting..." : "Apply Adjustment"}
+            <Button type="submit" className="flex-1" disabled={adjustStockMutation.isPending || !adjustQty}>
+              {adjustStockMutation.isPending ? "Adjusting..." : "Apply Adjustment"}
             </Button>
           </div>
         </form>
@@ -1365,8 +1353,8 @@ export default function StockPage() {
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowTransferModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={transferMutation.isPending || transferItems.length === 0 || !transferTargetOutlet}>
-              {transferMutation.isPending ? "Sending..." : "Submit Transfer Request"}
+            <Button type="submit" className="flex-1" disabled={transferStockMutation.isPending || transferItems.length === 0 || !transferTargetOutlet}>
+              {transferStockMutation.isPending ? "Sending..." : "Submit Transfer Request"}
             </Button>
           </div>
         </form>

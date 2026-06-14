@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getJson } from "@/lib/api-client";
+import { adminService } from "@/services/admin.service";
 import type { AuditLog } from "@/lib/types";
 
 const actionColors: Record<string, "soft" | "warning" | "danger" | "secondary"> = {
@@ -18,7 +18,7 @@ export default function AuditLogsPage() {
   const { token } = useAuth();
   const { data, isLoading } = useQuery({
     queryKey: ["audit-logs"],
-    queryFn: () => getJson<{ logs: AuditLog[]; total: number }>("/audit-logs", token),
+    queryFn: () => adminService.getAuditLogs(token),
     enabled: Boolean(token)
   });
 
