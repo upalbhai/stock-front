@@ -7,15 +7,14 @@ import {
   Bell,
   ChevronRight,
   Clock,
-  LayoutDashboard,
-  LogOut,
   Plus,
   RefreshCw,
   Search,
-  User,
 } from "lucide-react";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { BottomNav } from "@/components/layout/navigation";
+import { UserAccountMenu } from "@/components/layout/user-account-menu";
+import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -36,18 +35,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 function useBreadcrumbs(pathname: string) {
   return useMemo(() => {
@@ -106,7 +95,7 @@ function NotificationBell() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, impersonating, exitImpersonation } = useAuth();
+  const { user, impersonating, exitImpersonation } = useAuth();
   const isAuthRoute = pathname.startsWith("/login");
   const isOnline = useOnlineStatus();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -115,8 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pageTitle = breadcrumbs[breadcrumbs.length - 1]?.label ?? "Dashboard";
 
   const isSuperAdmin = user?.role === "superadmin";
-  const displayName = user?.name ?? "User";
-  const userRole = user?.role?.toUpperCase() ?? "STAFF";
+  const isBillingRoute = pathname === "/billing" || pathname.startsWith("/billing/");
 
   useEffect(() => {
     if (
@@ -141,11 +129,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
-
   const handleNavigate = (path: string) => {
     setCommandOpen(false);
     router.push(path);
@@ -162,8 +145,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {user?.subscriptionStatus === "trial" && user.trialEndsAt && (
-            <div className="flex shrink-0 animate-fade items-center justify-center gap-4 border-b border-primary/20 bg-primary/10 px-4 py-2 text-center text-xs font-semibold text-primary">
-              <span>
+            <div className="flex shrink-0 animate-fade flex-col items-center justify-center gap-2 border-b border-primary/20 bg-primary/10 px-4 py-2.5 text-center text-xs font-semibold text-primary sm:flex-row sm:gap-4">
+              <span className="leading-snug">
                 Free Trial Active:{" "}
                 {Math.max(
                   0,
@@ -173,21 +156,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}{" "}
                 days remaining
               </span>
-              <Button size="xs" variant="default" className="rounded-xl px-3 py-1 font-bold shadow-sm" asChild>
+              <Button size="xs" variant="default" className="shrink-0 rounded-xl px-3 py-1 font-bold shadow-sm" asChild>
                 <Link href="/subscribe">Upgrade Now</Link>
               </Button>
             </div>
           )}
 
           {impersonating && (
-            <div className="flex shrink-0 animate-fade items-center justify-center gap-4 bg-destructive px-4 py-2 text-center text-xs font-semibold text-destructive-foreground">
-              <span>
+            <div className="flex shrink-0 animate-fade flex-col items-center justify-center gap-2 bg-destructive px-4 py-2.5 text-center text-xs font-semibold text-destructive-foreground sm:flex-row sm:gap-4">
+              <span className="leading-snug">
                 Impersonation active: Viewing session as {user?.name}. All actions are audited.
               </span>
               <Button
                 size="xs"
                 variant="outline"
-                className="rounded-xl border-white px-3 py-1 font-bold text-white shadow-sm hover:bg-white hover:text-destructive"
+                className="shrink-0 rounded-xl border-white px-3 py-1 font-bold text-white shadow-sm hover:bg-white hover:text-destructive"
                 onClick={exitImpersonation}
               >
                 Exit Session
@@ -299,54 +282,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <span className="hidden text-xs font-semibold md:inline">Refresh</span>
                 </Button>
 
-                <div className="hidden h-5 w-px bg-border md:block" />
-                <NotificationBell />
-                <ThemeToggle />
-
-                <div className="hidden md:block">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="rounded-full transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <Avatar name={displayName} size="md" className="cursor-pointer ring-2 ring-border" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={6} className="w-64">
-                      <DropdownMenuLabel className="font-normal">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={displayName} size="lg" />
-                          <div className="flex flex-col">
-                            <p className="text-sm font-bold text-foreground">{displayName}</p>
-                            <p className="mt-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-                              {userRole}
-                            </p>
-                          </div>
-                        </div>
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                          <User className="mr-2 h-4 w-4" />
-                          Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.push("/")} className="cursor-pointer">
-                          <LayoutDashboard className="mr-2 h-4 w-4" />
-                          Dashboard
-                        </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} variant="destructive" className="cursor-pointer">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <div className="hidden h-5 w-px bg-border sm:block" />
+                <div className="hidden sm:block">
+                  <NotificationBell />
                 </div>
+                <ThemeToggle />
+                <UserAccountMenu />
               </div>
             </div>
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6">
-            <div className="p-4 md:p-6 xl:p-8">{children}</div>
+          <div
+            className={cn(
+              "min-h-0 flex-1",
+              isBillingRoute ? "overflow-hidden" : "overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6"
+            )}
+          >
+            <div
+              className={cn(
+                isBillingRoute ? "flex h-full min-h-0 flex-col overflow-hidden" : "p-4 md:p-6 xl:p-8"
+              )}
+            >
+              {children}
+            </div>
           </div>
         </SidebarInset>
 
@@ -394,7 +352,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </CommandList>
         </CommandDialog>
 
-        <BottomNav />
+        {/* <BottomNav /> */}
       </SidebarProvider>
     </RequireAuth>
   );

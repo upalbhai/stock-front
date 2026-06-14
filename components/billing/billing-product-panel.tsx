@@ -1,0 +1,327 @@
+"use client";
+
+import * as React from "react";
+import {
+  Search,
+  ChevronRight,
+  ChevronLeft,
+  RefreshCw,
+  ScanLine,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
+import { formatCurrency } from "@/lib/format";
+import { getProductUnitLabel, getWholesalePriceHint, getActivePackagingUnits } from "@/lib/productUtils";
+import { cn } from "@/lib/utils";
+import type { Product, Category } from "@/lib/types";
+import type { LineItem } from "@/store/billingSlice";
+
+type BillingProductPanelProps = {
+  search: string;
+  onSearchChange: (value: string) => void;
+  onSearchEnter: () => void;
+  onOpenScanner: () => void;
+  catScrollRef: React.Ref<HTMLDivElement>;
+  topCategories: Category[];
+  categories: Category[];
+  selectedCategoryId: string | null;
+  selectedParentId: string | null;
+  onSelectCategory: (id: string | null, parentId: string | null) => void;
+  activeSubcategories: Category[];
+  onSubcategorySelect: (id: string) => void;
+  scrollCategoryLeft: () => void;
+  scrollCategoryRight: () => void;
+  prodIsRefetching: boolean;
+  prodCooldownSeconds: number;
+  onRefetch: () => void;
+  products: Product[];
+  productsFetching: boolean;
+  prodMeta?: { page: number; totalPages: number };
+  prodPage: number;
+  prodLimit: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  cartItems: LineItem[];
+  isWholesale: boolean;
+  onAddProduct: (product: Product) => void;
+  mobileBottomPadding?: boolean;
+};
+
+export function BillingProductPanel({
+  search,
+  onSearchChange,
+  onSearchEnter,
+  onOpenScanner,
+  catScrollRef,
+  topCategories,
+  categories,
+  selectedCategoryId,
+  selectedParentId,
+  onSelectCategory,
+  activeSubcategories,
+  onSubcategorySelect,
+  scrollCategoryLeft,
+  scrollCategoryRight,
+  prodIsRefetching,
+  prodCooldownSeconds,
+  onRefetch,
+  products,
+  productsFetching,
+  prodMeta,
+  prodPage,
+  prodLimit,
+  onPageChange,
+  onPageSizeChange,
+  cartItems,
+  isWholesale,
+  onAddProduct,
+  mobileBottomPadding = true,
+}: BillingProductPanelProps) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-2 overflow-hidden",
+        mobileBottomPadding && "pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
+      )}
+    >
+      <div className="flex shrink-0 gap-2 px-2 pt-2 sm:px-0 sm:pt-0">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="product-search"
+            className="h-11 pl-9"
+            placeholder="Search products or scan..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && search.trim().length > 0) onSearchEnter();
+            }}
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-11 w-11 shrink-0"
+          onClick={onOpenScanner}
+          title="Scan barcode"
+          aria-label="Scan barcode"
+        >
+          <ScanLine className="h-5 w-5" />
+        </Button>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1.5 px-2 sm:px-0">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={scrollCategoryLeft}
+          className="hidden h-9 w-9 shrink-0 sm:flex"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <div
+          ref={catScrollRef}
+          className="flex flex-1 gap-2 overflow-x-auto pb-0.5 scroll-smooth scrollbar-hide"
+        >
+          <button
+            type="button"
+            onClick={() => onSelectCategory(null, null)}
+            className={cn(
+              "shrink-0 rounded-xl px-3 py-2 text-xs font-medium transition",
+              !selectedCategoryId
+                ? "bg-primary text-white"
+                : "border border-border bg-card text-muted-foreground hover:text-foreground"
+            )}
+          >
+            All
+          </button>
+          {topCategories.map((cat) => (
+            <button
+              key={cat._id}
+              type="button"
+              onClick={() => {
+                const hasChildren = categories.some((c) => c.parentId === cat._id);
+                if (hasChildren) {
+                  onSelectCategory(cat._id, selectedParentId === cat._id ? null : cat._id);
+                } else {
+                  onSelectCategory(cat._id, null);
+                }
+              }}
+              className={cn(
+                "flex shrink-0 items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition",
+                selectedCategoryId === cat._id
+                  ? "text-white shadow-sm"
+                  : "border border-border bg-card text-muted-foreground hover:text-foreground"
+              )}
+              style={selectedCategoryId === cat._id ? { backgroundColor: cat.color } : {}}
+            >
+              <span>{cat.icon}</span>
+              {cat.name}
+              {categories.some((c) => c.parentId === cat._id) && (
+                <ChevronRight className="h-2.5 w-2.5" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={scrollCategoryRight}
+          className="hidden h-9 w-9 shrink-0 sm:flex"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {activeSubcategories.length > 0 && (
+        <div className="flex shrink-0 gap-2 overflow-x-auto px-2 pb-0.5 sm:px-0">
+          {activeSubcategories.map((sub) => (
+            <button
+              key={sub._id}
+              type="button"
+              onClick={() => onSubcategorySelect(sub._id)}
+              className={cn(
+                "shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+                selectedCategoryId === sub._id
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {sub.icon} {sub.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex shrink-0 items-center justify-between gap-2 px-2 sm:px-0">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRefetch}
+          disabled={prodIsRefetching}
+          className="h-9 gap-1.5"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", prodIsRefetching && "animate-spin")} />
+          <span className="hidden xs:inline sm:inline">
+            {prodIsRefetching ? `${prodCooldownSeconds}s` : "Refetch"}
+          </span>
+        </Button>
+        {prodMeta && (
+          <span className="text-xs text-muted-foreground">
+            Page {prodPage} of {prodMeta.totalPages || 1}
+          </span>
+        )}
+      </div>
+
+      <div className="relative min-h-0 flex-1 overflow-y-auto px-2 sm:px-0">
+        {productsFetching && products.length === 0 ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="min-h-[7rem] animate-pulse rounded-2xl bg-muted/50" />
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex h-full min-h-[14rem] flex-col items-center justify-center text-center">
+            <p className="text-4xl">🛍️</p>
+            <p className="mt-2 text-sm text-muted-foreground">No products found</p>
+            <Button variant="soft" size="sm" className="mt-3" onClick={onOpenScanner}>
+              <ScanLine className="mr-2 h-4 w-4" />
+              Scan barcode
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+            {products.map((product) => {
+              const cartQty = cartItems
+                .filter((i) => i.id === product._id)
+                .reduce((s, i) => s + (i.soldQty ?? i.qty), 0);
+              const unitLabel = getProductUnitLabel(product);
+              const packHint = isWholesale ? getWholesalePriceHint(product) : null;
+              const hasPackaging = getActivePackagingUnits(product).length > 0;
+
+              return (
+                <button
+                  key={product._id}
+                  type="button"
+                  onClick={() => onAddProduct(product)}
+                  className={cn(
+                    "group relative flex min-h-[7rem] flex-col rounded-2xl border p-3 text-left transition active:scale-[0.98]",
+                    "bg-card hover:border-primary/50 hover:shadow-sm",
+                    cartQty > 0 ? "border-primary/40 bg-primary/5" : "border-border"
+                  )}
+                >
+                  {cartQty > 0 && (
+                    <div className="absolute -right-1.5 -top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-white shadow">
+                      {cartQty}
+                    </div>
+                  )}
+                  {product.image && (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="mb-2 h-16 w-full rounded-lg object-cover"
+                    />
+                  )}
+                  <div className="flex min-w-0 items-start justify-between gap-1.5">
+                    <p className="line-clamp-2 flex-1 text-sm font-semibold leading-tight">
+                      {product.name}
+                    </p>
+                    {isWholesale && hasPackaging && (
+                      <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
+                        Bulk
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {unitLabel} · {product.onHandQty} in stock
+                  </p>
+                  <p className="mt-1.5 text-base font-bold leading-none text-primary">
+                    {formatCurrency(product.price)}
+                    <span className="text-xs font-normal text-muted-foreground">/{unitLabel}</span>
+                  </p>
+                  {packHint && (
+                    <p className="mt-1.5 line-clamp-2 border-t border-border/40 pt-1.5 text-[10px] leading-snug text-muted-foreground">
+                      {packHint}
+                    </p>
+                  )}
+                  {product.onHandQty <= product.lowStockThreshold && (
+                    <Badge variant="warning" className="mt-1.5 w-fit text-[10px]">
+                      Low Stock
+                    </Badge>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {productsFetching && products.length > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center pt-2">
+            <span className="rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow">
+              Updating...
+            </span>
+          </div>
+        )}
+
+        {prodMeta && prodMeta.totalPages > 1 && (
+          <div className="flex justify-center py-4">
+            <Pagination
+              page={prodPage}
+              totalPages={prodMeta.totalPages}
+              pageSize={prodLimit}
+              onPageChange={onPageChange}
+              onPageSizeChange={(size) => {
+                onPageSizeChange(size);
+                onPageChange(1);
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

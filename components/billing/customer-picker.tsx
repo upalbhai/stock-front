@@ -64,8 +64,8 @@ export function CustomerPicker({ token, outletId, selectedId, required, onSelect
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <label className="text-[10px] font-medium text-muted">
-          Customer {required && <span className="text-danger">*</span>}
+        <label className="text-xs font-medium text-muted-foreground">
+          Customer {required && <span className="text-destructive">*</span>}
         </label>
         {selectedId && (
           <button type="button" className="text-[9px] text-muted hover:text-danger" onClick={() => onSelect(null)}>
@@ -75,25 +75,25 @@ export function CustomerPicker({ token, outletId, selectedId, required, onSelect
       </div>
 
       {selected ? (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-2">
+        <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold truncate">{selected.name}</p>
-              {selected.phone && <p className="text-[9px] text-muted">{selected.phone}</p>}
+              <p className="truncate text-sm font-semibold">{selected.name}</p>
+              {selected.phone && <p className="text-xs text-muted-foreground">{selected.phone}</p>}
               {selected.outstandingBalance > 0 && (
-                <p className="text-[9px] text-warning mt-0.5">
+                <p className="mt-1 text-sm font-semibold text-amber-600 dark:text-amber-400">
                   Due: {formatCurrency(selected.outstandingBalance)}
                 </p>
               )}
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setOpen(true)}>
-              <Search className="h-3 w-3" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setOpen(true)}>
+              <Search className="h-4 w-4" />
             </Button>
           </div>
         </div>
       ) : (
-        <Button variant="outline" size="sm" className="w-full h-8 text-[10px] gap-1.5" onClick={() => setOpen(true)}>
-          <Search className="h-3 w-3" /> Select customer
+        <Button variant="outline" className="h-11 w-full gap-2 text-sm" onClick={() => setOpen(true)}>
+          <Search className="h-4 w-4" /> Select customer
         </Button>
       )}
 

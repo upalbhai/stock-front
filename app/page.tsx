@@ -12,9 +12,22 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { getJson } from "@/lib/api-client";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import {
-  ArrowRight, ReceiptText, Package, Store, Users, ShieldCheck, ChartNoAxesCombined,
-  DollarSign, ShoppingBag, FileText, Wallet, TrendingUp
+  ArrowRight,
+  ReceiptText,
+  Package,
+  Store,
+  Users,
+  ShieldCheck,
+  ChartNoAxesCombined,
+  DollarSign,
+  ShoppingBag,
+  FileText,
+  Wallet,
+  TrendingUp,
+  History,
+  UserCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const features = [
   { title: "Billing", description: "Create bills fast with payment tracking and receipt flow.", icon: ReceiptText },
@@ -55,17 +68,37 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
 
   const summary = data;
 
+  const quickActions = React.useMemo(
+    () =>
+      [
+        { href: "/billing", label: "New bill", icon: ReceiptText },
+        { href: "/stock", label: "Stock", icon: Package },
+        hasCreditKhata && { href: "/customers", label: "Customers", icon: UserCircle },
+        hasGstInvoices && { href: "/invoices", label: "Invoices", icon: FileText },
+        { href: "/orders", label: "Order history", icon: History },
+      ].filter(Boolean) as { href: string; label: string; icon: typeof ReceiptText }[],
+    [hasCreditKhata, hasGstInvoices]
+  );
+
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-center justify-between gap-4">
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <Badge className="w-fit mb-2">Today&apos;s pulse</Badge>
+          <Badge className="mb-2 w-fit">Today&apos;s pulse</Badge>
           <h1 className="text-2xl font-bold tracking-tight">Operations dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Live snapshot for your outlet — sales, GST, and credit at a glance.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Live snapshot for your outlet — sales, GST, and credit at a glance.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild><Link href="/billing">Open Billing <ArrowRight className="h-4 w-4" /></Link></Button>
-          <Button asChild variant="outline"><Link href="/reports">Full Reports</Link></Button>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/billing">
+              Open Billing <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/reports">Full Reports</Link>
+          </Button>
         </div>
       </section>
 
@@ -118,20 +151,34 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card className="border-border/70 shadow-sm">
-          <CardHeader>
+          <CardHeader className="">
             <CardTitle className="text-lg">Quick actions</CardTitle>
             <CardDescription>Jump into daily workflows</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="soft"><Link href="/billing">New bill</Link></Button>
-            <Button asChild size="sm" variant="soft"><Link href="/stock">Stock</Link></Button>
-            {hasCreditKhata && (
-              <Button asChild size="sm" variant="soft"><Link href="/customers">Customers</Link></Button>
-            )}
-            {hasGstInvoices && (
-              <Button asChild size="sm" variant="soft"><Link href="/invoices">Invoices</Link></Button>
-            )}
-            <Button asChild size="sm" variant="soft"><Link href="/orders">Order history</Link></Button>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className={cn(
+                      "group flex min-h-[5.5rem] flex-col items-center justify-center gap-2.5 rounded-2xl border border-border/80 bg-muted/30 px-3 py-4 text-center transition-all",
+                      "hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98]",
+                      "sm:min-h-0 sm:flex-row sm:justify-start sm:rounded-xl sm:px-3.5 sm:py-3 sm:text-left"
+                    )}
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15 sm:h-9 sm:w-9 sm:rounded-lg">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-xs font-semibold leading-tight text-foreground sm:text-sm">
+                      {action.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
