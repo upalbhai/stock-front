@@ -226,32 +226,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <OutletSwitcher className="hidden md:block" />
                 )}
 
-                {/* Search: icon on mobile, full on md+ */}
+                {/* Search: icon on mobile/md/lg, full on xl+ */}
                 <button
                   onClick={() => setCommandOpen(true)}
-                  className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground transition-all hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:w-auto md:justify-between md:gap-2 md:px-3"
+                  className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground transition-all hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:w-auto xl:justify-between xl:gap-2 xl:px-3"
                   aria-label="Search menu items"
                 >
-                  <Search className="h-3.5 w-3.5" />
-                  <span className="hidden text-xs md:inline">Search Menu...</span>
-                  <kbd className="pointer-events-none hidden h-4 select-none items-center gap-0.5 rounded border border-border bg-muted px-1 font-mono text-[9px] font-bold text-muted-foreground lg:inline-flex">
+                  <Search className="h-4 w-4" />
+                  <span className="hidden text-xs font-medium xl:inline">Search Menu...</span>
+                  <kbd className="pointer-events-none hidden h-4 select-none items-center gap-0.5 rounded border border-border bg-muted px-1 font-mono text-[9px] font-bold text-muted-foreground xl:inline-flex">
                     <span className="text-[10px]">⌘</span>K
                   </kbd>
                 </button>
 
-                <div className="hidden lg:flex">
+                <div className="hidden xl:flex">
                   <LastUpdated />
                 </div>
 
                 {(!isSuperAdmin || impersonating) && (
                   <>
-                    <Button asChild size="icon-sm" className="sm:hidden">
+                    <Button asChild size="icon-sm" className="xl:hidden h-8 w-8">
                       <Link href="/billing" aria-label="New Bill">
                         <Plus className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button asChild size="sm" className="hidden h-8 gap-1.5 sm:flex">
-                      <Link href="/billing">New Bill</Link>
+                    <Button asChild size="sm" className="hidden h-8 gap-1.5 xl:flex">
+                      <Link href="/billing">
+                        <Plus className="h-3.5 w-3.5" />
+                        New Bill
+                      </Link>
                     </Button>
                   </>
                 )}
@@ -264,22 +267,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
                 <Button
                   variant="outline"
-                  size="icon-sm"
-                  className="sm:hidden"
-                  aria-label="Refresh page"
-                  onClick={() => router.refresh()}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
                   size="sm"
-                  className="hidden h-8 gap-1.5 transition-all active:scale-95 sm:flex"
+                  className="hidden h-8 w-8 p-0 items-center justify-center transition-all active:scale-95 sm:flex xl:w-auto xl:px-3 xl:gap-1.5"
                   aria-label="Refresh page"
                   onClick={() => router.refresh()}
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
-                  <span className="hidden text-xs font-semibold md:inline">Refresh</span>
+                  <span className="hidden text-xs font-semibold xl:inline">Refresh</span>
                 </Button>
 
                 <div className="hidden h-5 w-px bg-border sm:block" />

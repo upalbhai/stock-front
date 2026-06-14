@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, Printer, Search } from "lucide-react";
+import { FileText, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ export default function InvoicesPage() {
   const [printId, setPrintId] = React.useState<string | null>(null);
   const printRef = React.useRef<HTMLDivElement>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["invoices", outletId],
     queryFn: () =>
       getJson<{ invoices: Order[]; total: number }>("/invoices", token, {
@@ -74,21 +74,15 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <Input
-          className="pl-9"
-          placeholder="Search invoice #, bill #, customer..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
       <DataTable
-        loading={isLoading}
+        isLoading={isLoading}
         data={invoices}
         keyExtractor={(inv) => inv._id}
-        emptyMessage="No GST invoices yet. Generate one from Billing or Orders."
+        searchQuery={search}
+        onSearchChange={setSearch}
+        onRefetch={() => refetch()}
+        placeholderText="Search invoice #, bill #, customer..."
+        emptyStateText="No GST invoices yet. Generate one from Billing or Orders."
         columns={[
           {
             key: "invoiceNumber",

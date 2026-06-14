@@ -35,10 +35,11 @@ export default function AdminPlansPage() {
   const qc = useQueryClient();
 
   const [showPlanCrudModal, setShowPlanCrudModal] = React.useState(false);
+  const [planSearch, setPlanSearch] = React.useState("");
   const [editPlanId, setEditPlanId] = React.useState<string | null>(null);
   const [planCrudForm, setPlanCrudForm] = React.useState(EMPTY_FORM);
 
-  const { data: plansData, isLoading: loadingPlans } = useQuery({
+  const { data: plansData, isLoading: loadingPlans, refetch } = useQuery({
     queryKey: ["admin-plans"],
     queryFn: () => planService.getAllPlans(token),
     enabled: Boolean(token),
@@ -74,7 +75,9 @@ export default function AdminPlansPage() {
     onError: (err) => toast.error(getErrorMessage(err, "Failed to delete plan")),
   });
 
-  const plans = plansData?.plans || [];
+  const plans = (plansData?.plans || []).filter(
+    (p) => !planSearch.trim() || p.name.toLowerCase().includes(planSearch.toLowerCase())
+  );
   const featureRegistry = featuresData?.features || [];
 
   const openCreatePlan = () => {
@@ -134,17 +137,20 @@ export default function AdminPlansPage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 duration-300">
-      <div className="flex justify-end">
-        <Button onClick={openCreatePlan} className="gap-1">
-          <Plus className="h-4 w-4" /> Add New Plan
-        </Button>
-      </div>
-
       <DataTable
-        loading={loadingPlans}
+        isLoading={loadingPlans}
         data={plans}
         keyExtractor={(p) => p._id}
-        emptyMessage="No plans configured."
+        searchQuery={planSearch}
+        onSearchChange={setPlanSearch}
+        onRefetch={() => refetch()}
+        placeholderText="Search plans..."
+        emptyStateText="No plans configured."
+        filters={
+          <Button onClick={openCreatePlan} className="gap-1">
+            <Plus className="h-4 w-4" /> Add New Plan
+          </Button>
+        }
         columns={[
           {
             key: "name",

@@ -26,6 +26,7 @@ import {
   TrendingUp,
   History,
   UserCircle,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +58,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
   const hasGstInvoices = useFeature("gst_invoices");
   const hasWholesale = useFeature("wholesale_billing");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["reports-summary", outletId],
     queryFn: () =>
       getJson<SummaryData>("/reports/summary", token, {
@@ -90,7 +91,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
             Live snapshot for your outlet — sales, GST, and credit at a glance.
           </p>
         </div>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto items-center">
           <Button asChild className="w-full sm:w-auto">
             <Link href="/billing">
               Open Billing <ArrowRight className="h-4 w-4" />
@@ -98,6 +99,24 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href="/reports">Full Reports</Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetch()}
+            className="hidden sm:flex"
+            title="Refresh Data"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          {/* Mobile refresh button */}
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            className="col-span-2 sm:hidden flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh Data
           </Button>
         </div>
       </section>
@@ -164,13 +183,13 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                     key={action.href}
                     href={action.href}
                     className={cn(
-                      "group flex min-h-[5.5rem] flex-col items-center justify-center gap-2.5 rounded-2xl border border-border/80 bg-muted/30 px-3 py-4 text-center transition-all",
+                      "group flex min-h-[4rem] flex-col items-center justify-center gap-2 rounded-2xl border border-border/80 bg-muted/30 px-2 py-2 text-center transition-all",
                       "hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98]",
-                      "sm:min-h-0 sm:flex-row sm:justify-start sm:rounded-xl sm:px-3.5 sm:py-3 sm:text-left"
+                      "sm:min-h-0 sm:flex-row sm:justify-start sm:rounded-xl sm:px-2 sm:py-2 sm:text-left"
                     )}
                   >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15 sm:h-9 sm:w-9 sm:rounded-lg">
-                      <Icon className="h-5 w-5" />
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15 sm:h-8 sm:w-8 sm:rounded-lg">
+                      <Icon className="h-4 w-4" />
                     </span>
                     <span className="text-xs font-semibold leading-tight text-foreground sm:text-sm">
                       {action.label}

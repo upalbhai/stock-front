@@ -53,7 +53,7 @@ export function Pagination({
   const visible = getVisiblePages();
 
   return (
-    <div className={cn("flex items-center gap-3", className)}>
+    <div className={cn("flex flex-wrap items-center justify-center gap-x-4 gap-y-2", className)}>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={handlePrev} disabled={current === 1} aria-label="Previous page">
           <ChevronLeft className="h-4 w-4" />

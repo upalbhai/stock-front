@@ -83,8 +83,6 @@ export default function ProductsPage() {
   const [showScanner, setShowScanner] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const [isRefetching, setIsRefetching] = React.useState(false);
-  const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
   const hasPackaging = useFeature("packaging_units");
   const hasGstInvoices = useFeature("gst_invoices");
   const showHsn = hasPackaging || hasGstInvoices;
@@ -130,23 +128,6 @@ export default function ProductsPage() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
-
-  const handleRefetch = () => {
-    setIsRefetching(true);
-    setCooldownSeconds(15);
-    refetchProducts();
-    
-    let seconds = 15;
-    timeoutRef.current = setInterval(() => {
-      seconds -= 1;
-      setCooldownSeconds(seconds);
-      if (seconds === 0) {
-        setIsRefetching(false);
-        if (timeoutRef.current) clearInterval(timeoutRef.current);
-      }
-    }, 1000);
-  };
-
 
 
   const save = useMutation({
@@ -334,47 +315,51 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div><h1 className="text-2xl font-bold">Products</h1><p className="text-sm text-muted">{products.length} products</p></div>
+        <div><h1 className="text-2xl font-bold">Products</h1><p className="text-sm text-muted">{pagination.total} products</p></div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefetch} disabled={isRefetching} id="refetch-products-btn">
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
-            {isRefetching ? `Refetch (${cooldownSeconds}s)` : "Refetch"}
-          </Button>
           <Button id="create-product-btn" onClick={openCreate}><Plus className="h-4 w-4" /> Add Product</Button>
         </div>
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted/60" /><Input className="pl-10 py-3 text-base" placeholder="Search products by name or SKU..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-        <AsyncSelect
-          className="sm:w-56"
-          value={selectedCatFilter}
-          onChange={(opt) => {
-            const o = Array.isArray(opt) ? opt[0] : opt;
-            setCatFilter(o?.id ?? o?._id ?? "");
-            setPage(1);
-          }}
-          loadOptions={loadCategoryFilterOptions}
-          placeholder="All Categories"
-          searchable
-          pageSize={25}
-        />
-      </div>
 
-      <DataTable loading={isLoading} error={isError} errorMessage={error ? getErrorMessage(error) : undefined} data={products} keyExtractor={(p) => p._id} emptyMessage="No products yet. Add your first product."
+      <DataTable 
+        isLoading={isLoading} 
+        error={isError} 
+        errorMessage={error ? getErrorMessage(error) : undefined} 
+        data={products} 
+        keyExtractor={(p) => p._id} 
+        emptyStateText="No products yet. Add your first product."
+        totalItems={pagination.total}
+        page={page}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+        searchQuery={search}
+        onSearchChange={setSearch}
+        onRefetch={() => refetchProducts()}
+        filters={
+          <AsyncSelect
+            className="sm:w-56 min-w-[200px]"
+            value={selectedCatFilter}
+            onChange={(opt) => {
+              const o = Array.isArray(opt) ? opt[0] : opt;
+              setCatFilter(o?.id ?? o?._id ?? "");
+              setPage(1);
+            }}
+            loadOptions={loadCategoryFilterOptions}
+            placeholder="All Categories"
+            searchable
+            pageSize={25}
+          />
+        }
         columns={[
-          { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image ? <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0"><Package className="h-6 w-6" /></div>}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
+          { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image && <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />}{/* No placeholder icon */}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
           { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm font-medium">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },
           { key: "price", header: "Price", render: (p) => <span className="font-bold text-lg">{formatCurrency(p.price)}</span> },
           { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {(p as any).unitId?.abbreviation ?? p.unit}</p>{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
           { key: "isActive", header: "Status", render: (p) => <Badge variant={p.isActive ? "soft" : "danger"}>{p.isActive ? "Active" : "Inactive"}</Badge> },
           { key: "actions", header: "", render: (p) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(p._id)}><Trash2 className="h-4 w-4" /></Button></div>) }
-        ]} />
-
-      <div className="flex justify-center p-4">
-        {isLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted" /> : (
-          <Pagination page={page} totalPages={pagination.totalPages} pageSize={limit} onPageChange={(p) => setPage(p)} onPageSizeChange={(s) => { setLimit(s); setPage(1); }} />
-        )}
-      </div>
+        ]} 
+      />
 
       <Modal
         open={showModal}

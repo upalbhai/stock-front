@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Drawer } from "@/components/ui/drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
 import { roleService } from "@/services/role.service";
 import type { Role } from "@/lib/types";
@@ -34,7 +35,7 @@ export default function RolesPage() {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState(emptyForm);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["roles"],
     queryFn: () => roleService.getRoles(token),
     enabled: Boolean(token)
@@ -100,48 +101,78 @@ export default function RolesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Roles & Permissions</h1><p className="text-sm text-muted">Control what each role can access</p></div>
-        <Button id="create-role-btn" onClick={openCreate}><Plus className="h-4 w-4" /> Create Role</Button>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-24 animate-pulse rounded-3xl bg-border/40" />)}</div>
-      ) : (
-        <div className="space-y-4">
-          {roles.map((role) => (
-            <div key={role._id} className="animate-rise glass-panel rounded-3xl border border-border/70 p-5 shadow-soft">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <Shield className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-semibold">{role.name}</h2>
-                      {role.isSystem && <Badge variant="secondary" className="text-xs">System</Badge>}
-                    </div>
-                    <p className="text-xs text-muted">{role.description || "No description"}</p>
-                  </div>
+      <DataTable
+        isLoading={isLoading}
+        data={roles}
+        keyExtractor={(role) => role._id}
+        onRefetch={() => refetch()}
+        emptyStateIcon={<Shield className="h-12 w-12 text-muted/30" />}
+        emptyStateText="No roles configured yet."
+        expandable
+        filters={
+          <Button id="create-role-btn" onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-1.5" /> Create Role
+          </Button>
+        }
+        columns={[
+          {
+            key: "name",
+            header: "Role",
+            render: (role) => (
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Shield className="h-5 w-5" />
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => openEdit(role)} id={`edit-role-${role._id}`}><Pencil className="h-3.5 w-3.5" /></Button>
-                  {!role.isSystem && (
-                    <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleteId(role._id)} id={`delete-role-${role._id}`}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold">{role.name}</p>
+                    {role.isSystem && <Badge variant="secondary" className="text-xs">System</Badge>}
+                  </div>
+                  <p className="text-xs text-muted">{role.description || "No description"}</p>
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {role.permissions.map((p) => (
-                  <div key={p.module} className="rounded-xl bg-surface border border-border px-3 py-1.5">
-                    <span className="text-xs font-medium">{MODULE_ICONS[p.module]} {p.module}</span>
-                    <div className="flex gap-1 mt-1">{p.actions.map((a) => <Badge key={a} variant="soft" className="text-[10px]">{a}</Badge>)}</div>
-                  </div>
-                ))}
-                {role.permissions.length === 0 && <p className="text-xs text-muted">No permissions configured</p>}
+            )
+          },
+          {
+            key: "permissions",
+            header: "Modules",
+            render: (role) => (
+              <span className="text-xs text-muted font-medium">
+                {role.permissions.length} module{role.permissions.length !== 1 ? "s" : ""}
+              </span>
+            )
+          },
+          {
+            key: "actions",
+            header: "",
+            render: (role) => (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(role); }} id={`edit-role-${role._id}`}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                {!role.isSystem && (
+                  <Button variant="ghost" size="sm" className="text-danger" onClick={(e) => { e.stopPropagation(); setDeleteId(role._id); }} id={`delete-role-${role._id}`}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )
+          }
+        ]}
+        renderSubComponent={(role) => (
+          <div className="p-4 flex flex-wrap gap-2">
+            {role.permissions.map((p) => (
+              <div key={p.module} className="rounded-xl bg-surface border border-border px-3 py-1.5">
+                <span className="text-xs font-medium">{MODULE_ICONS[p.module]} {p.module}</span>
+                <div className="flex gap-1 mt-1 flex-wrap">{p.actions.map((a) => <Badge key={a} variant="soft" className="text-[10px]">{a}</Badge>)}</div>
+              </div>
+            ))}
+            {role.permissions.length === 0 && <p className="text-xs text-muted">No permissions configured</p>}
+          </div>
+        )}
+      />
 
       <Drawer open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Role" : "Create Role"} size="lg">
         <form className="flex flex-col h-full overflow-hidden" onSubmit={handleSubmit}>

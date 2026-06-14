@@ -64,7 +64,7 @@ export default function BillingPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-2 overflow-hidden px-2 pb-2 sm:px-0">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2">
       <BillingSaleModeTabs
         showSaleModeTabs={b.showSaleModeTabs}
         wholesaleOnly={b.wholesaleOnly}
@@ -74,7 +74,7 @@ export default function BillingPage() {
         onSaleModeChange={b.handleSaleModeChange}
       />
 
-      <div className="relative flex min-h-0 flex-1 flex-col gap-2 overflow-hidden lg:flex-row">
+      <div className="relative flex min-h-0 flex-1 flex-col gap-2 overflow-hidden lg:flex-row p-2">
         <BillingProductPanel
           search={b.search}
           onSearchChange={b.setSearch}

@@ -219,7 +219,7 @@ export function BillingProductPanel({
 
       <div className="relative min-h-0 flex-1 overflow-y-auto px-2 sm:px-0">
         {productsFetching && products.length === 0 ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="min-h-[7rem] animate-pulse rounded-2xl bg-muted/50" />
             ))}
@@ -234,7 +234,7 @@ export function BillingProductPanel({
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {products.map((product) => {
               const cartQty = cartItems
                 .filter((i) => i.id === product._id)

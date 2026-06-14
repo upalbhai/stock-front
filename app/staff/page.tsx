@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, UserCheck, UserX, Search } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,11 @@ export default function StaffPage() {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState({ name: "", phone: "", email: "", role: "staff", roleId: "", outletIds: [] as string[], pin: "" });
 
-  const { data: staffData, isLoading } = useQuery({ queryKey: ["staff"], queryFn: () => userService.getUsers(token), enabled: Boolean(token) });
+  const { data: staffData, isLoading, refetch } = useQuery({
+    queryKey: ["staff", search],
+    queryFn: () => userService.getUsers(token, { search: search || undefined }),
+    enabled: Boolean(token)
+  });
   const { data: rolesData } = useQuery({ queryKey: ["roles"], queryFn: () => roleService.getRoles(token), enabled: Boolean(token) });
   const { data: outletsData } = useQuery({ queryKey: ["outlets"], queryFn: () => outletService.getOutlets(token), enabled: Boolean(token) });
 
@@ -51,7 +55,7 @@ export default function StaffPage() {
     onError: (err: any) => toast.error(getErrorMessage(err, "Failed to delete staff"))
   });
 
-  const users = (staffData?.users ?? []).filter((u) => !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.phone.includes(search));
+  const users = staffData?.users ?? [];
   const roles = rolesData?.roles ?? [];
   const outlets = outletsData?.outlets ?? [];
 
@@ -62,17 +66,30 @@ export default function StaffPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Staff</h1><p className="text-sm text-muted">{users.length} team members</p></div>
-        <Button id="add-staff-btn" onClick={openCreate}><Plus className="h-4 w-4" /> Add Staff</Button>
       </div>
-      <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><Input className="pl-9" placeholder="Search by name or phone..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-      <DataTable loading={isLoading} data={users} keyExtractor={(u) => u._id} emptyMessage="No staff members yet."
+
+      <DataTable
+        isLoading={isLoading}
+        data={users}
+        keyExtractor={(u) => u._id}
+        searchQuery={search}
+        onSearchChange={setSearch}
+        onRefetch={() => refetch()}
+        placeholderText="Search by name or phone..."
+        emptyStateText="No staff members yet."
+        filters={
+          <Button id="add-staff-btn" onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add Staff
+          </Button>
+        }
         columns={[
           { key: "name", header: "Staff Member", render: (u) => (<div className="flex items-center gap-3"><Avatar name={u.name} size="sm" /><div><p className="font-medium">{u.name}</p><p className="text-xs text-muted">{u.phone}</p></div></div>) },
           { key: "role", header: "Role", render: (u) => <Badge variant="soft" className="capitalize">{u.role}</Badge> },
           { key: "outletIds", header: "Outlets", render: (u) => <span className="text-sm text-muted">{u.outletIds.length === 0 ? "All" : `${u.outletIds.length} outlet(s)`}</span> },
           { key: "isActive", header: "Status", render: (u) => <Badge variant={u.isActive ? "soft" : "danger"}>{u.isActive ? "Active" : "Inactive"}</Badge> },
           { key: "actions", header: "", render: (u) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(u)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(u._id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>) }
-        ]} />
+        ]}
+      />
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Staff" : "Add Staff"} size="md">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }}>

@@ -139,7 +139,7 @@ export default function ProfitPage() {
   const [issueCost, setIssueCost] = React.useState("");
   const [issueNote, setIssueNote] = React.useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["profit-ledger", outletId, from, to],
     queryFn: () =>
       reportService.getProfitLedger(token!, {
@@ -371,10 +371,12 @@ export default function ProfitPage() {
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Money movement ledger</h2>
         <DataTable
-          loading={isLoading}
+          isLoading={isLoading}
           data={movements}
           keyExtractor={(m) => m._id}
-          emptyMessage="No stock money movements in this period."
+          onRefetch={() => refetch()}
+          hidePagination
+          emptyStateText="No stock money movements in this period."
           columns={[
             {
               key: "time",

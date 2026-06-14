@@ -13,7 +13,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { categoryService } from "@/services/category.service";
 import { getErrorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
-import Pagination from "@/components/ui/pagination";
+import { DataTable } from "@/components/ui/data-table";
 import type { Category } from "@/lib/types";
 
 const EMOJI_OPTIONS = ["🍽️","🥤","🧃","☕","🍵","🥛","🧁","🍰","🍕","🥗","🌮","🍜","🥚","🥗","🫙","🍱","🍦","🧊","🍹","🍺"];
@@ -45,21 +45,6 @@ export default function CategoriesPage() {
     };
   }, []);
 
-  const handleRefetch = () => {
-    setIsRefetching(true);
-    setCooldownSeconds(15);
-    refetch();
-    
-    let seconds = 15;
-    timeoutRef.current = setInterval(() => {
-      seconds -= 1;
-      setCooldownSeconds(seconds);
-      if (seconds === 0) {
-        setIsRefetching(false);
-        if (timeoutRef.current) clearInterval(timeoutRef.current);
-      }
-    }, 1000);
-  };
 
   const saveMutation = useMutation({
     mutationFn: (body: unknown) => {
@@ -92,7 +77,7 @@ export default function CategoriesPage() {
   });
 
   const allCategories = data?.data ?? [];
-  const topLevel = allCategories.filter((c) => !c.parentId);
+  const topLevel = allCategories.filter((c) => !c.parentId || c.parentId === c._id);
   const pagination = data?.meta?.pagination ?? { page: 1, limit, total: allCategories.length, totalPages: 1 };
 
   const openCreate = (parentId = "") => {
@@ -112,67 +97,97 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Categories</h1><p className="text-sm text-muted">Organize products into categories and subcategories</p></div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefetch} disabled={isRefetching} id="refetch-categories-btn">
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
-            {isRefetching ? `Refetch (${cooldownSeconds}s)` : "Refetch"}
-          </Button>
-          <Button id="create-category-btn" onClick={() => openCreate("")}><Plus className="h-4 w-4" /> Add Category</Button>
-        </div>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-3xl bg-border/40" />)}</div>
-      ) : topLevel.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-border/60 py-20 text-center">
-          <FolderOpen className="h-12 w-12 text-muted/30" />
-          <p className="mt-3 font-medium text-muted">No categories yet</p>
-          <p className="text-sm text-muted/60">Create your first category like "Lassi", "Tea", "Juice"</p>
-          <Button className="mt-4" onClick={() => openCreate("")}><Plus className="h-4 w-4" /> Create Category</Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {topLevel.map((cat) => {
-            const children = allCategories.filter((c) => c.parentId === cat._id);
-            return (
-              <div key={cat._id} className="animate-rise glass-panel rounded-3xl border border-border/70 p-5 shadow-soft">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ backgroundColor: cat.color + "20", color: cat.color }}>
-                      {cat.icon}
-                    </div>
-                    <div>
-                      <h2 className="font-semibold">{cat.name}</h2>
-                      <p className="text-xs text-muted">{children.length} subcategory{children.length !== 1 ? "ies" : ""}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="soft" size="sm" onClick={() => openCreate(cat._id)} id={`add-sub-${cat._id}`}><Plus className="h-3.5 w-3.5" /> Sub</Button>
-                    <Button variant="outline" size="sm" onClick={() => openEdit(cat)} id={`edit-cat-${cat._id}`}><Pencil className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleteId(cat._id)} id={`delete-cat-${cat._id}`}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </div>
+      <DataTable
+        isLoading={isLoading}
+        data={topLevel}
+        keyExtractor={(c) => c._id}
+        totalItems={pagination.total}
+        page={page}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+        searchQuery={search}
+        onSearchChange={setSearch}
+        onRefetch={() => refetch()}
+        filters={<Button id="create-category-btn" onClick={() => openCreate("")}><Plus className="h-4 w-4 mr-1.5" /> Add Category</Button>}
+        emptyStateIcon={<FolderOpen className="h-12 w-12 text-muted/30" />}
+        emptyStateText="No categories yet. Create your first category like 'Lassi', 'Tea'."
+        expandable
+        columns={[
+          {
+            key: "category",
+            header: "Category",
+            render: (cat: Category) => (
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: cat.color + "20", color: cat.color }}>
+                  {cat.icon}
                 </div>
-                {children.length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2 pl-4 border-l-2" style={{ borderColor: cat.color }}>
-                    {children.map((sub) => (
-                      <div key={sub._id} className="flex items-center gap-2 rounded-2xl border border-border bg-surface/60 px-3 py-2">
-                        <span>{sub.icon}</span>
-                        <span className="text-sm font-medium">{sub.name}</span>
-                        <button onClick={() => openEdit(sub)} className="text-muted hover:text-text transition"><Pencil className="h-3 w-3" /></button>
-                        <button onClick={() => setDeleteId(sub._id)} className="text-danger/60 hover:text-danger transition"><Trash2 className="h-3 w-3" /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <h2 className="font-semibold">{cat.name}</h2>
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="flex justify-center p-4">
-        <Pagination page={page} totalPages={pagination.totalPages} pageSize={limit} onPageChange={(p) => setPage(p)} onPageSizeChange={(s) => { setLimit(s); setPage(1); }} />
-      </div>
+            )
+          },
+          {
+            key: "subcategories",
+            header: "Subcategories",
+            render: (cat: Category) => {
+              const children = allCategories.filter((c) => c.parentId === cat._id && c._id !== cat._id);
+              return <span className="text-xs text-muted font-medium">{children.length} subcategory{children.length !== 1 ? "ies" : ""}</span>;
+            }
+          },
+          {
+            key: "actions",
+            header: "",
+            className: "text-right",
+            render: (cat: Category) => (
+              <div className="flex gap-2 justify-end">
+                <Button variant="soft" size="sm" onClick={(e) => { e.stopPropagation(); openCreate(cat._id); }} id={`add-sub-${cat._id}`}><Plus className="h-3.5 w-3.5" /> Sub</Button>
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(cat); }} id={`edit-cat-${cat._id}`}><Pencil className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="sm" className="text-danger" onClick={(e) => { e.stopPropagation(); setDeleteId(cat._id); }} id={`delete-cat-${cat._id}`}><Trash2 className="h-3.5 w-3.5" /></Button>
+              </div>
+            )
+          }
+        ]}
+        renderSubComponent={(cat: Category) => {
+          const children = allCategories.filter((c) => c.parentId === cat._id && c._id !== cat._id);
+          if (children.length === 0) return null;
+          
+          return (
+            <div className="pl-14 p-4 border-l-[3px] ml-[1.125rem]" style={{ borderColor: cat.color }}>
+              <DataTable
+                data={children}
+                keyExtractor={(c) => c._id}
+                hidePagination
+                emptyStateText="No subcategories."
+                columns={[
+                  {
+                    key: "subcategory",
+                    header: "Subcategory",
+                    render: (sub: Category) => (
+                       <div className="flex items-center gap-3">
+                         <span className="text-xl">{sub.icon}</span>
+                         <span className="font-medium text-sm">{sub.name}</span>
+                       </div>
+                    )
+                  },
+                  {
+                    key: "actions",
+                    header: "",
+                    className: "text-right",
+                    render: (sub: Category) => (
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted hover:text-foreground" onClick={() => openEdit(sub)}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-danger/60 hover:text-danger" onClick={() => setDeleteId(sub._id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    )
+                  }
+                ]}
+              />
+            </div>
+          );
+        }}
+      />
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Category" : "Create Category"} size="md">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); saveMutation.mutate({ ...form, parentId: form.parentId || null, sortOrder: Number(form.sortOrder) }); }}>

@@ -2,8 +2,6 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -12,16 +10,10 @@ import { userService } from "@/services/user.service";
 export default function AdminUsersPage() {
   const { token } = useAuth();
   const [search, setSearch] = React.useState("");
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
 
-  React.useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
-    return () => window.clearTimeout(timer);
-  }, [search]);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin-users", debouncedSearch],
-    queryFn: () => userService.getUsers(token, { search: debouncedSearch || undefined }),
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["admin-users", search],
+    queryFn: () => userService.getUsers(token, { search: search || undefined }),
     enabled: Boolean(token),
   });
 
@@ -29,18 +21,15 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input className="pl-9" placeholder="Search system users..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-      </div>
-
       <DataTable
-        loading={isLoading}
+        isLoading={isLoading}
         data={allUsers}
         keyExtractor={(u) => u._id}
-        emptyMessage="No system users matching search."
+        searchQuery={search}
+        onSearchChange={setSearch}
+        onRefetch={() => refetch()}
+        placeholderText="Search system users..."
+        emptyStateText="No system users matching search."
         columns={[
           {
             key: "name", header: "User Profile",

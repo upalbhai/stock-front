@@ -38,7 +38,7 @@ export default function AdminBusinessesPage() {
     planId: "", billingCycle: "monthly", amount: "", paymentReference: "", endDate: "", notes: ""
   });
 
-  const { data: bizData, isLoading: loadingBiz } = useQuery({
+  const { data: bizData, isLoading: loadingBiz, refetch } = useQuery({
     queryKey: ["admin-businesses", search, statusFilter],
     queryFn: () => adminService.getAdminBusinesses(token, { search: search || undefined, status: statusFilter !== "all" ? statusFilter : undefined }),
     enabled: Boolean(token)
@@ -142,27 +142,24 @@ export default function AdminBusinessesPage() {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Search businesses..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <div className="w-48">
-          <Select id="status-filter" value={statusFilter} onValueChange={setStatusFilter} options={[
+      <DataTable
+        isLoading={loadingBiz}
+        data={businesses}
+        keyExtractor={(b) => b._id}
+        searchQuery={search}
+        onSearchChange={setSearch}
+        onRefetch={() => refetch()}
+        placeholderText="Search businesses..."
+        emptyStateText="No businesses registered on the platform matching search."
+        filters={
+          <Select id="status-filter" value={statusFilter} onValueChange={setStatusFilter} className="w-48 h-9" options={[
             { value: "", label: "All Statuses" },
             { value: "pending", label: "Pending Approval" },
             { value: "active", label: "Active" },
             { value: "suspended", label: "Suspended" },
             { value: "banned", label: "Banned" }
           ]} />
-        </div>
-      </div>
-
-      <DataTable
-        loading={loadingBiz}
-        data={businesses}
-        keyExtractor={(b) => b._id}
-        emptyMessage="No businesses registered on the platform matching search."
+        }
         columns={[
           {
             key: "name", header: "Business & Owner",

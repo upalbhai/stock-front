@@ -30,11 +30,20 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
   const listEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!open) {
+      setItems([]);
+      setPage(1);
+      setHasMore(true);
+      setQ("");
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     setItems([]);
     setPage(1);
     setHasMore(true);
-  }, [open, q]);
+  }, [q]);
 
   useEffect(() => {
     let mounted = true;

@@ -42,6 +42,8 @@ export default function ExpensesPage() {
   const [voidReason, setVoidReason] = React.useState("");
   const [catFilter, setCatFilter] = React.useState("");
   const [recordFilter, setRecordFilter] = React.useState<RecordFilter>("active");
+  const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(50);
   const [form, setForm] = React.useState({
     category: "rent",
     amount: "",
@@ -50,13 +52,15 @@ export default function ExpensesPage() {
     outletId: outletId ?? ""
   });
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["expenses", outletId, catFilter, recordFilter],
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["expenses", outletId, catFilter, recordFilter, page, limit],
     queryFn: () =>
       expenseService.getExpenses(token, {
         outletId: outletId ?? undefined,
         category: catFilter || undefined,
-        recordStatus: recordFilter
+        recordStatus: recordFilter,
+        page,
+        limit
       }),
     enabled: Boolean(token)
   });
@@ -110,9 +114,6 @@ export default function ExpensesPage() {
           <h1 className="text-2xl font-bold">Expenses</h1>
           <p className="text-sm text-muted">Track operational costs — voided entries stay in history</p>
         </div>
-        <Button id="add-expense-btn" onClick={() => setShowModal(true)}>
-          <Plus className="h-4 w-4" /> Add Expense
-        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -124,27 +125,37 @@ export default function ExpensesPage() {
           ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={catFilter}
-          onValueChange={setCatFilter}
-          options={[{ value: "", label: "All Categories" }, ...catOptions]}
-          className="w-48"
-        />
-        <Tabs value={recordFilter} onValueChange={(v) => setRecordFilter(v as RecordFilter)}>
-          <TabsList>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="voided">Voided</TabsTrigger>
-            <TabsTrigger value="all">All</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
       <DataTable
-        loading={isLoading}
+        isLoading={isLoading}
         data={expenses}
         keyExtractor={(e) => e._id}
-        emptyMessage="No expenses recorded yet."
+        totalItems={data?.total ?? expenses.length}
+        page={page}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={(size) => { setLimit(size); setPage(1); }}
+        onRefetch={() => refetch()}
+        emptyStateText="No expenses recorded yet."
+        filters={
+          <>
+            <Select
+              value={catFilter}
+              onValueChange={(v) => { setCatFilter(v); setPage(1); }}
+              options={[{ value: "", label: "All Categories" }, ...catOptions]}
+              className="w-48 h-9"
+            />
+            <Tabs value={recordFilter} onValueChange={(v) => { setRecordFilter(v as RecordFilter); setPage(1); }}>
+              <TabsList>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="voided">Voided</TabsTrigger>
+                <TabsTrigger value="all">All</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button id="add-expense-btn" onClick={() => setShowModal(true)}>
+              <Plus className="h-4 w-4 mr-1.5" /> Add Expense
+            </Button>
+          </>
+        }
         columns={[
           {
             key: "date",

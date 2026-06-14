@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { StatsCard } from "@/components/ui/stats-card";
+import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
 import { getJson } from "@/lib/api-client";
@@ -81,7 +82,7 @@ export default function ReportsPage() {
         </div>
         <Input
           type="date"
-          className="w-48 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm"
+          className="w-34 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
         />
@@ -170,34 +171,28 @@ export default function ReportsPage() {
             <CardDescription>Product sales breakdown and total contribution</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
-            {isLoading ? (
-              <p className="text-sm text-muted animate-pulse">Analyzing sales matrix...</p>
-            ) : !report?.bestSelling?.length ? (
-              <p className="text-sm text-muted italic">No sales recorded on this business date.</p>
-            ) : (
-              <div className="border border-border/50 rounded-2xl overflow-hidden">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-border/30 border-b border-border/50 text-xs font-semibold text-muted">
-                      <th className="p-3">Rank</th>
-                      <th className="p-3">Item Name</th>
-                      <th className="p-3 text-right">Qty Sold</th>
-                      <th className="p-3 text-right">Revenue Contribution</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/30">
-                    {report.bestSelling.map((p, idx) => (
-                      <tr key={p.name} className="hover:bg-surface/50 transition">
-                        <td className="p-3 font-semibold text-muted">#{idx + 1}</td>
-                        <td className="p-3 font-medium">{p.name}</td>
-                        <td className="p-3 text-right font-bold">{p.qty}</td>
-                        <td className="p-3 text-right font-bold text-primary">{formatCurrency(p.total ?? 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <DataTable
+              isLoading={isLoading}
+              data={report?.bestSelling ?? []}
+              keyExtractor={(p) => p.name}
+              hidePagination
+              onRefetch={() => refetch()}
+              emptyStateText="No sales recorded on this business date."
+              className="border-0 shadow-none"
+              columns={[
+                {
+                  key: "rank",
+                  header: "Rank",
+                  render: (p) => {
+                    const idx = (report?.bestSelling ?? []).findIndex((x) => x.name === p.name);
+                    return <span className="font-semibold text-muted">#{idx + 1}</span>;
+                  }
+                },
+                { key: "name", header: "Item Name", render: (p) => <span className="font-medium">{p.name}</span> },
+                { key: "qty", header: "Qty Sold", className: "text-right", render: (p) => <span className="font-bold">{p.qty}</span> },
+                { key: "total", header: "Revenue Contribution", className: "text-right", render: (p) => <span className="font-bold text-primary">{formatCurrency(p.total ?? 0)}</span> }
+              ]}
+            />
           </CardContent>
         </Card>
 
@@ -207,34 +202,43 @@ export default function ReportsPage() {
             <CardTitle>Closing Inventory</CardTitle>
             <CardDescription>End-of-day remaining quantities</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 max-h-[400px] overflow-y-auto">
-            {isLoading ? (
-              <p className="text-sm text-muted animate-pulse">Checking stock registers...</p>
-            ) : !report?.remainingStock?.length ? (
-              <p className="text-sm text-muted italic">No stock levels tracked yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {report.remainingStock.map((item) => {
-                  const isLow = item.onHandQty <= item.lowStockThreshold;
-                  return (
-                    <div key={item.name} className="flex justify-between items-center py-1.5 border-b border-border/20">
-                      <div>
-                        <p className="font-semibold text-sm">{item.name}</p>
-                        <p className="text-xs text-muted">Threshold: {item.lowStockThreshold} {item.unit}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
+          <CardContent>
+            <DataTable
+              isLoading={isLoading}
+              data={report?.remainingStock ?? []}
+              keyExtractor={(item) => item.name}
+              hidePagination
+              emptyStateText="No stock levels tracked yet."
+              className="border-0 shadow-none"
+              columns={[
+                {
+                  key: "name",
+                  header: "Product",
+                  render: (item) => (
+                    <div>
+                      <p className="font-semibold text-sm">{item.name}</p>
+                      <p className="text-xs text-muted">Threshold: {item.lowStockThreshold} {item.unit}</p>
+                    </div>
+                  )
+                },
+                {
+                  key: "onHandQty",
+                  header: "On Hand",
+                  className: "text-right",
+                  render: (item) => {
+                    const isLow = item.onHandQty <= item.lowStockThreshold;
+                    return (
+                      <div className="flex items-center justify-end gap-2">
                         <span className={`font-bold text-sm ${isLow ? "text-danger" : ""}`}>
                           {item.onHandQty} {item.unit}
                         </span>
-                        {isLow && (
-                          <Badge variant="danger" className="text-[10px] py-0.5">Low</Badge>
-                        )}
+                        {isLow && <Badge variant="danger" className="text-[10px] py-0.5">Low</Badge>}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  }
+                }
+              ]}
+            />
           </CardContent>
         </Card>
         {/* Bottom Row: Staff Performance */}
@@ -244,28 +248,27 @@ export default function ReportsPage() {
             <CardDescription>Sales tracked by individual team members</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <p className="text-sm text-muted animate-pulse">Calculating staff contributions...</p>
-            ) : !report?.staffSales?.length ? (
-              <p className="text-sm text-muted italic">No staff sales data available.</p>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                {report.staffSales.map((staff, idx) => (
-                  <div key={staff.name} className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-surface">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold">
-                      {idx + 1}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{staff.name}</p>
-                      <p className="text-sm text-muted">{staff.orders} orders</p>
-                    </div>
-                    <div className="ml-auto text-right">
-                      <p className="font-bold text-primary">{formatCurrency(staff.revenue)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <DataTable
+              isLoading={isLoading}
+              data={report?.staffSales ?? []}
+              keyExtractor={(staff) => staff.name}
+              hidePagination
+              emptyStateText="No staff sales data available."
+              className="border-0 shadow-none"
+              columns={[
+                {
+                  key: "rank",
+                  header: "#",
+                  render: (staff) => {
+                    const idx = (report?.staffSales ?? []).findIndex((s) => s.name === staff.name);
+                    return <span className="font-bold text-primary">{idx + 1}</span>;
+                  }
+                },
+                { key: "name", header: "Staff", render: (staff) => <span className="font-semibold">{staff.name}</span> },
+                { key: "orders", header: "Orders", render: (staff) => <span className="text-sm text-muted">{staff.orders} orders</span> },
+                { key: "revenue", header: "Revenue", className: "text-right", render: (staff) => <span className="font-bold text-primary">{formatCurrency(staff.revenue)}</span> }
+              ]}
+            />
           </CardContent>
         </Card>
       </div>

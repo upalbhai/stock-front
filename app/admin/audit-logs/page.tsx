@@ -12,7 +12,7 @@ import type { AuditLog } from "@/lib/types";
 export default function AdminAuditLogsPage() {
   const { token } = useAuth();
 
-  const { data: auditData, isLoading: loadingAudit } = useQuery({
+  const { data: auditData, isLoading: loadingAudit, refetch } = useQuery({
     queryKey: ["admin-audit-logs"],
     queryFn: () => adminService.getAuditLogs(token),
     enabled: Boolean(token)
@@ -23,10 +23,11 @@ export default function AdminAuditLogsPage() {
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <DataTable
-        loading={loadingAudit}
+        isLoading={loadingAudit}
         data={auditLogs}
         keyExtractor={(l) => l._id}
-        emptyMessage="No platform-wide audit activities found."
+        onRefetch={() => refetch()}
+        emptyStateText="No platform-wide audit activities found."
         columns={[
           {
             key: "actor", header: "Actor",

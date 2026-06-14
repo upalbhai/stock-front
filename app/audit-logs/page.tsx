@@ -16,7 +16,7 @@ const actionColors: Record<string, "soft" | "warning" | "danger" | "secondary"> 
 
 export default function AuditLogsPage() {
   const { token } = useAuth();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["audit-logs"],
     queryFn: () => adminService.getAuditLogs(token),
     enabled: Boolean(token)
@@ -32,10 +32,12 @@ export default function AuditLogsPage() {
       </div>
 
       <DataTable
-        loading={isLoading}
+        isLoading={isLoading}
         data={logs}
         keyExtractor={(l) => l._id}
-        emptyMessage="No audit logs yet."
+        onRefetch={() => refetch()}
+        emptyStateIcon={<ClipboardList className="h-12 w-12 text-muted/30" />}
+        emptyStateText="No audit logs yet."
         columns={[
           {
             key: "actor", header: "Actor",

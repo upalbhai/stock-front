@@ -135,7 +135,7 @@ export function BillingCartPanel({
         </div>
       )}
 
-      {!isWholesale && (
+      {/* {!isWholesale && (
         <div className="flex shrink-0 gap-1 border-b border-border/60 p-2">
           {BILLING_MODES.map((mode) => (
             <button
@@ -153,7 +153,7 @@ export function BillingCartPanel({
             </button>
           ))}
         </div>
-      )}
+      )} */}
 
       {isWholesale && (
         <div className="shrink-0 border-b border-border/60 px-3 py-2">

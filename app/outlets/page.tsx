@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Store, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,6 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { DataTable } from "@/components/ui/data-table";
-import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth/auth-provider";
 import { outletService } from "@/services/outlet.service";
 import type { Outlet } from "@/lib/types";
@@ -31,7 +30,7 @@ export default function OutletsPage() {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [showModal, setShowModal] = React.useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["outlets"],
     queryFn: () => outletService.getOutlets(token),
     enabled: Boolean(token)
@@ -77,48 +76,93 @@ export default function OutletsPage() {
           <h1 className="text-2xl font-bold">Outlets</h1>
           <p className="text-sm text-muted">Manage all your business locations</p>
         </div>
-        <Button id="create-outlet-btn" onClick={() => { setEditId(null); setForm({ ...emptyForm }); setShowModal(true); }}>
-          <Plus className="h-4 w-4" /> Add Outlet
-        </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {isLoading ? [...Array(3)].map((_, i) => (
-          <div key={i} className="h-40 animate-pulse rounded-3xl bg-border/40" />
-        )) : outlets.map((outlet) => (
-          <div key={outlet._id} className="animate-rise glass-panel rounded-3xl border border-border/70 p-5 shadow-soft">
-            <div className="flex items-start justify-between gap-3">
+      <DataTable
+        isLoading={isLoading}
+        data={outlets}
+        keyExtractor={(o) => o._id}
+        onRefetch={() => refetch()}
+        emptyStateIcon={<Store className="h-12 w-12 text-muted/30" />}
+        emptyStateText="No outlets yet. Add your first business location."
+        filters={
+          <Button id="create-outlet-btn" onClick={() => { setEditId(null); setForm({ ...emptyForm }); setShowModal(true); }}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add Outlet
+          </Button>
+        }
+        columns={[
+          {
+            key: "name",
+            header: "Outlet",
+            render: (outlet) => (
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary text-xl">
-                  <Store className="h-6 w-6" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Store className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="font-semibold">{outlet.name}</h2>
+                  <p className="font-semibold">{outlet.name}</p>
                   <p className="text-xs text-muted">{outlet.address || "No address"}</p>
                 </div>
               </div>
+            )
+          },
+          {
+            key: "contact",
+            header: "Contact",
+            render: (outlet) => (
+              <div className="text-xs text-muted">
+                {outlet.phone && <p>{outlet.phone}</p>}
+                {outlet.email && <p>{outlet.email}</p>}
+                {!outlet.phone && !outlet.email && <span>—</span>}
+              </div>
+            )
+          },
+          {
+            key: "billingModes",
+            header: "Billing Modes",
+            render: (outlet) => (
+              <div className="flex gap-1 flex-wrap">
+                {outlet.billingModes.map((m) => (
+                  <Badge key={m} variant="secondary" className="text-xs capitalize">{m.replace("_", " ")}</Badge>
+                ))}
+              </div>
+            )
+          },
+          {
+            key: "tax",
+            header: "Tax",
+            render: (outlet) =>
+              outlet.taxEnabled ? (
+                <Badge variant="warning" className="text-xs">GST {outlet.defaultTaxRate}%</Badge>
+              ) : (
+                <span className="text-xs text-muted">Off</span>
+              )
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (outlet) => (
               <Badge variant={outlet.isActive ? "soft" : "danger"}>
                 {outlet.isActive ? "Active" : "Inactive"}
               </Badge>
-            </div>
-            <div className="mt-4 flex gap-1.5 flex-wrap">
-              {outlet.billingModes.map((m) => (
-                <Badge key={m} variant="secondary" className="text-xs capitalize">{m.replace("_", " ")}</Badge>
-              ))}
-              {outlet.taxEnabled && <Badge variant="warning" className="text-xs">GST {outlet.defaultTaxRate}%</Badge>}
-            </div>
-            <div className="mt-4 flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(outlet)} id={`edit-outlet-${outlet._id}`}>
-                <Pencil className="h-3.5 w-3.5" /> Edit
-              </Button>
-              <Button variant="ghost" size="sm" className="text-danger hover:bg-danger/10"
-                onClick={() => setDeleteId(outlet._id)} id={`delete-outlet-${outlet._id}`}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+            )
+          },
+          {
+            key: "actions",
+            header: "",
+            render: (outlet) => (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => openEdit(outlet)} id={`edit-outlet-${outlet._id}`}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(outlet._id)} id={`delete-outlet-${outlet._id}`}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )
+          }
+        ]}
+      />
 
       <Modal open={showModal} onClose={() => setShowModal(false)}
         title={editId ? "Edit Outlet" : "Create Outlet"} size="md">

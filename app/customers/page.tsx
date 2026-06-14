@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Users, Search } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ export default function CustomersPage() {
   const [search, setSearch] = React.useState("");
   const [balanceFilter, setBalanceFilter] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(50);
   const [showModal, setShowModal] = React.useState(false);
   const emptyForm = {
     name: "",
@@ -38,14 +39,15 @@ export default function CustomersPage() {
   };
   const [form, setForm] = React.useState(emptyForm);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["customers", outletId, search, balanceFilter, page],
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["customers", outletId, search, balanceFilter, page, limit],
     queryFn: () =>
       customerService.getCustomers(token, {
         outletId: outletId ?? undefined,
         search: search || undefined,
         hasBalance: balanceFilter === "due" ? "true" : undefined,
-        page
+        page,
+        limit
       }),
     enabled: Boolean(token) && hasCustomers
   });
@@ -81,9 +83,6 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold">Customers</h1>
           <p className="text-sm text-muted">Khata ledger — track who owes what</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus className="h-4 w-4" /> Add Customer
-        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -95,27 +94,36 @@ export default function CustomersPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input className="pl-9" placeholder="Search name, phone, GSTIN..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <Select
-          value={balanceFilter}
-          onValueChange={setBalanceFilter}
-          className="w-44"
-          options={[
-            { value: "", label: "All customers" },
-            { value: "due", label: "With balance due" }
-          ]}
-        />
-      </div>
-
       <DataTable
-        loading={isLoading}
+        isLoading={isLoading}
         data={customers}
         keyExtractor={(c) => c._id}
-        emptyMessage="No customers yet. Add your first wholesale buyer."
+        totalItems={data?.total ?? customers.length}
+        page={page}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={(size) => { setLimit(size); setPage(1); }}
+        searchQuery={search}
+        onSearchChange={setSearch}
+        onRefetch={() => refetch()}
+        placeholderText="Search name, phone, GSTIN..."
+        emptyStateText="No customers yet. Add your first wholesale buyer."
+        filters={
+          <>
+            <Select
+              value={balanceFilter}
+              onValueChange={(v) => { setBalanceFilter(v); setPage(1); }}
+              className="w-44 h-9"
+              options={[
+                { value: "", label: "All customers" },
+                { value: "due", label: "With balance due" }
+              ]}
+            />
+            <Button onClick={() => setShowModal(true)}>
+              <Plus className="h-4 w-4 mr-1.5" /> Add Customer
+            </Button>
+          </>
+        }
         columns={[
           {
             key: "name",

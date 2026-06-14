@@ -11,6 +11,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getErrorMessage } from "@/lib/error";
 import { ArrowLeft } from "lucide-react";
@@ -28,8 +33,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
 
   const [form, setForm] = useState({
     name: "",
@@ -47,38 +51,7 @@ export default function LoginPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) {
-      const pastedData = value.replace(/[^0-9a-zA-Z]/g, "").slice(0, 6).split("");
-      const newOtp = [...otpCode];
-      for (let i = 0; i < pastedData.length; i++) {
-        if (index + i < 6) {
-          newOtp[index + i] = pastedData[i];
-        }
-      }
-      setOtpCode(newOtp);
-      setForm(prev => ({ ...prev, code: newOtp.join("") }));
-      
-      const nextIndex = Math.min(index + pastedData.length, 5);
-      otpRefs.current[nextIndex]?.focus();
-      return;
-    }
 
-    const newOtp = [...otpCode];
-    newOtp[index] = value;
-    setOtpCode(newOtp);
-    setForm(prev => ({ ...prev, code: newOtp.join("") }));
-
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !otpCode[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
 
   const handleEmailCheckSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,18 +328,21 @@ export default function LoginPage() {
                     <label className="block text-xs font-medium text-muted-foreground">OTP Code *</label>
                     <button type="button" onClick={handleSendOtp} disabled={loading} className="text-xs text-primary font-medium hover:underline">Resend Code</button>
                   </div>
-                  <div className="flex gap-2 justify-between">
-                    {otpCode.map((digit, idx) => (
-                      <Input
-                        key={idx}
-                        ref={(el) => { otpRefs.current[idx] = el; }}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className="w-12 h-14 text-center text-xl font-bold rounded-xl bg-card border-border shadow-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                        maxLength={6}
-                      />
-                    ))}
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={form.code}
+                      onChange={(value) => setForm(prev => ({ ...prev, code: value }))}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} className="w-12 h-14 text-lg" />
+                        <InputOTPSlot index={1} className="w-12 h-14 text-lg" />
+                        <InputOTPSlot index={2} className="w-12 h-14 text-lg" />
+                        <InputOTPSlot index={3} className="w-12 h-14 text-lg" />
+                        <InputOTPSlot index={4} className="w-12 h-14 text-lg" />
+                        <InputOTPSlot index={5} className="w-12 h-14 text-lg" />
+                      </InputOTPGroup>
+                    </InputOTP>
                   </div>
                 </div>
               </div>

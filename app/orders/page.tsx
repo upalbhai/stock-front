@@ -40,12 +40,19 @@ export default function OrdersPage() {
   const [voidTarget, setVoidTarget] = React.useState<Order | null>(null);
   const [voidReason, setVoidReason] = React.useState("");
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["orders", outletId, recordFilter],
+  const [page, setPage] = React.useState(1);
+  const [limit, setLimit] = React.useState(10);
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["orders", outletId, recordFilter, page, limit, searchQuery],
     queryFn: () =>
       orderService.getOrders(token, {
         outletId: outletId ?? undefined,
-        recordStatus: recordFilter
+        recordStatus: recordFilter,
+        page,
+        limit,
+        search: searchQuery || undefined
       }),
     enabled: Boolean(token) && hasHistory
   });
@@ -92,19 +99,28 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <Tabs value={recordFilter} onValueChange={(v) => setRecordFilter(v as RecordFilter)}>
-        <TabsList className="max-w-md">
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="voided">Voided</TabsTrigger>
-          <TabsTrigger value="all">All</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
       <DataTable
-        loading={isLoading}
+        isLoading={isLoading}
         data={orders}
         keyExtractor={(o) => o._id}
-        emptyMessage="No orders found."
+        emptyStateText="No orders found."
+        totalItems={data?.total ?? 0}
+        page={page}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onRefetch={() => refetch()}
+        filters={
+          <Tabs value={recordFilter} onValueChange={(v) => { setRecordFilter(v as RecordFilter); setPage(1); }}>
+            <TabsList>
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="voided">Voided</TabsTrigger>
+              <TabsTrigger value="all">All</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        }
         columns={[
           {
             key: "orderNumber",

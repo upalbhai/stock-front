@@ -110,10 +110,10 @@ export default function CustomerDetailPage() {
       <div>
         <h2 className="text-lg font-semibold mb-3">Khata Ledger</h2>
         <DataTable
-          loading={false}
+          isLoading={isLoading}
           data={transactions}
           keyExtractor={(t) => t._id}
-          emptyMessage="No transactions yet."
+          emptyStateText="No transactions yet."
           columns={[
             {
               key: "date",

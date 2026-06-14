@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { PAYMENT_METHODS } from "@/components/billing/billing-constants";
 
 type PaymentMethod = (typeof PAYMENT_METHODS)[number]["value"];
@@ -27,24 +28,25 @@ export function BillingPaymentSection({
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-muted-foreground">Payment method</p>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 lg:grid-cols-3">
+      <div className="flex gap-2">
         {paymentMethods.map((pm) => (
-          <button
+          <Button
             key={pm.value}
             type="button"
             onClick={() => onSelectMethod(pm.value)}
+            variant={selectedMethod === pm.value ? (pm.value === "credit" ? "outline" : "default") : "outline"}
             className={cn(
-              "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xl border py-2 text-xs font-medium transition",
+              "flex h-auto min-h-11 flex-col items-center  justify-center gap-0.5 rounded-xl text-xs font-medium transition",
               selectedMethod === pm.value
                 ? pm.value === "credit"
-                  ? "border-primary bg-primary/10 text-primary"
+                  ? "border-primary bg-primary/10 text-primary hover:bg-primary/20"
                   : "border-primary bg-primary text-white"
                 : "border-border bg-muted/40 text-muted-foreground hover:bg-muted"
             )}
           >
-            <span className="text-base">{pm.icon}</span>
+            {/* <span className="text-base">{pm.icon}</span> */}
             {pm.label}
-          </button>
+          </Button>
         ))}
       </div>
 
