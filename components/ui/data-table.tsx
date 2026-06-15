@@ -52,6 +52,7 @@ export interface DataTableProps<T> {
   hidePagination?: boolean;
   onRowClick?: (row: T) => void;
   filters?: React.ReactNode;
+  headerActions?: React.ReactNode;
   renderSubComponent?: (row: T) => React.ReactNode;
   expandable?: boolean;
 }
@@ -82,6 +83,7 @@ export function DataTable<T>({
   hidePagination: newHidePagination,
   onRowClick,
   filters,
+  headerActions,
   renderSubComponent,
   expandable = false,
 }: DataTableProps<T>) {
@@ -143,7 +145,7 @@ export function DataTable<T>({
   }
 
   // Determine if header with search/refetch should be shown
-  const showTopBar = onSearchChange || onRefetch || filters;
+  const showTopBar = onSearchChange || onRefetch || filters || headerActions;
 
   return (
     <div className={cn("w-full bg-card border border-border rounded-xl overflow-hidden shadow-sm", className)}>
@@ -164,19 +166,22 @@ export function DataTable<T>({
             )}
             {filters && <div className="flex flex-wrap items-center gap-2">{filters}</div>}
           </div>
-          {onRefetch && (
+          {(onRefetch || headerActions) && (
             <div className="flex items-center gap-3 justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleManualRefetch}
-                disabled={finalIsLoading || countdown > 0}
-                className="h-9 gap-2 font-semibold active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                title={countdown > 0 ? "Refetch cooldown active" : "Refetch list"}
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${finalIsLoading ? "animate-spin" : ""}`} />
-                <span>{countdown > 0 ? `Refetch (${countdown}s)` : "Refetch"}</span>
-              </Button>
+              {headerActions}
+              {onRefetch && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManualRefetch}
+                  disabled={finalIsLoading || countdown > 0}
+                  className="h-9 gap-2 font-semibold active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={countdown > 0 ? "Refetch cooldown active" : "Refetch list"}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${finalIsLoading ? "animate-spin" : ""}`} />
+                  <span>{countdown > 0 ? `Refetch (${countdown}s)` : "Refetch"}</span>
+                </Button>
+              )}
             </div>
           )}
         </div>

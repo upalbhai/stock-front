@@ -10,19 +10,22 @@ interface BarcodeScannerProps {
   open: boolean;
   onClose: () => void;
   onScan: (decodedText: string) => void;
+  continuous?: boolean;
 }
 
-export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
+export function BarcodeScanner({ open, onClose, onScan, continuous = false }: BarcodeScannerProps) {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const hasScannedRef = useRef(false);
 
   const regionId = "html5qr-code-full-region";
 
   useEffect(() => {
     if (open) {
+      hasScannedRef.current = false;
       startScanner();
     } else {
       stopScanner();
@@ -66,9 +69,27 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             qrbox: { width: 250, height: 250 },
           },
           (decodedText) => {
-            // Stop scanning and call the callback
-            stopScanner();
+            if (hasScannedRef.current) return;
+            hasScannedRef.current = true;
+
+            try {
+              const audio = new Audio('/beep.mp3');
+              audio.play().catch(() => {});
+            } catch (err) {
+              console.error("Audio error", err);
+            }
+
             onScan(decodedText);
+
+            if (continuous) {
+              // Allow scanning next item after 1.5s cooldown
+              setTimeout(() => {
+                hasScannedRef.current = false;
+              }, 1500);
+            } else {
+              stopScanner();
+              onClose();
+            }
           },
           (errorMessage) => {
             // Ignore scan errors, as they happen continuously until a barcode is found
@@ -118,7 +139,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         ) : (
           <div className="w-full relative overflow-hidden rounded-xl bg-black border border-border">
             <div id={regionId} className="w-full min-h-[300px]"></div>
-            
+
             {cameras.length > 1 && (
               <button
                 onClick={switchCamera}
@@ -128,7 +149,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 <RefreshCcw className="h-5 w-5" />
               </button>
             )}
-            
+
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
               {/* Target overlay */}
               <div className="w-[250px] h-[250px] border-2 border-primary/50 rounded-lg relative">
@@ -141,7 +162,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             </div>
           </div>
         )}
-        
+
         <div className="flex w-full justify-between mt-4 gap-3">
           <p className="text-xs text-muted flex-1">Point your camera at a barcode or QR code.</p>
           <Button variant="outline" onClick={onClose} size="sm">

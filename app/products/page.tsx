@@ -300,14 +300,27 @@ export default function ProductsPage() {
       hsnCode: form.hsnCode || undefined
     };
     if (hasPackaging && packagingUnits.length) {
-      body.packagingUnits = packagingUnits
-        .filter((p) => p.unitId && p.qtyPerUnit)
-        .map((p) => ({
-          unitId: p.unitId,
-          qtyPerUnit: Number(p.qtyPerUnit),
-          price: p.price ? Number(p.price) : undefined,
-          costPrice: p.costPrice ? Number(p.costPrice) : 0
-        }));
+      const validUnits = packagingUnits.filter((p) => p.unitId && p.qtyPerUnit);
+      
+      // Validation: Packaging unit cannot be the same as the base product unit
+      if (validUnits.some(p => p.unitId === form.unitId)) {
+        toast.error("Packaging unit cannot be the same as the base unit. Please type a new unit name like 'Crate' or 'Box'.");
+        return;
+      }
+      
+      // Validation: Packaging units must be unique
+      const uniqueUnitIds = new Set(validUnits.map(p => p.unitId));
+      if (uniqueUnitIds.size !== validUnits.length) {
+        toast.error("Each packaging unit must have a unique unit name.");
+        return;
+      }
+
+      body.packagingUnits = validUnits.map((p) => ({
+        unitId: p.unitId,
+        qtyPerUnit: Number(p.qtyPerUnit),
+        price: p.price ? Number(p.price) : undefined,
+        costPrice: p.costPrice ? Number(p.costPrice) : 0
+      }));
     }
     save.mutate(body);
   };
@@ -321,12 +334,12 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <DataTable 
-        isLoading={isLoading} 
-        error={isError} 
-        errorMessage={error ? getErrorMessage(error) : undefined} 
-        data={products} 
-        keyExtractor={(p) => p._id} 
+      <DataTable
+        isLoading={isLoading}
+        error={isError}
+        errorMessage={error ? getErrorMessage(error) : undefined}
+        data={products}
+        keyExtractor={(p) => p._id}
         emptyStateText="No products yet. Add your first product."
         totalItems={pagination.total}
         page={page}
@@ -358,7 +371,7 @@ export default function ProductsPage() {
           { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {(p as any).unitId?.abbreviation ?? p.unit}</p>{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
           { key: "isActive", header: "Status", render: (p) => <Badge variant={p.isActive ? "soft" : "danger"}>{p.isActive ? "Active" : "Inactive"}</Badge> },
           { key: "actions", header: "", render: (p) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(p._id)}><Trash2 className="h-4 w-4" /></Button></div>) }
-        ]} 
+        ]}
       />
 
       <Modal
@@ -369,8 +382,8 @@ export default function ProductsPage() {
         className="max-w-3xl md:max-w-4xl lg:max-w-5xl"
       >
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2"><label className="mb-1 block text-xs font-medium text-muted">Product Name *</label><Input id="product-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Mango Lassi" /></div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="md:col-span-3"><label className="mb-1 block text-xs font-medium text-muted">Product Name *</label><Input id="product-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Mango Lassi" /></div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">Category</label>
               <AsyncSelect
@@ -406,14 +419,14 @@ export default function ProductsPage() {
               <label className="mb-1 block text-xs font-medium text-muted">Barcode</label>
               <div className="relative">
                 <Input id="product-barcode" value={form.barcode} onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))} placeholder="Scan or type" className="pr-10" />
-                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted" onClick={() => setShowScanner(true)}>
+                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted z-10" onPointerDown={(e) => { e.preventDefault(); setShowScanner(true); }} onClick={(e) => { e.preventDefault(); setShowScanner(true); }}>
                   <span className="text-lg">📷</span>
                 </Button>
               </div>
             </div>
             <div><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} value={form.gstRate} onChange={(e) => setForm((f) => ({ ...f, gstRate: e.target.value }))} /></div>
             {hasPackaging && (
-              <div className="sm:col-span-2 space-y-2 rounded-xl border border-border/60 p-3">
+              <div className="md:col-span-3 space-y-2 rounded-xl border border-border/60 p-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-muted uppercase tracking-wide">Packaging Units (Peti/Crate)</label>
                   <Button type="button" variant="soft" size="sm" onClick={() => setPackagingUnits((rows) => [...rows, { unitId: "", unitName: "", qtyPerUnit: "", price: "", costPrice: "" }])}>
@@ -456,7 +469,7 @@ export default function ProductsPage() {
                           }
                         }}
                         loadOptions={loadUnitOptions}
-                        placeholder="Unit"
+                        placeholder="Package name (e.g. Crate)"
                         searchable
                         pageSize={25}
                         creatable
@@ -483,15 +496,15 @@ export default function ProductsPage() {
               <div><label className="mb-1 block text-xs font-medium text-muted">HSN Code</label><Input value={form.hsnCode} onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))} placeholder="e.g. 2202" /></div>
             )}
           </div>
-          <div className="sticky bottom-0 -mx-5 flex gap-3 border-t border-border/60 bg-surface px-5 py-4 sm:-mx-6 sm:px-6">
-            <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Product")}</Button>
+          <div className="sticky bottom-0 -mx-5 flex justify-end gap-3 border-t border-border/60 bg-surface px-5 py-4 sm:-mx-6 sm:px-6">
+            <Button variant="outline" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Product")}</Button>
           </div>
         </form>
+        <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={(text) => setForm((f) => ({ ...f, barcode: text }))} continuous={true} />
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && remove.mutate(deleteId)} title="Delete Product?" message="This product will be hidden from billing." confirmLabel="Delete" loading={remove.isPending} />
-      <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={(text) => setForm((f) => ({ ...f, barcode: text }))} />
     </div>
   );
 }

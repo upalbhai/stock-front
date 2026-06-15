@@ -251,10 +251,9 @@ export function useBillingPage() {
             );
           }
           setSearch("");
-          setShowScanner(false);
         } else {
           setSearch(scannedBarcode);
-          setShowScanner(false);
+          toast.error("Product not found");
         }
       } catch (err) {
         console.error("Barcode scan failed", err);

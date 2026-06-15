@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import { Plus, Minus, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,12 @@ export function BillingCartLine({
 }: BillingCartLineProps) {
   const lineQty = item.soldQty ?? item.qty;
   const lineTotal = item.price * lineQty;
+
+  const [qtyInput, setQtyInput] = useState(item.qty.toString());
+
+  useEffect(() => {
+    setQtyInput(item.qty.toString());
+  }, [item.qty]);
 
   return (
     <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card/60 p-2.5">
@@ -85,7 +92,25 @@ export function BillingCartLine({
         >
           <Minus className="h-4 w-4" />
         </button>
-        <span className="w-6 text-center text-sm font-semibold">{item.qty}</span>
+        <input
+          type="number"
+          min={1}
+          value={qtyInput}
+          onChange={(e) => {
+            setQtyInput(e.target.value);
+            const val = parseInt(e.target.value, 10);
+            if (!isNaN(val) && val > 0) {
+              onUpdateQty(val);
+            }
+          }}
+          onBlur={() => {
+            const val = parseInt(qtyInput, 10);
+            if (isNaN(val) || val <= 0) {
+              setQtyInput(item.qty.toString());
+            }
+          }}
+          className="w-10 bg-transparent text-center text-sm font-semibold outline-none focus:ring-1 focus:ring-primary rounded py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
         <button
           type="button"
           onClick={() => onUpdateQty(item.qty + 1)}

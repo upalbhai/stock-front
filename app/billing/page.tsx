@@ -9,9 +9,13 @@ import { BillingCartPanel } from "@/components/billing/billing-cart-panel";
 import { MobileCartBar } from "@/components/billing/mobile-cart-bar";
 import { CheckoutSheet } from "@/components/billing/checkout-sheet";
 import { useBillingPage } from "@/hooks/use-billing-page";
+import { useGlobalBarcodeScanner } from "@/hooks/use-global-barcode-scanner";
 
 export default function BillingPage() {
   const b = useBillingPage();
+
+  // Enable global physical barcode scanner listening on the entire billing page
+  useGlobalBarcodeScanner(b.handleBarcodeScanned, !b.showScanner);
 
   const cartDispatch = {
     setBillingMode: (mode: Parameters<typeof b.setBillingMode>[0]) => b.dispatch(b.setBillingMode(mode)),
@@ -130,6 +134,7 @@ export default function BillingPage() {
         open={b.showScanner}
         onClose={() => b.setShowScanner(false)}
         onScan={b.handleBarcodeScanned}
+        continuous={true}
       />
 
       <UnitPickerModal

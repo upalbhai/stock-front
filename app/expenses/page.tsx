@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
+import { Textarea } from "@/components/ui/textarea";
 import { StatsCard } from "@/components/ui/stats-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -137,24 +138,29 @@ export default function ExpensesPage() {
         onRefetch={() => refetch()}
         emptyStateText="No expenses recorded yet."
         filters={
-          <>
+          <div className="flex w-full gap-2 sm:w-auto">
             <Select
               value={catFilter}
               onValueChange={(v) => { setCatFilter(v); setPage(1); }}
               options={[{ value: "", label: "All Categories" }, ...catOptions]}
-              className="w-48 h-9"
+              className="flex-1 sm:w-40 h-9"
             />
-            <Tabs value={recordFilter} onValueChange={(v) => { setRecordFilter(v as RecordFilter); setPage(1); }}>
-              <TabsList>
-                <TabsTrigger value="active">Active</TabsTrigger>
-                <TabsTrigger value="voided">Voided</TabsTrigger>
-                <TabsTrigger value="all">All</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button id="add-expense-btn" onClick={() => setShowModal(true)}>
-              <Plus className="h-4 w-4 mr-1.5" /> Add Expense
-            </Button>
-          </>
+            <Select
+              value={recordFilter}
+              onValueChange={(v) => { setRecordFilter(v as RecordFilter); setPage(1); }}
+              options={[
+                { value: "active", label: "Active" },
+                { value: "voided", label: "Voided" },
+                { value: "all", label: "All Records" }
+              ]}
+              className="flex-1 sm:w-32 h-9"
+            />
+          </div>
+        }
+        headerActions={
+          <Button id="add-expense-btn" onClick={() => setShowModal(true)} className="h-9">
+            <Plus className="h-4 w-4 mr-1.5" /> Add Expense
+          </Button>
         }
         columns={[
           {
@@ -227,7 +233,7 @@ export default function ExpensesPage() {
         ]}
       />
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Expense" size="sm">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Expense" size="md">
         <form
           className="space-y-4"
           onSubmit={(e) => {
@@ -235,40 +241,43 @@ export default function ExpensesPage() {
             saveMutation.mutate({ ...form, amount: Number(form.amount) });
           }}
         >
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Category *</label>
-            <Select
-              id="exp-cat"
-              value={form.category}
-              onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}
-              options={catOptions}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Amount (₹) *</label>
-            <Input
-              id="exp-amount"
-              type="number"
-              min={1}
-              required
-              value={form.amount}
-              onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-              placeholder="0.00"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Date</label>
-            <Input
-              id="exp-date"
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-            />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Category *</label>
+              <Select
+                id="exp-cat"
+                value={form.category}
+                onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}
+                options={catOptions}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Amount (₹) *</label>
+              <Input
+                id="exp-amount"
+                type="number"
+                min={1}
+                required
+                value={form.amount}
+                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Date</label>
+              <Input
+                id="exp-date"
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+              />
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted">Note</label>
-            <Input
+            <Textarea
               id="exp-note"
+              rows={2}
               value={form.note}
               onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               placeholder="Details..."
