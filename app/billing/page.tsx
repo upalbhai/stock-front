@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { BarcodeScanner } from "@/components/ui/barcode-scanner";
+import { PrinterSettingsModal } from "@/components/billing/printer-settings-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UnitPickerModal } from "@/components/billing/unit-picker";
 import { BillingSaleModeTabs } from "@/components/billing/billing-sale-mode-tabs";
@@ -13,24 +15,33 @@ import { useGlobalBarcodeScanner } from "@/hooks/use-global-barcode-scanner";
 
 export default function BillingPage() {
   const b = useBillingPage();
+  const [showPrinterSettings, setShowPrinterSettings] = useState(false);
 
   // Enable global physical barcode scanner listening on the entire billing page
   useGlobalBarcodeScanner(b.handleBarcodeScanned, !b.showScanner);
 
   const cartDispatch = {
-    setBillingMode: (mode: Parameters<typeof b.setBillingMode>[0]) => b.dispatch(b.setBillingMode(mode)),
+    setBillingMode: (mode: Parameters<typeof b.setBillingMode>[0]) =>
+      b.dispatch(b.setBillingMode(mode)),
     setDiscount: (n: number) => b.dispatch(b.setDiscount(n)),
     setTaxEnabled: (v: boolean) => b.dispatch(b.setTaxEnabled(v)),
     setTaxRate: (n: number) => b.dispatch(b.setTaxRate(n)),
-    setTaxMode: (m: Parameters<typeof b.setTaxMode>[0]) => b.dispatch(b.setTaxMode(m)),
-    setPaymentMethod: (m: Parameters<typeof b.setPaymentMethod>[0]) => b.dispatch(b.setPaymentMethod(m)),
+    setTaxMode: (m: Parameters<typeof b.setTaxMode>[0]) =>
+      b.dispatch(b.setTaxMode(m)),
+    setPaymentMethod: (m: Parameters<typeof b.setPaymentMethod>[0]) =>
+      b.dispatch(b.setPaymentMethod(m)),
     setCreditSale: (v: boolean) => b.dispatch(b.setCreditSale(v)),
     setAmountReceived: (n: number) => b.dispatch(b.setAmountReceived(n)),
-    setGenerateGstInvoice: (v: boolean) => b.dispatch(b.setGenerateGstInvoice(v)),
-    setPaymentAmount: (p: Parameters<typeof b.setPaymentAmount>[0]) => b.dispatch(b.setPaymentAmount(p)),
-    selectCustomer: (c: Parameters<typeof b.selectCustomer>[0]) => b.dispatch(b.selectCustomer(c)),
-    updateQty: (p: Parameters<typeof b.updateQty>[0]) => b.dispatch(b.updateQty(p)),
-    updateLinePrice: (p: Parameters<typeof b.updateLinePrice>[0]) => b.dispatch(b.updateLinePrice(p)),
+    setGenerateGstInvoice: (v: boolean) =>
+      b.dispatch(b.setGenerateGstInvoice(v)),
+    setPaymentAmount: (p: Parameters<typeof b.setPaymentAmount>[0]) =>
+      b.dispatch(b.setPaymentAmount(p)),
+    selectCustomer: (c: Parameters<typeof b.selectCustomer>[0]) =>
+      b.dispatch(b.selectCustomer(c)),
+    updateQty: (p: Parameters<typeof b.updateQty>[0]) =>
+      b.dispatch(b.updateQty(p)),
+    updateLinePrice: (p: Parameters<typeof b.updateLinePrice>[0]) =>
+      b.dispatch(b.updateLinePrice(p)),
     removeItem: (id: string) => b.dispatch(b.removeItem(id)),
     clearBill: () => b.dispatch(b.clearBill()),
   };
@@ -65,6 +76,8 @@ export default function BillingPage() {
     setEditingPriceId: b.setEditingPriceId,
     setEditPriceValue: b.setEditPriceValue,
     onCheckout: b.handleCheckout,
+    onOpenPrinterSettings: () => setShowPrinterSettings(true),
+    printerConnected: b.printer.isConnected,
   };
 
   return (
@@ -130,6 +143,12 @@ export default function BillingPage() {
         {...sharedCartProps}
       />
 
+      <PrinterSettingsModal
+        open={showPrinterSettings}
+        onClose={() => setShowPrinterSettings(false)}
+        printer={b.printer}
+      />
+
       <BarcodeScanner
         open={b.showScanner}
         onClose={() => b.setShowScanner(false)}
@@ -142,7 +161,8 @@ export default function BillingPage() {
         product={b.unitPickProduct}
         onClose={() => b.setUnitPickProduct(null)}
         onConfirm={(option, qty) => {
-          if (b.unitPickProduct) b.addProductToCart(b.unitPickProduct, option, qty);
+          if (b.unitPickProduct)
+            b.addProductToCart(b.unitPickProduct, option, qty);
         }}
       />
 

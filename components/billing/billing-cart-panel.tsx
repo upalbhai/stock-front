@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag, Printer, RotateCcw } from "lucide-react";
+import { ShoppingBag, Printer, RotateCcw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CustomerPicker } from "@/components/billing/customer-picker";
@@ -68,9 +68,17 @@ type BillingCartPanelProps = {
     setCreditSale: (v: boolean) => void;
     setAmountReceived: (n: number) => void;
     setGenerateGstInvoice: (v: boolean) => void;
-    setPaymentAmount: (p: { field: "cash" | "upi" | "card"; value: number }) => void;
+    setPaymentAmount: (p: {
+      field: "cash" | "upi" | "card";
+      value: number;
+    }) => void;
     selectCustomer: (
-      c: { id: string; name: string; phone?: string; defaultTaxMode?: "exclusive" | "inclusive" } | null
+      c: {
+        id: string;
+        name: string;
+        phone?: string;
+        defaultTaxMode?: "exclusive" | "inclusive";
+      } | null,
     ) => void;
     updateQty: (p: { cartLineId: string; qty: number }) => void;
     updateLinePrice: (p: { cartLineId: string; price: number }) => void;
@@ -80,6 +88,8 @@ type BillingCartPanelProps = {
   setEditingPriceId: (id: string | null) => void;
   setEditPriceValue: (v: string) => void;
   onCheckout: () => void;
+  onOpenPrinterSettings?: () => void;
+  printerConnected?: boolean;
 };
 
 export function BillingCartPanel({
@@ -114,6 +124,8 @@ export function BillingCartPanel({
   setEditingPriceId,
   setEditPriceValue,
   onCheckout,
+  onOpenPrinterSettings,
+  printerConnected,
 }: BillingCartPanelProps) {
   const isSheet = variant === "sheet";
 
@@ -121,7 +133,7 @@ export function BillingCartPanel({
     <div
       className={cn(
         "flex flex-col overflow-hidden bg-card",
-        isSheet ? "h-full" : "h-full rounded-xl border border-border shadow-sm"
+        isSheet ? "h-full" : "h-full rounded-xl border border-border shadow-sm",
       )}
     >
       {isSheet && (
@@ -157,7 +169,9 @@ export function BillingCartPanel({
 
       {isWholesale && (
         <div className="shrink-0 border-b border-border/60 px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Wholesale Bill</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+            Wholesale Bill
+          </p>
         </div>
       )}
 
@@ -166,7 +180,9 @@ export function BillingCartPanel({
           <div className="flex h-full min-h-[12rem] flex-col items-center justify-center py-8 text-center">
             <ShoppingBag className="h-12 w-12 text-muted-foreground/30" />
             <p className="mt-3 text-sm text-muted-foreground">Cart is empty</p>
-            <p className="text-xs text-muted-foreground/70">Tap a product to add it</p>
+            <p className="text-xs text-muted-foreground/70">
+              Tap a product to add it
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -183,11 +199,16 @@ export function BillingCartPanel({
                   setEditPriceValue(String(item.price));
                 }}
                 onCommitEdit={(price) => {
-                  dispatch.updateLinePrice({ cartLineId: item.cartLineId, price });
+                  dispatch.updateLinePrice({
+                    cartLineId: item.cartLineId,
+                    price,
+                  });
                   setEditingPriceId(null);
                 }}
                 onCancelEdit={() => setEditingPriceId(null)}
-                onUpdateQty={(qty) => dispatch.updateQty({ cartLineId: item.cartLineId, qty })}
+                onUpdateQty={(qty) =>
+                  dispatch.updateQty({ cartLineId: item.cartLineId, qty })
+                }
                 onRemove={() => dispatch.removeItem(item.cartLineId)}
               />
             ))}
@@ -199,14 +220,18 @@ export function BillingCartPanel({
           <div className="mt-4 space-y-4 border-t border-border/50 pt-4">
             <BillingPaymentSection
               paymentMethods={paymentMethods}
-              selectedMethod={billing.paymentMethod as (typeof PAYMENT_METHODS)[number]["value"]}
+              selectedMethod={
+                billing.paymentMethod as (typeof PAYMENT_METHODS)[number]["value"]
+              }
               isKhataPayment={isKhataPayment}
               payment={billing.payment}
               onSelectMethod={(method) => {
                 dispatch.setPaymentMethod(method);
                 if (method === "credit") dispatch.setCreditSale(true);
               }}
-              onSplitAmountChange={(field, value) => dispatch.setPaymentAmount({ field, value })}
+              onSplitAmountChange={(field, value) =>
+                dispatch.setPaymentAmount({ field, value })
+              }
             />
 
             {isKhataPayment && hasCreditKhata && (
@@ -227,7 +252,14 @@ export function BillingCartPanel({
                 required={isKhataPayment || billing.generateGstInvoice}
                 onSelect={(c: Customer | null) =>
                   dispatch.selectCustomer(
-                    c ? { id: c._id, name: c.name, phone: c.phone, defaultTaxMode: c.defaultTaxMode } : null
+                    c
+                      ? {
+                          id: c._id,
+                          name: c.name,
+                          phone: c.phone,
+                          defaultTaxMode: c.defaultTaxMode,
+                        }
+                      : null,
                   )
                 }
               />
@@ -238,12 +270,16 @@ export function BillingCartPanel({
                 <input
                   type="checkbox"
                   checked={billing.generateGstInvoice}
-                  onChange={(e) => dispatch.setGenerateGstInvoice(e.target.checked)}
+                  onChange={(e) =>
+                    dispatch.setGenerateGstInvoice(e.target.checked)
+                  }
                 />
                 <span>
                   Generate GST Invoice
                   {!billing.customerId && billing.generateGstInvoice && (
-                    <span className="ml-1 text-amber-600">(select customer with GSTIN)</span>
+                    <span className="ml-1 text-amber-600">
+                      (select customer with GSTIN)
+                    </span>
                   )}
                 </span>
               </label>
@@ -256,7 +292,9 @@ export function BillingCartPanel({
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between text-muted-foreground">
             <span>Subtotal</span>
-            <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
+            <span className="font-medium text-foreground">
+              {formatCurrency(subtotal)}
+            </span>
           </div>
           <div className="flex items-center justify-between gap-2 text-muted-foreground">
             <span>Discount (₹)</span>
@@ -287,7 +325,9 @@ export function BillingCartPanel({
                     min={0}
                     max={100}
                     value={billing.taxRate || ""}
-                    onChange={(e) => dispatch.setTaxRate(Number(e.target.value))}
+                    onChange={(e) =>
+                      dispatch.setTaxRate(Number(e.target.value))
+                    }
                     className="h-9 w-16 text-right text-xs"
                     placeholder="%"
                   />
@@ -313,36 +353,38 @@ export function BillingCartPanel({
                   </label>
                 </div>
               )}
-       
-              {billing.taxEnabled && taxAmount > 0 && (settings.gstEnabled || isWholesale) && (
-                <div className="space-y-1 border-t border-border/40 pt-2 text-xs text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>Taxable</span>
-                    <span>{formatCurrency(cartTotals.taxableAmount)}</span>
-                  </div>
-                  {isInterState ? (
+
+              {billing.taxEnabled &&
+                taxAmount > 0 &&
+                (settings.gstEnabled || isWholesale) && (
+                  <div className="space-y-1 border-t border-border/40 pt-2 text-xs text-muted-foreground">
                     <div className="flex justify-between">
-                      <span>IGST</span>
-                      <span>{formatCurrency(igst)}</span>
+                      <span>Taxable</span>
+                      <span>{formatCurrency(cartTotals.taxableAmount)}</span>
                     </div>
-                  ) : (
-                    <>
+                    {isInterState ? (
                       <div className="flex justify-between">
-                        <span>CGST</span>
-                        <span>{formatCurrency(cgst)}</span>
+                        <span>IGST</span>
+                        <span>{formatCurrency(igst)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>SGST</span>
-                        <span>{formatCurrency(sgst)}</span>
-                      </div>
-                    </>
-                  )}
-                  <div className="flex justify-between font-medium text-foreground">
-                    <span>Tax</span>
-                    <span>{formatCurrency(taxAmount)}</span>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span>CGST</span>
+                          <span>{formatCurrency(cgst)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>SGST</span>
+                          <span>{formatCurrency(sgst)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between font-medium text-foreground">
+                      <span>Tax</span>
+                      <span>{formatCurrency(taxAmount)}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           )}
 
@@ -363,10 +405,30 @@ export function BillingCartPanel({
           >
             <RotateCcw className="h-4 w-4" />
           </Button>
+          {onOpenPrinterSettings && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="relative h-12 w-12 shrink-0"
+              onClick={onOpenPrinterSettings}
+              title="Printer settings"
+              aria-label="Printer settings"
+            >
+              <Settings2 className="h-4 w-4" />
+              <span
+                className={cn(
+                  "absolute right-1.5 top-1.5 h-2 w-2 rounded-full",
+                  printerConnected ? "bg-green-500" : "bg-muted-foreground/30",
+                )}
+              />
+            </Button>
+          )}
           <Button
             className="h-12 flex-1 gap-2 text-sm font-bold"
             onClick={onCheckout}
-            disabled={billing.items.length === 0 || submitPending || outletMissing}
+            disabled={
+              billing.items.length === 0 || submitPending || outletMissing
+            }
             title={outletMissing ? "Please select an outlet" : undefined}
           >
             {submitPending ? (

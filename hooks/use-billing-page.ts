@@ -30,7 +30,13 @@ import type { UnitPickOption } from "@/components/billing/unit-picker";
 import { calculateCartTotals, resolveSupplyType } from "@/lib/taxCalculator";
 import { getErrorMessage } from "@/lib/error";
 import { PAYMENT_METHODS } from "@/components/billing/billing-constants";
-import type { Product, Category, Outlet, Customer, Business } from "@/lib/types";
+import type {
+  Product,
+  Category,
+  Outlet,
+  Customer,
+  Business,
+} from "@/lib/types";
 
 import { outletService } from "@/services/outlet.service";
 import { categoryService } from "@/services/category.service";
@@ -38,6 +44,8 @@ import { productService } from "@/services/product.service";
 import { businessService } from "@/services/business.service";
 import { customerService } from "@/services/customer.service";
 import { orderService } from "@/services/order.service";
+import { usePOSPrinter } from "@/hooks/use-pos-printer";
+import type { ReceiptData } from "@/lib/pos-receipt";
 
 export function useBillingPage() {
   const { token, outletId } = useAuth();
@@ -52,10 +60,17 @@ export function useBillingPage() {
   const qc = useQueryClient();
   const billing = useAppSelector((s) => s.billing);
 
+  const printer = usePOSPrinter(token);
+  // Keep a stable ref to printer so the mutation onSuccess closure never goes stale
+  const printerRef = React.useRef(printer);
+  printerRef.current = printer;
+  const receiptSnapshotRef = React.useRef<ReceiptData | null>(null);
+
   const showSaleModeTabs = hasRetail && hasWholesale;
   const wholesaleOnly = hasWholesale && !hasRetail;
   const isWholesale = billing.saleMode === "wholesale";
-  const isKhataPayment = billing.paymentMethod === "credit" || billing.creditSale;
+  const isKhataPayment =
+    billing.paymentMethod === "credit" || billing.creditSale;
   const showCustomerSection =
     (hasCustomers || hasCreditKhata) &&
     (isWholesale || isKhataPayment || billing.generateGstInvoice);
@@ -69,8 +84,12 @@ export function useBillingPage() {
 
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
-  const [selectedParentId, setSelectedParentId] = React.useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = React.useState<
+    string | null
+  >(null);
+  const [selectedParentId, setSelectedParentId] = React.useState<string | null>(
+    null,
+  );
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [showCheckout, setShowCheckout] = React.useState(false);
   const [showScanner, setShowScanner] = React.useState(false);
@@ -78,10 +97,16 @@ export function useBillingPage() {
   const [prodLimit, setProdLimit] = React.useState(12);
   const [prodIsRefetching, setProdIsRefetching] = React.useState(false);
   const [prodCooldownSeconds, setProdCooldownSeconds] = React.useState(0);
-  const [unitPickProduct, setUnitPickProduct] = React.useState<Product | null>(null);
-  const [editingPriceId, setEditingPriceId] = React.useState<string | null>(null);
+  const [unitPickProduct, setUnitPickProduct] = React.useState<Product | null>(
+    null,
+  );
+  const [editingPriceId, setEditingPriceId] = React.useState<string | null>(
+    null,
+  );
   const [editPriceValue, setEditPriceValue] = React.useState("");
-  const [pendingSaleMode, setPendingSaleMode] = React.useState<"retail" | "wholesale" | null>(null);
+  const [pendingSaleMode, setPendingSaleMode] = React.useState<
+    "retail" | "wholesale" | null
+  >(null);
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -101,7 +126,8 @@ export function useBillingPage() {
 
   const { data: catData } = useQuery({
     queryKey: ["categories", "flat", outletId],
-    queryFn: () => categoryService.getCategories(token, { flat: "true", limit: 200 }),
+    queryFn: () =>
+      categoryService.getCategories(token, { flat: "true", limit: 200 }),
     enabled: Boolean(token),
   });
 
@@ -110,7 +136,14 @@ export function useBillingPage() {
     refetch: refetchProducts,
     isFetching: productsFetching,
   } = useQuery({
-    queryKey: ["products", outletId, selectedCategoryId, debouncedSearch, prodPage, prodLimit],
+    queryKey: [
+      "products",
+      outletId,
+      selectedCategoryId,
+      debouncedSearch,
+      prodPage,
+      prodLimit,
+    ],
     queryFn: () =>
       productService.getProductsWithOffset(token || "", {
         outletId: outletId ?? undefined,
@@ -136,7 +169,7 @@ export function useBillingPage() {
 
   const supplyType = resolveSupplyType(
     bizData?.business?.gstNumber,
-    selectedCustomerData?.customer?.gstin
+    selectedCustomerData?.customer?.gstin,
   );
   const isInterState = supplyType === "inter";
 
@@ -148,12 +181,28 @@ export function useBillingPage() {
     supplyType,
   });
   const { subtotal, tax: taxAmount, cgst, sgst, igst, total } = cartTotals;
-  const amountDuePreview = isKhataPayment ? Math.max(0, total - (billing.amountReceived || 0)) : 0;
-  const cartItemCount = billing.items.reduce((acc, i) => acc + (i.soldQty ?? i.qty), 0);
+  const amountDuePreview = isKhataPayment
+    ? Math.max(0, total - (billing.amountReceived || 0))
+    : 0;
+  const cartItemCount = billing.items.reduce(
+    (acc, i) => acc + (i.soldQty ?? i.qty),
+    0,
+  );
 
   const submitOrder = useMutation({
     mutationFn: (body: unknown) => orderService.createOrder(body, token),
-    onSuccess: () => {
+    onSuccess: (data: unknown) => {
+      // Auto-print receipt if the printer is configured and auto-print is on
+      const orderNum =
+        (data as Record<string, Record<string, Record<string, string>>>)?.data
+          ?.order?.orderNumber ?? "";
+      const snapshot = receiptSnapshotRef.current;
+      receiptSnapshotRef.current = null;
+      if (snapshot && printerRef.current.config.autoPrint) {
+        printerRef.current
+          .print({ ...snapshot, orderNumber: orderNum })
+          .catch((e: Error) => toast.error(`Print failed: ${e.message}`));
+      }
       dispatch(clearBill());
       setShowSuccess(true);
       setShowCheckout(false);
@@ -187,13 +236,25 @@ export function useBillingPage() {
       dispatch(setSaleMode("retail"));
     }
     saleModeInitialized.current = true;
-  }, [businessProfile, hasWholesale, hasRetail, wholesaleOnly, billing.saleMode, dispatch]);
+  }, [
+    businessProfile,
+    hasWholesale,
+    hasRetail,
+    wholesaleOnly,
+    billing.saleMode,
+    dispatch,
+  ]);
 
   React.useEffect(() => {
     if (!currentOutlet) return;
     dispatch(setTaxEnabled(currentOutlet.taxEnabled ?? false));
     dispatch(setTaxRate(currentOutlet.defaultTaxRate ?? 0));
-  }, [currentOutlet?._id, currentOutlet?.taxEnabled, currentOutlet?.defaultTaxRate, dispatch]);
+  }, [
+    currentOutlet?._id,
+    currentOutlet?.taxEnabled,
+    currentOutlet?.defaultTaxRate,
+    dispatch,
+  ]);
 
   React.useEffect(() => {
     if (isWholesale && currentOutlet?.taxEnabled) {
@@ -228,7 +289,7 @@ export function useBillingPage() {
         });
         const prods = res.data ?? [];
         const exactMatch = prods.find(
-          (p) => p.barcode === scannedBarcode || p.sku === scannedBarcode
+          (p) => p.barcode === scannedBarcode || p.sku === scannedBarcode,
         );
 
         if (exactMatch) {
@@ -247,7 +308,7 @@ export function useBillingPage() {
                   typeof exactMatch.categoryId === "object"
                     ? exactMatch.categoryId?._id
                     : (exactMatch.categoryId ?? undefined),
-              })
+              }),
             );
           }
           setSearch("");
@@ -259,7 +320,7 @@ export function useBillingPage() {
         console.error("Barcode scan failed", err);
       }
     },
-    [token, outletId, dispatch, isWholesale]
+    [token, outletId, dispatch, isWholesale],
   );
 
   React.useEffect(() => {
@@ -267,7 +328,11 @@ export function useBillingPage() {
     let lastTime = 0;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
 
       const currentTime = new Date().getTime();
       if (currentTime - lastTime > 50) buffer = "";
@@ -310,7 +375,11 @@ export function useBillingPage() {
     catScrollRef.current?.scrollBy({ left: 200, behavior: "smooth" });
   };
 
-  const addProductToCart = (product: Product, option?: UnitPickOption, qty = 1) => {
+  const addProductToCart = (
+    product: Product,
+    option?: UnitPickOption,
+    qty = 1,
+  ) => {
     const taxRate = product.gstRate || product.taxRate || 0;
     if (option) {
       dispatch(
@@ -331,7 +400,7 @@ export function useBillingPage() {
               ? product.categoryId?._id
               : (product.categoryId ?? undefined),
           qty,
-        })
+        }),
       );
       return;
     }
@@ -347,7 +416,7 @@ export function useBillingPage() {
           typeof product.categoryId === "object"
             ? product.categoryId?._id
             : (product.categoryId ?? undefined),
-      })
+      }),
     );
   };
 
@@ -368,14 +437,21 @@ export function useBillingPage() {
 
     const paymentSplit =
       billing.paymentMethod === "split"
-        ? { cash: billing.payment.cash, upi: billing.payment.upi, card: billing.payment.card }
+        ? {
+            cash: billing.payment.cash,
+            upi: billing.payment.upi,
+            card: billing.payment.card,
+          }
         : undefined;
 
     let amountReceived = total;
     if (isKhataPayment) {
       amountReceived = billing.amountReceived ?? 0;
     } else if (billing.paymentMethod === "split" && paymentSplit) {
-      amountReceived = Object.values(paymentSplit).reduce((s, v) => s + (Number(v) || 0), 0);
+      amountReceived = Object.values(paymentSplit).reduce(
+        (s, v) => s + (Number(v) || 0),
+        0,
+      );
     }
 
     const amountDue = Math.max(0, total - amountReceived);
@@ -403,6 +479,41 @@ export function useBillingPage() {
           ? "cash"
           : billing.paymentMethod;
 
+    // Capture receipt snapshot before the cart is cleared on success
+    receiptSnapshotRef.current = {
+      businessName: bizData?.business?.name ?? "Shop",
+      outletName: currentOutlet?.name ?? undefined,
+      businessPhone: bizData?.business?.phone ?? undefined,
+      businessAddress: bizData?.business?.address ?? undefined,
+      businessGst: bizData?.business?.gstNumber ?? undefined,
+      orderNumber: "", // filled from server response in onSuccess
+      createdAt: new Date().toISOString(),
+      customerName:
+        selectedCustomerData?.customer?.name ||
+        billing.customerName ||
+        undefined,
+      customerPhone:
+        selectedCustomerData?.customer?.phone ||
+        billing.customerPhone ||
+        undefined,
+      items: billing.items.map((i) => ({
+        name: i.name,
+        qty: i.soldQty ?? i.qty,
+        unit: i.soldUnit ?? i.unit,
+        price: i.price,
+        lineTotal: i.price * (i.soldQty ?? i.qty),
+      })),
+      subtotal,
+      discount: billing.discount,
+      tax: taxAmount,
+      total,
+      paymentMethod: payMethod,
+      amountPaid: amountReceived,
+      amountDue,
+      isWholesale,
+      paperWidth: printerRef.current.config.paperWidth,
+    };
+
     submitOrder.mutate({
       outletId,
       billingMode: isWholesale ? "wholesale" : billing.billingMode,
@@ -423,7 +534,7 @@ export function useBillingPage() {
         conversionFactor: i.conversionFactor ?? 1,
         packagingUnitId: i.packagingUnitId,
         price: i.price,
-        taxRate: billing.taxEnabled ? (i.taxRate || billing.taxRate) : 0,
+        taxRate: billing.taxEnabled ? i.taxRate || billing.taxRate : 0,
         unit: i.soldUnit ?? i.unit,
         lineTotal: i.price * (i.soldQty ?? i.qty),
         taxTotal: calculateCartTotals([i], {
@@ -529,6 +640,7 @@ export function useBillingPage() {
     addProductToCart,
     handleAddProduct,
     handleCheckout,
+    printer,
     handleSaleModeChange,
     setDiscount,
     setBillingMode,
