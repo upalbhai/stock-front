@@ -15,6 +15,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
 import { useAuth } from "@/components/auth/auth-provider";
 import { reportService } from "@/services/report.service";
+import { apiFetch } from "@/lib/api-client";
 import { productService } from "@/services/product.service";
 import { stockService } from "@/services/stock.service";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/format";
@@ -139,13 +140,24 @@ export default function ProfitPage() {
   const [issueCost, setIssueCost] = React.useState("");
   const [issueNote, setIssueNote] = React.useState("");
 
+  // Ledger state
+  const [ledgerSearch, setLedgerSearch] = React.useState("");
+  const [editEntry, setEditEntry] = React.useState<LedgerMovement | null>(null);
+  const [deleteEntry, setDeleteEntry] = React.useState<LedgerMovement | null>(null);
+
+  // Edit form state
+  const [editQty, setEditQty] = React.useState("");
+  const [editReason, setEditReason] = React.useState("");
+  const [editNote, setEditNote] = React.useState("");
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["profit-ledger", outletId, from, to],
+    queryKey: ["profit-ledger", outletId, from, to, ledgerSearch],
     queryFn: () =>
       reportService.getProfitLedger(token!, {
         outletId: outletId ?? undefined,
         from,
         to,
+        search: ledgerSearch || undefined,
         limit: 100
       }),
     enabled: Boolean(token)
@@ -181,20 +193,56 @@ export default function ProfitPage() {
     setIssueCost(String(defaults.costPrice || ""));
   }, [selectedProduct, issueUnitKey]);
 
-  const recordIssue = useMutation({
-    mutationFn: (body: unknown) => stockService.adjustStock(body, token),
+  const issueMutation = useMutation({
+    mutationFn: (body: any) => stockService.adjustStock(body, token!),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["profit-ledger"] });
-      qc.invalidateQueries({ queryKey: ["stock-history"] });
-      qc.invalidateQueries({ queryKey: ["products"] });
-      toast.success("Stock issue recorded");
+      toast.success("Stock issue recorded successfully");
       setShowIssueModal(false);
-      setSelectedProduct(null);
       setIssueQty("1");
       setIssueNote("");
+      setSelectedProduct(null);
+      qc.invalidateQueries({ queryKey: ["profit-ledger"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      refetch();
     },
     onError: (err) => toast.error(getErrorMessage(err, "Failed to record issue"))
   });
+
+  const editMutation = useMutation({
+    mutationFn: (body: any) => stockService.updateStockEntry(editEntry!._id, body, token!),
+    onSuccess: () => {
+      toast.success("Ledger entry updated");
+      setEditEntry(null);
+      qc.invalidateQueries({ queryKey: ["profit-ledger"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      refetch();
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to update entry"))
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => stockService.deleteStockEntry(deleteEntry!._id, token!),
+    onSuccess: () => {
+      toast.success("Ledger entry deleted, stock reverted");
+      setDeleteEntry(null);
+      qc.invalidateQueries({ queryKey: ["profit-ledger"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      refetch();
+    },
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to delete entry"))
+  });
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editEntry) return;
+    const qtyNum = Number(editQty);
+    if (isNaN(qtyNum)) return toast.error("Invalid quantity");
+    editMutation.mutate({
+      qty: editEntry.qty < 0 ? -Math.abs(qtyNum) : Math.abs(qtyNum), 
+      lossReason: editReason,
+      note: editNote
+    });
+  };
 
   const handleRecordIssue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,7 +261,7 @@ export default function ProfitPage() {
         : { baseUnit, soldQty: issueCount, soldUnit: selectedUnit?.soldUnit ?? baseUnit };
 
     if (isGoodReturn) {
-      recordIssue.mutate({
+      issueMutation.mutate({
         productId: selectedProduct._id,
         outletId,
         qty: baseQty,
@@ -225,7 +273,7 @@ export default function ProfitPage() {
       return;
     }
 
-    recordIssue.mutate({
+    issueMutation.mutate({
       productId: selectedProduct._id,
       outletId,
       qty: -baseQty,
@@ -254,7 +302,6 @@ export default function ProfitPage() {
         </Button>
       </div>
 
-      {/* Explainer */}
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm space-y-2">
         <p className="font-semibold flex items-center gap-2">
           <Info className="h-4 w-4 text-primary" /> How to read this page
@@ -267,7 +314,6 @@ export default function ProfitPage() {
         </ul>
       </div>
 
-      {/* Date filter */}
       <div className="flex flex-wrap items-center gap-2">
         <Calendar className="h-4 w-4 text-muted-foreground" />
         <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-36" />
@@ -275,7 +321,6 @@ export default function ProfitPage() {
         <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-36" />
       </div>
 
-      {/* Real profit section */}
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3 font-semibold">Real money (sold &amp; lost)</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -308,7 +353,6 @@ export default function ProfitPage() {
         </div>
       </div>
 
-      {/* Losses breakdown */}
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3 font-semibold">Losses &amp; shrinkage</p>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -336,7 +380,6 @@ export default function ProfitPage() {
         </div>
       </div>
 
-      {/* Unrealized / on hand */}
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3 font-semibold">Not sold yet (potential only)</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -367,7 +410,6 @@ export default function ProfitPage() {
         </div>
       </div>
 
-      {/* Ledger table */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Money movement ledger</h2>
         <DataTable
@@ -375,6 +417,9 @@ export default function ProfitPage() {
           data={movements}
           keyExtractor={(m) => m._id}
           onRefetch={() => refetch()}
+          searchQuery={ledgerSearch}
+          onSearchChange={setLedgerSearch}
+          placeholderText="Search product, note, reason..."
           hidePagination
           emptyStateText="No stock money movements in this period."
           columns={[
@@ -463,12 +508,44 @@ export default function ProfitPage() {
                   {m.note || "—"}
                 </span>
               )
+            },
+            {
+              key: "actions",
+              header: "",
+              render: (m) => {
+                const canEdit = m.type === "wastage" || m.type === "adjustment" || m.lossReason;
+                if (!canEdit) return null;
+                return (
+                  <div className="flex gap-1 justify-end">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 text-muted-foreground hover:text-primary" 
+                      onClick={() => {
+                        setEditQty(Math.abs(m.qty).toString());
+                        setEditReason(m.lossReason || "");
+                        setEditNote(m.note || "");
+                        setEditEntry(m);
+                      }}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 text-muted-foreground hover:text-danger" 
+                      onClick={() => setDeleteEntry(m)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                );
+              }
             }
           ]}
         />
       </div>
 
-      {/* Record issue modal */}
       <Modal
         open={showIssueModal}
         onClose={() => setShowIssueModal(false)}
@@ -575,11 +652,93 @@ export default function ProfitPage() {
             <Button type="button" variant="outline" className="flex-1" onClick={() => setShowIssueModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={!selectedProduct || recordIssue.isPending}>
-              {recordIssue.isPending ? "Saving..." : "Record issue"}
+            <Button type="submit" className="flex-1" disabled={!selectedProduct || issueMutation.isPending}>
+              {issueMutation.isPending ? "Saving..." : "Record issue"}
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={!!editEntry}
+        onClose={() => setEditEntry(null)}
+        title="Edit Ledger Entry"
+        size="md"
+      >
+        {editEntry && (
+          <form className="space-y-4" onSubmit={handleEditSubmit}>
+            <div>
+              <p className="text-sm font-semibold">{editEntry.productName}</p>
+              <p className="text-xs text-muted-foreground">{editEntry.categoryLabel}</p>
+            </div>
+            
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Quantity (absolute value) *</label>
+              <Input
+                type="number"
+                min={0}
+                required
+                value={editQty}
+                onChange={(e) => setEditQty(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                The item's stock will be adjusted accordingly.
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Reason</label>
+              <Select
+                value={editReason}
+                onValueChange={setEditReason}
+                options={ISSUE_TYPES.map(t => ({ label: t.label, value: t.value }))}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Note (Optional)</label>
+              <Input
+                placeholder="Optional note..."
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={editMutation.isPending}>
+              {editMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!deleteEntry}
+        onClose={() => setDeleteEntry(null)}
+        title="Delete Ledger Entry"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete this {deleteEntry?.categoryLabel} entry for <strong>{deleteEntry?.productName}</strong>?
+          </p>
+          <div className="rounded border border-warning/30 bg-warning/10 p-3 flex gap-2 text-warning items-start">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <p className="text-xs">
+              Deleting this entry will <strong>revert</strong> its stock impact. For example, if it subtracted {Math.abs(deleteEntry?.qty || 0)} items, they will be added back to inventory.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setDeleteEntry(null)}>Cancel</Button>
+            <Button 
+              variant="default" 
+              className="flex-1 bg-danger hover:bg-danger/90 text-white" 
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Entry"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

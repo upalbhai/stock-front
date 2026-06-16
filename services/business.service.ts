@@ -6,6 +6,6 @@ export const businessService = {
     return getJson<{ business: Business }>("/businesses/mine", token);
   },
   updateBusiness: async (id: string, data: unknown, token?: string | null) => {
-    return apiFetch(`/businesses/${id}`, { method: "PATCH", body: data, token });
+    return apiFetch(`/businesses/mine`, { method: "PATCH", body: data, token });
   },
 };

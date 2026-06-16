@@ -10,4 +10,10 @@ export const stockService = {
   approveTransfer: async (id: string, token?: string | null) => {
     return apiFetch(`/stock/transfers/${id}/approve`, { method: "POST", token });
   },
+  updateStockEntry: async (id: string, body: any, token: string) => {
+    return apiFetch(`/stock/entries/${id}`, { method: "PUT", body, token });
+  },
+  deleteStockEntry: async (id: string, token: string) => {
+    return apiFetch(`/stock/entries/${id}`, { method: "DELETE", token });
+  },
 };

@@ -423,7 +423,7 @@ export function useBillingPage() {
         conversionFactor: i.conversionFactor ?? 1,
         packagingUnitId: i.packagingUnitId,
         price: i.price,
-        taxRate: i.taxRate,
+        taxRate: billing.taxEnabled ? (i.taxRate || billing.taxRate) : 0,
         unit: i.soldUnit ?? i.unit,
         lineTotal: i.price * (i.soldQty ?? i.qty),
         taxTotal: calculateCartTotals([i], {

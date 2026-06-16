@@ -55,7 +55,7 @@ export function GstInvoicePrint({ order, business, outlet, printRef }: GstInvoic
   const isInterState = order.supplyType === "inter" || (order.igst ?? 0) > 0;
 
   return (
-    <div ref={printRef} className="gst-invoice-print bg-white text-black p-6 max-w-[800px] mx-auto text-sm">
+    <div ref={printRef} className="gst-invoice-print bg-[#ffffff] text-[#000000] p-6 max-w-[800px] mx-auto text-sm">
       <style jsx global>{`
         @media print {
           body * { visibility: hidden; }
@@ -65,32 +65,32 @@ export function GstInvoicePrint({ order, business, outlet, printRef }: GstInvoic
         }
       `}</style>
 
-      <div className="text-center border-b-2 border-black pb-3 mb-4">
+      <div className="text-center border-b-2 border-[#000000] pb-3 mb-4">
         <h1 className="text-xl font-bold uppercase tracking-wide">Tax Invoice</h1>
         {order.invoiceNumber && (
           <p className="text-base font-semibold mt-1">{order.invoiceNumber}</p>
         )}
-        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-xs text-[#4b5563] mt-1">
           Bill Ref: {order.orderNumber} · {formatDateTime(order.invoiceGeneratedAt || order.createdAt)}
         </p>
         {isInterState && (
-          <p className="text-[10px] font-semibold text-amber-800 mt-1 uppercase tracking-wide">
+          <p className="text-[10px] font-semibold text-[#92400e] mt-1 uppercase tracking-wide">
             Inter-State Supply · IGST
           </p>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4 text-xs">
-        <div className="border border-gray-300 p-3 rounded">
-          <p className="font-bold uppercase text-[10px] text-gray-500 mb-1">Seller</p>
+        <div className="border border-[#d1d5db] p-3 rounded">
+          <p className="font-bold uppercase text-[10px] text-[#6b7280] mb-1">Seller</p>
           <p className="font-semibold text-sm">{business?.name || "—"}</p>
           {business?.gstNumber && <p>GSTIN: {business.gstNumber}</p>}
           {business?.address && <p className="mt-1">{business.address}</p>}
           {business?.phone && <p>Ph: {business.phone}</p>}
           {outlet?.name && outlet.name !== business?.name && <p className="mt-1">Outlet: {outlet.name}</p>}
         </div>
-        <div className="border border-gray-300 p-3 rounded">
-          <p className="font-bold uppercase text-[10px] text-gray-500 mb-1">Buyer</p>
+        <div className="border border-[#d1d5db] p-3 rounded">
+          <p className="font-bold uppercase text-[10px] text-[#6b7280] mb-1">Buyer</p>
           <p className="font-semibold text-sm">{customer?.name || order.customerName || "—"}</p>
           {customer?.gstin && <p>GSTIN: {customer.gstin}</p>}
           {(customer?.address || customer?.phone) && (
@@ -104,23 +104,23 @@ export function GstInvoicePrint({ order, business, outlet, printRef }: GstInvoic
 
       <table className="w-full border-collapse text-xs mb-4">
         <thead>
-          <tr className="bg-gray-100 border border-gray-400">
-            <th className="border border-gray-400 p-1.5 text-left">#</th>
-            <th className="border border-gray-400 p-1.5 text-left">Description</th>
-            <th className="border border-gray-400 p-1.5 text-left">HSN</th>
-            <th className="border border-gray-400 p-1.5 text-right">Qty</th>
-            <th className="border border-gray-400 p-1.5 text-right">Rate</th>
-            <th className="border border-gray-400 p-1.5 text-right">Taxable</th>
-            <th className="border border-gray-400 p-1.5 text-right">GST%</th>
+          <tr className="bg-[#f3f4f6] border border-[#9ca3af]">
+            <th className="border border-[#9ca3af] p-1.5 text-left">#</th>
+            <th className="border border-[#9ca3af] p-1.5 text-left">Description</th>
+            <th className="border border-[#9ca3af] p-1.5 text-left">HSN</th>
+            <th className="border border-[#9ca3af] p-1.5 text-right">Qty</th>
+            <th className="border border-[#9ca3af] p-1.5 text-right">Rate</th>
+            <th className="border border-[#9ca3af] p-1.5 text-right">Taxable</th>
+            <th className="border border-[#9ca3af] p-1.5 text-right">GST%</th>
             {isInterState ? (
-              <th className="border border-gray-400 p-1.5 text-right">IGST</th>
+              <th className="border border-[#9ca3af] p-1.5 text-right">IGST</th>
             ) : (
               <>
-                <th className="border border-gray-400 p-1.5 text-right">CGST</th>
-                <th className="border border-gray-400 p-1.5 text-right">SGST</th>
+                <th className="border border-[#9ca3af] p-1.5 text-right">CGST</th>
+                <th className="border border-[#9ca3af] p-1.5 text-right">SGST</th>
               </>
             )}
-            <th className="border border-gray-400 p-1.5 text-right">Amount</th>
+            <th className="border border-[#9ca3af] p-1.5 text-right">Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -129,24 +129,24 @@ export function GstInvoicePrint({ order, business, outlet, printRef }: GstInvoic
             const unit = item.soldUnit ?? item.unit ?? "pcs";
             return (
               <tr key={idx}>
-                <td className="border border-gray-300 p-1.5">{idx + 1}</td>
-                <td className="border border-gray-300 p-1.5">{item.name}</td>
-                <td className="border border-gray-300 p-1.5">{item.hsnCode || "—"}</td>
-                <td className="border border-gray-300 p-1.5 text-right">{qty} {unit}</td>
-                <td className="border border-gray-300 p-1.5 text-right">{formatCurrency(item.price)}</td>
-                <td className="border border-gray-300 p-1.5 text-right">
+                <td className="border border-[#d1d5db] p-1.5">{idx + 1}</td>
+                <td className="border border-[#d1d5db] p-1.5">{item.name}</td>
+                <td className="border border-[#d1d5db] p-1.5">{item.hsnCode || "—"}</td>
+                <td className="border border-[#d1d5db] p-1.5 text-right">{qty} {unit}</td>
+                <td className="border border-[#d1d5db] p-1.5 text-right">{formatCurrency(item.price)}</td>
+                <td className="border border-[#d1d5db] p-1.5 text-right">
                   {formatCurrency(item.taxableAmount ?? item.price * qty)}
                 </td>
-                <td className="border border-gray-300 p-1.5 text-right">{item.taxRate ?? 0}%</td>
+                <td className="border border-[#d1d5db] p-1.5 text-right">{item.taxRate ?? 0}%</td>
                 {isInterState ? (
-                  <td className="border border-gray-300 p-1.5 text-right">{formatCurrency(item.igst ?? 0)}</td>
+                  <td className="border border-[#d1d5db] p-1.5 text-right">{formatCurrency(item.igst ?? 0)}</td>
                 ) : (
                   <>
-                    <td className="border border-gray-300 p-1.5 text-right">{formatCurrency(item.cgst ?? 0)}</td>
-                    <td className="border border-gray-300 p-1.5 text-right">{formatCurrency(item.sgst ?? 0)}</td>
+                    <td className="border border-[#d1d5db] p-1.5 text-right">{formatCurrency(item.cgst ?? 0)}</td>
+                    <td className="border border-[#d1d5db] p-1.5 text-right">{formatCurrency(item.sgst ?? 0)}</td>
                   </>
                 )}
-                <td className="border border-gray-300 p-1.5 text-right font-medium">
+                <td className="border border-[#d1d5db] p-1.5 text-right font-medium">
                   {formatCurrency(item.lineTotal ?? item.price * qty)}
                 </td>
               </tr>
@@ -184,31 +184,31 @@ export function GstInvoicePrint({ order, business, outlet, printRef }: GstInvoic
               </div>
             </>
           )}
-          <div className="flex justify-between border-t border-gray-400 pt-1 font-bold text-sm">
+          <div className="flex justify-between border-t border-[#9ca3af] pt-1 font-bold text-sm">
             <span>Grand Total</span>
             <span>{formatCurrency(order.total)}</span>
           </div>
           {order.taxMode && (
-            <p className="text-[10px] text-gray-500 pt-0.5">
+            <p className="text-[10px] text-[#6b7280] pt-0.5">
               GST {order.taxMode === "inclusive" ? "included in rates" : "added on taxable value"}
             </p>
           )}
         </div>
       </div>
 
-      <div className="border-t border-gray-300 pt-3 text-xs">
+      <div className="border-t border-[#d1d5db] pt-3 text-xs">
         <p className="font-medium">Amount in words:</p>
         <p className="italic mt-0.5">{amountInWords(order.total)}</p>
       </div>
 
       {order.paymentStatus !== "paid" && (
-        <p className="text-xs text-amber-700 mt-3">
+        <p className="text-xs text-[#b45309] mt-3">
           Payment: {order.paymentStatus === "partial" ? "Partially paid" : "Pending"} —
           Paid {formatCurrency(order.amountPaid ?? 0)}, Due {formatCurrency(order.amountDue ?? 0)}
         </p>
       )}
 
-      <p className="text-[10px] text-gray-500 mt-6 text-center">
+      <p className="text-[10px] text-[#6b7280] mt-6 text-center">
         This is a computer-generated GST invoice.
       </p>
     </div>

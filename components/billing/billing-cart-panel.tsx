@@ -193,6 +193,63 @@ export function BillingCartPanel({
             ))}
           </div>
         )}
+
+        {/* Move payment, khata, customer, and GST inside scrollable area */}
+        {billing.items.length > 0 && (
+          <div className="mt-4 space-y-4 border-t border-border/50 pt-4">
+            <BillingPaymentSection
+              paymentMethods={paymentMethods}
+              selectedMethod={billing.paymentMethod as (typeof PAYMENT_METHODS)[number]["value"]}
+              isKhataPayment={isKhataPayment}
+              payment={billing.payment}
+              onSelectMethod={(method) => {
+                dispatch.setPaymentMethod(method);
+                if (method === "credit") dispatch.setCreditSale(true);
+              }}
+              onSplitAmountChange={(field, value) => dispatch.setPaymentAmount({ field, value })}
+            />
+
+            {isKhataPayment && hasCreditKhata && (
+              <BillingKhataSection
+                total={total}
+                amountReceived={billing.amountReceived}
+                amountDuePreview={amountDuePreview}
+                hasCustomer={Boolean(billing.customerId)}
+                onAmountChange={(n) => dispatch.setAmountReceived(n)}
+              />
+            )}
+
+            {showCustomerSection && (
+              <CustomerPicker
+                token={token}
+                outletId={outletId}
+                selectedId={billing.customerId}
+                required={isKhataPayment || billing.generateGstInvoice}
+                onSelect={(c: Customer | null) =>
+                  dispatch.selectCustomer(
+                    c ? { id: c._id, name: c.name, phone: c.phone, defaultTaxMode: c.defaultTaxMode } : null
+                  )
+                }
+              />
+            )}
+
+            {hasGstInvoices && billing.taxEnabled && (
+              <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-muted/30 px-3 py-2.5 text-xs">
+                <input
+                  type="checkbox"
+                  checked={billing.generateGstInvoice}
+                  onChange={(e) => dispatch.setGenerateGstInvoice(e.target.checked)}
+                />
+                <span>
+                  Generate GST Invoice
+                  {!billing.customerId && billing.generateGstInvoice && (
+                    <span className="ml-1 text-amber-600">(select customer with GSTIN)</span>
+                  )}
+                </span>
+              </label>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="shrink-0 space-y-3 border-t border-border p-3">
@@ -237,33 +294,26 @@ export function BillingCartPanel({
                 )}
               </div>
               {isWholesale && billing.taxEnabled && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => dispatch.setTaxMode("exclusive")}
-                    className={cn(
-                      "flex-1 rounded-lg py-2 text-xs font-medium",
-                      billing.taxMode === "exclusive"
-                        ? "bg-primary text-white"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
+                <div className="flex gap-4 items-center">
+                  <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={billing.taxMode === "exclusive"}
+                      onChange={() => dispatch.setTaxMode("exclusive")}
+                    />
                     GST Extra
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => dispatch.setTaxMode("inclusive")}
-                    className={cn(
-                      "flex-1 rounded-lg py-2 text-xs font-medium",
-                      billing.taxMode === "inclusive"
-                        ? "bg-primary text-white"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
+                  </label>
+                  <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={billing.taxMode === "inclusive"}
+                      onChange={() => dispatch.setTaxMode("inclusive")}
+                    />
                     GST Included
-                  </button>
+                  </label>
                 </div>
               )}
+       
               {billing.taxEnabled && taxAmount > 0 && (settings.gstEnabled || isWholesale) && (
                 <div className="space-y-1 border-t border-border/40 pt-2 text-xs text-muted-foreground">
                   <div className="flex justify-between">
@@ -301,58 +351,6 @@ export function BillingCartPanel({
             <span className="text-primary">{formatCurrency(total)}</span>
           </div>
         </div>
-
-        <BillingPaymentSection
-          paymentMethods={paymentMethods}
-          selectedMethod={billing.paymentMethod as (typeof PAYMENT_METHODS)[number]["value"]}
-          isKhataPayment={isKhataPayment}
-          payment={billing.payment}
-          onSelectMethod={(method) => {
-            dispatch.setPaymentMethod(method);
-            if (method === "credit") dispatch.setCreditSale(true);
-          }}
-          onSplitAmountChange={(field, value) => dispatch.setPaymentAmount({ field, value })}
-        />
-
-        {isKhataPayment && hasCreditKhata && (
-          <BillingKhataSection
-            total={total}
-            amountReceived={billing.amountReceived}
-            amountDuePreview={amountDuePreview}
-            hasCustomer={Boolean(billing.customerId)}
-            onAmountChange={(n) => dispatch.setAmountReceived(n)}
-          />
-        )}
-
-        {showCustomerSection && (
-          <CustomerPicker
-            token={token}
-            outletId={outletId}
-            selectedId={billing.customerId}
-            required={isKhataPayment || billing.generateGstInvoice}
-            onSelect={(c: Customer | null) =>
-              dispatch.selectCustomer(
-                c ? { id: c._id, name: c.name, phone: c.phone, defaultTaxMode: c.defaultTaxMode } : null
-              )
-            }
-          />
-        )}
-
-        {hasGstInvoices && billing.taxEnabled && (
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-muted/30 px-3 py-2.5 text-xs">
-            <input
-              type="checkbox"
-              checked={billing.generateGstInvoice}
-              onChange={(e) => dispatch.setGenerateGstInvoice(e.target.checked)}
-            />
-            <span>
-              Generate GST Invoice
-              {!billing.customerId && billing.generateGstInvoice && (
-                <span className="ml-1 text-amber-600">(select customer with GSTIN)</span>
-              )}
-            </span>
-          </label>
-        )}
 
         <div className="flex gap-2">
           <Button
