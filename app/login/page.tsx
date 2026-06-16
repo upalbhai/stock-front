@@ -22,11 +22,11 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 
-type LoginStep = "email" | "password" | "otp" | "phone";
+type LoginStep = "email" | "password" | "otp";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginWithEmail, login, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword } = useAuth();
+  const { loginWithEmail, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword } = useAuth();
   const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">("login");
   const [loginStep, setLoginStep] = useState<LoginStep>("email");
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,6 @@ export default function LoginPage() {
     password: "",
     confirmPassword: "",
     phone: "",
-    pin: "",
     code: "", // for otp/reset
     businessName: "",
     outletName: ""
@@ -91,9 +90,6 @@ export default function LoginPage() {
           return;
         }
         loggedInUser = (res as any).user;
-      } else if (loginStep === "phone") {
-        const res = await login({ phone: form.phone, pin: form.pin });
-        loggedInUser = res.user;
       }
 
       if (loggedInUser?.role === "superadmin") {
@@ -348,19 +344,6 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* LOGIN FORM - PHONE PIN STEP */}
-            {mode === "login" && loginStep === "phone" && (
-              <div className="space-y-3 animate-fade">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Phone *</label>
-                  <Input required type="tel" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="9876543210" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Security PIN *</label>
-                  <Input required type="password" maxLength={6} value={form.pin} onChange={(e) => handleChange("pin", e.target.value)} placeholder="����" className="tracking-widest text-center text-lg font-bold" />
-                </div>
-              </div>
-            )}
 
             {/* FORGOT PASSWORD FORM */}
             {mode === "forgot" && (
@@ -402,18 +385,6 @@ export default function LoginPage() {
                mode === "register" ? "Start Free Trial" : 
                mode === "forgot" ? "Send Reset Code" : "Reset Password"}
             </Button>
-            
-            {mode === "login" && loginStep === "email" && (
-              <button type="button" onClick={() => { setLoginStep("phone"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-2 block transition">
-                Sign in with Phone & PIN instead
-              </button>
-            )}
-
-            {mode === "login" && loginStep === "phone" && (
-              <button type="button" onClick={() => { setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-2 block transition">
-                Back to Email login
-              </button>
-            )}
             
             {(mode === "forgot" || mode === "reset") && (
               <button type="button" onClick={() => { setMode("login"); setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-2 block transition">

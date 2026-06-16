@@ -26,7 +26,7 @@ export default function StaffPage() {
   const [showModal, setShowModal] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const [form, setForm] = React.useState({ name: "", phone: "", email: "", role: "staff", roleId: "", outletIds: [] as string[], pin: "" });
+  const [form, setForm] = React.useState({ name: "", phone: "", email: "", role: "staff", roleId: "", outletIds: [] as string[], password: "" });
 
   const { data: staffData, isLoading, refetch } = useQuery({
     queryKey: ["staff", search],
@@ -59,8 +59,8 @@ export default function StaffPage() {
   const roles = rolesData?.roles ?? [];
   const outlets = outletsData?.outlets ?? [];
 
-  const openCreate = () => { setEditId(null); setForm({ name: "", phone: "", email: "", role: "staff", roleId: "", outletIds: [], pin: "" }); setShowModal(true); };
-  const openEdit = (u: StaffUser) => { setEditId(u._id); setForm({ name: u.name, phone: u.phone, email: u.email ?? "", role: u.role, roleId: typeof u.roleId === "object" ? u.roleId?._id ?? "" : u.roleId ?? "", outletIds: u.outletIds, pin: "" }); setShowModal(true); };
+  const openCreate = () => { setEditId(null); setForm({ name: "", phone: "", email: "", role: "staff", roleId: "", outletIds: [], password: "" }); setShowModal(true); };
+  const openEdit = (u: StaffUser) => { setEditId(u._id); setForm({ name: u.name, phone: u.phone, email: u.email ?? "", role: u.role, roleId: typeof u.roleId === "object" ? u.roleId?._id ?? "" : u.roleId ?? "", outletIds: u.outletIds, password: "" }); setShowModal(true); };
 
   return (
     <div className="space-y-6">
@@ -97,7 +97,7 @@ export default function StaffPage() {
             <div><label className="mb-1 block text-xs font-medium text-muted">Full Name *</label><Input id="staff-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Phone *</label><Input id="staff-phone" required value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
           </div>
-          <div><label className="mb-1 block text-xs font-medium text-muted">PIN {editId ? "(leave blank to keep)" : "*"}</label><Input id="staff-pin" type="password" value={form.pin} onChange={(e) => setForm((f) => ({ ...f, pin: e.target.value }))} required={!editId} placeholder="4–6 digit PIN" /></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted">Password {editId ? "(leave blank to keep)" : "*"}</label><Input id="staff-password" type="password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} required={!editId} placeholder="At least 6 characters" minLength={6} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="mb-1 block text-xs font-medium text-muted">Role</label><Select id="staff-role" value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v }))} options={[{ value: "manager", label: "Manager" }, { value: "staff", label: "Staff" }]} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted">Permission Set</label><Select id="staff-role-id" value={form.roleId} onValueChange={(v) => setForm((f) => ({ ...f, roleId: v }))} options={[{ value: "", label: "Default" }, ...roles.map((r) => ({ value: r._id, label: r.name }))]} /></div>

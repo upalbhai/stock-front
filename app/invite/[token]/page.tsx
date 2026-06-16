@@ -12,21 +12,18 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/components/auth/auth-provider";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
-import { Sparkles, ShieldCheck, UserCheck } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export default function InviteAcceptPage() {
   const router = useRouter();
   const params = useParams();
   const tokenParam = params?.token as string;
-  const { login } = useAuth();
 
-  const [form, setForm] = React.useState({ name: "", pin: "", confirmPin: "" });
+  const [form, setForm] = React.useState({ name: "", password: "", confirmPassword: "" });
   const [error, setError] = React.useState<string | null>(null);
 
-  // Fetch token validity and brand information
   const { data: inviteData, isLoading } = useQuery({
     queryKey: ["invite-detail", tokenParam],
     queryFn: () => getJson<{ invite: any; businessName: string }>(`/users/invites/${tokenParam}`),
@@ -39,7 +36,6 @@ export default function InviteAcceptPage() {
       body
     }),
     onSuccess: async (data) => {
-      // Store credentials and initialize auth context
       const { setStoredAuth, setStoredOutletId } = await import("@/lib/auth-storage");
       try {
         setStoredAuth({ token: data.token, user: data.user });
@@ -57,17 +53,17 @@ export default function InviteAcceptPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (form.pin !== form.confirmPin) {
-      setError("PINs do not match!");
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match!");
       return;
     }
-    if (form.pin.length < 4 || form.pin.length > 6) {
-      setError("PIN must be between 4 and 6 digits!");
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters!");
       return;
     }
     acceptMutation.mutate({
       name: form.name,
-      pin: form.pin
+      password: form.password
     });
   };
 
@@ -121,32 +117,32 @@ export default function InviteAcceptPage() {
                 placeholder="Rahul Patel"
               />
             </div>
+            {invite.phone && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Registered Phone</label>
+                <Input disabled value={invite.phone} className="bg-border/20 font-semibold" />
+              </div>
+            )}
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Registered Phone (Pre-filled)</label>
-              <Input disabled value={invite.phone} className="bg-border/20 font-semibold" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Set Security PIN (4–6 Digits) *</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Set Password *</label>
               <Input
                 required
                 type="password"
-                maxLength={6}
-                value={form.pin}
-                onChange={(e) => setForm(f => ({ ...f, pin: e.target.value }))}
-                placeholder="••••"
-                className="tracking-widest text-center text-lg font-bold"
+                value={form.password}
+                onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="At least 6 characters"
+                minLength={6}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Confirm PIN *</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Confirm Password *</label>
               <Input
                 required
                 type="password"
-                maxLength={6}
-                value={form.confirmPin}
-                onChange={(e) => setForm(f => ({ ...f, confirmPin: e.target.value }))}
-                placeholder="••••"
-                className="tracking-widest text-center text-lg font-bold"
+                value={form.confirmPassword}
+                onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                placeholder="Repeat password"
+                minLength={6}
               />
             </div>
 

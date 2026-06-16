@@ -11,8 +11,7 @@ import { setAuth, setOutlet as setOutletAction, clearAuth } from "@/store/authSl
 export type { AuthUser, UserRole } from "@/lib/types";
 
 type AuthResponse = { token: string; user: AuthUser };
-type RegisterPayload = { name: string; email: string; password?: string; phone?: string; pin?: string; businessName?: string; outletName?: string; outletId?: string };
-type LoginPayload = { phone: string; pin: string };
+type RegisterPayload = { name: string; email: string; password?: string; phone?: string; businessName?: string; outletName?: string; outletId?: string };
 type EmailLoginPayload = { email: string; password?: string };
 
 type AuthContextValue = {
@@ -22,7 +21,6 @@ type AuthContextValue = {
   businessId: string | null;
   isLoading: boolean;
   impersonating: boolean;
-  login: (payload: LoginPayload) => Promise<AuthResponse>;
   loginWithEmail: (payload: EmailLoginPayload) => Promise<AuthResponse>;
   checkEmail: (email: string) => Promise<{ method: "password" | "otp"; message?: string }>;
   register: (payload: RegisterPayload) => Promise<AuthResponse | { message?: string }>;
@@ -67,12 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setAuthState = React.useCallback((data: AuthResponse) => {
     dispatch(setAuth({ user: data.user, token: data.token }));
   }, [dispatch]);
-
-  const login = React.useCallback(async (payload: LoginPayload) => {
-    const response = await apiFetch<ApiResponse<AuthResponse>>("/auth/login-pin", { method: "POST", body: payload });
-    setAuthState(response.data);
-    return response.data;
-  }, [setAuthState]);
 
   const loginWithEmail = React.useCallback(async (payload: EmailLoginPayload) => {
     const response = await apiFetch<ApiResponse<AuthResponse>>("/auth/login", { method: "POST", body: payload });
@@ -176,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ 
       user, token, outletId, businessId, isLoading: !isMounted, impersonating, 
-      login, loginWithEmail, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword, 
+      loginWithEmail, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword, 
       logout, setOutletId, impersonate, exitImpersonation, isTrialExpired
     }}>
       {children}
