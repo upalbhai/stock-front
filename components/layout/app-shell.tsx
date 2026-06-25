@@ -145,8 +145,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {user?.subscriptionStatus === "trial" && user.trialEndsAt && (
-            <div className="flex shrink-0 animate-fade flex-col items-center justify-center gap-2 border-b border-primary/20 bg-primary/10 px-4 py-2.5 text-center text-xs font-semibold text-primary sm:flex-row sm:gap-4">
-              <span className="leading-snug">
+            <div className="flex shrink-0 animate-fade flex-row items-center justify-center gap-3 border-b border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
+              <span className="leading-none">
                 Free Trial Active:{" "}
                 {Math.max(
                   0,
@@ -156,8 +156,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}{" "}
                 days remaining
               </span>
-              <Button size="xs" variant="default" className="shrink-0 rounded-xl px-3 py-1 font-bold shadow-sm" asChild>
-                <Link href="/subscribe">Upgrade Now</Link>
+              <Button size="xs" variant="default" className="h-6 shrink-0 rounded-full px-2.5 py-0 text-[10px] font-bold shadow-sm" asChild>
+                <Link href="/subscribe">Upgrade</Link>
               </Button>
             </div>
           )}
