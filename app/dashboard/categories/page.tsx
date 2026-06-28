@@ -195,7 +195,7 @@ export default function CategoriesPage() {
           <div><label className="mb-1 block text-xs font-medium text-muted">Parent Category</label><Select id="cat-parent" value={form.parentId} onValueChange={(v) => setForm((f) => ({ ...f, parentId: v }))} options={topLevelOptions} /></div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted">Icon (Emoji)</label>
-            <div className="flex flex-wrap gap-2 mt-1">
+            <div className="flex flex-wrap gap-2 mt-1 mb-2">
               {EMOJI_OPTIONS.map((emoji) => (
                 <button key={emoji} type="button" onClick={() => setForm((f) => ({ ...f, icon: emoji }))}
                   className={cn("flex h-10 w-10 items-center justify-center rounded-2xl text-xl transition border", form.icon === emoji ? "border-primary bg-primary/10" : "border-border hover:border-primary/50")}>
@@ -203,15 +203,42 @@ export default function CategoriesPage() {
                 </button>
               ))}
             </div>
+            <div className="flex items-center gap-2 max-w-[200px] mt-2">
+              <span className="text-xs text-muted shrink-0">Custom Emoji:</span>
+              <Input
+                maxLength={2}
+                placeholder="e.g. 🍔"
+                value={EMOJI_OPTIONS.includes(form.icon) ? "" : form.icon}
+                onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
+                className="h-8 text-sm px-2"
+              />
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted">Color</label>
-            <div className="flex flex-wrap gap-2 mt-1">
+            <div className="flex flex-wrap gap-2 mt-1 mb-2">
               {COLOR_OPTIONS.map((color) => (
                 <button key={color} type="button" onClick={() => setForm((f) => ({ ...f, color }))}
                   className={cn("h-8 w-8 rounded-xl transition", form.color === color ? "ring-2 ring-offset-2 ring-primary" : "")}
                   style={{ backgroundColor: color }} />
               ))}
+            </div>
+            <div className="flex items-center gap-2 max-w-[220px] mt-2">
+              <span className="text-xs text-muted shrink-0">Custom Color:</span>
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <input
+                  type="color"
+                  value={form.color.startsWith("#") && form.color.length === 7 ? form.color : "#6366f1"}
+                  onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                  className="h-8 w-8 rounded cursor-pointer border border-border bg-transparent p-0 shrink-0"
+                />
+                <Input
+                  placeholder="#hexcode"
+                  value={form.color}
+                  onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                  className="h-8 text-sm px-2 flex-grow"
+                />
+              </div>
             </div>
           </div>
           <div className="flex gap-3 pt-2">

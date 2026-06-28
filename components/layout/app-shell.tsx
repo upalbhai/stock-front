@@ -297,7 +297,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div
             className={cn(
               "min-h-0 flex-1",
-              isBillingRoute ? "overflow-hidden" : "overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6"
+              isBillingRoute ? "overflow-hidden" : "overflow-y-auto p-0 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6"
             )}
           >
             <div

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   TrendingUp, Calendar, Printer, Download, Store, DollarSign,
-  ShoppingBag, ClipboardCheck, AlertCircle, Sparkles, FileText, Wallet
+  ShoppingBag, ClipboardCheck, AlertCircle, Sparkles, FileText, Wallet, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,33 +61,33 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6 print:space-y-4 print:p-4">
       {/* Page Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-primary" /> Reports & Analytics
           </h1>
-          <p className="text-sm text-muted">Generate end-of-day reports and monitor closing indicators</p>
+          <p className="text-sm text-muted-foreground">Generate end-of-day reports and monitor closing indicators</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint}>
-            <Printer className="h-4 w-4" /> Print Summary
-          </Button>
-        </div>
+        {/* <Button variant="outline" size="sm" className="gap-1.5 w-full sm:w-auto justify-center shrink-0" onClick={handlePrint}>
+          <Printer className="h-4 w-4" /> Print Summary
+        </Button> */}
       </div>
 
-      {/* Date Filter & Selector */}
-      <div className="glass-panel border border-border/70 p-4 rounded-3xl shadow-soft flex items-center gap-4 flex-wrap print:hidden">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <Calendar className="h-4 w-4 text-muted" /> Date:
+      {/* Date Filter & Selector (Single Line on Mobile) */}
+      <div className=" p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-soft flex items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-2 flex-grow min-w-0">
+          {/* <Calendar className="h-4 w-4 text-muted-foreground shrink-0" /> */}
+          <span className="text-xs sm:text-sm font-semibold text-muted-foreground hidden xs:inline shrink-0">Date:</span>
+          <Input
+            type="date"
+            className="w-full max-w-[155px] sm:max-w-[200px] rounded-xl border border-border bg-surface px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm focus:border-primary outline-none transition"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
         </div>
-        <Input
-          type="date"
-          className="w-34 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
-        <Button variant="soft" size="sm" onClick={() => refetch()} className="ml-auto">
-          Refresh Report
+        <Button variant="soft" size="sm" onClick={() => refetch()} className="shrink-0 flex items-center gap-1.5 px-3 sm:px-4">
+          <RefreshCw className="h-4 w-4" />
+          <span className="hidden sm:inline">Refresh Report</span>
         </Button>
       </div>
 
@@ -100,6 +100,7 @@ export default function ReportsPage() {
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
+          className="min-w-0"
           label="Total Net Revenue"
           value={formatCurrency(report?.totalSales || 0)}
           hint={`For ${formatDate(selectedDate)}`}
@@ -107,15 +108,18 @@ export default function ReportsPage() {
           color="primary"
         />
         <StatsCard
+          className="min-w-0"
           label="Total Orders"
           value={formatNumber(report?.totalOrders || 0)}
           icon={<ShoppingBag className="h-5 w-5" />}
         />
         <StatsCard
+          className="min-w-0"
           label="Cash Collected"
           value={formatCurrency(report?.paymentSummary?.cash || 0)}
         />
         <StatsCard
+          className="min-w-0"
           label="Digital Payments (UPI/Card)"
           value={formatCurrency((report?.paymentSummary?.online || 0) + (report?.paymentSummary?.card || 0))}
           color="success"
@@ -127,6 +131,7 @@ export default function ReportsPage() {
           {hasGstInvoices && (
             <>
               <StatsCard
+                className="min-w-0"
                 label="GST Collected"
                 value={formatCurrency(report?.gstCollected || 0)}
                 hint={
@@ -137,6 +142,7 @@ export default function ReportsPage() {
                 icon={<FileText className="h-5 w-5" />}
               />
               <StatsCard
+                className="min-w-0"
                 label="GST Invoices"
                 value={formatNumber(report?.invoicesGenerated || 0)}
                 icon={<FileText className="h-5 w-5" />}
@@ -145,6 +151,7 @@ export default function ReportsPage() {
           )}
           {hasWholesale && (
             <StatsCard
+              className="min-w-0"
               label="Wholesale Sales"
               value={formatCurrency(report?.wholesaleSales || 0)}
               icon={<TrendingUp className="h-5 w-5" />}
@@ -153,6 +160,7 @@ export default function ReportsPage() {
           )}
           {hasCreditKhata && (
             <StatsCard
+              className="min-w-0"
               label="Credit Issued"
               value={formatCurrency(report?.creditIssued || 0)}
               icon={<Wallet className="h-5 w-5" />}
@@ -164,113 +172,99 @@ export default function ReportsPage() {
 
       {/* Payment Split & Drawer Analysis */}
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        {/* Left Card: Best Sellers */}
-        <Card className="rounded-3xl border border-border/70 shadow-soft">
-          <CardHeader>
-            <CardTitle>Sales Mix & Best Sellers</CardTitle>
-            <CardDescription>Product sales breakdown and total contribution</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <DataTable
-              isLoading={isLoading}
-              data={report?.bestSelling ?? []}
-              keyExtractor={(p) => p.name}
-              hidePagination
-              onRefetch={() => refetch()}
-              emptyStateText="No sales recorded on this business date."
-              className="border-0 shadow-none"
-              columns={[
-                {
-                  key: "rank",
-                  header: "Rank",
-                  render: (p) => {
-                    const idx = (report?.bestSelling ?? []).findIndex((x) => x.name === p.name);
-                    return <span className="font-semibold text-muted">#{idx + 1}</span>;
-                  }
-                },
-                { key: "name", header: "Item Name", render: (p) => <span className="font-medium">{p.name}</span> },
-                { key: "qty", header: "Qty Sold", className: "text-right", render: (p) => <span className="font-bold">{p.qty}</span> },
-                { key: "total", header: "Revenue Contribution", className: "text-right", render: (p) => <span className="font-bold text-primary">{formatCurrency(p.total ?? 0)}</span> }
-              ]}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Right Columns: Closing stock */}
-        <Card className="rounded-3xl border border-border/70 shadow-soft">
-          <CardHeader>
-            <CardTitle>Closing Inventory</CardTitle>
-            <CardDescription>End-of-day remaining quantities</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              isLoading={isLoading}
-              data={report?.remainingStock ?? []}
-              keyExtractor={(item) => item.name}
-              hidePagination
-              emptyStateText="No stock levels tracked yet."
-              className="border-0 shadow-none"
-              columns={[
-                {
-                  key: "name",
-                  header: "Product",
-                  render: (item) => (
-                    <div>
-                      <p className="font-semibold text-sm">{item.name}</p>
-                      <p className="text-xs text-muted">Threshold: {item.lowStockThreshold} {item.unit}</p>
-                    </div>
-                  )
-                },
-                {
-                  key: "onHandQty",
-                  header: "On Hand",
-                  className: "text-right",
-                  render: (item) => {
-                    const isLow = item.onHandQty <= item.lowStockThreshold;
-                    return (
-                      <div className="flex items-center justify-end gap-2">
-                        <span className={`font-bold text-sm ${isLow ? "text-danger" : ""}`}>
-                          {item.onHandQty} {item.unit}
-                        </span>
-                        {isLow && <Badge variant="danger" className="text-[10px] py-0.5">Low</Badge>}
-                      </div>
-                    );
-                  }
+        {/* Left: Best Sellers */}
+        <div className="min-w-0">
+          <DataTable
+            title="Sales Mix & Best Sellers"
+            description="Product sales breakdown and total contribution"
+            isLoading={isLoading}
+            data={report?.bestSelling ?? []}
+            keyExtractor={(p) => p.name}
+            hidePagination
+            onRefetch={() => refetch()}
+            emptyStateText="No sales recorded on this business date."
+            columns={[
+              {
+                key: "rank",
+                header: "Rank",
+                render: (p) => {
+                  const idx = (report?.bestSelling ?? []).findIndex((x) => x.name === p.name);
+                  return <span className="font-semibold text-muted">#{idx + 1}</span>;
                 }
-              ]}
-            />
-          </CardContent>
-        </Card>
+              },
+              { key: "name", header: "Item Name", render: (p) => <span className="font-medium">{p.name}</span> },
+              { key: "qty", header: "Qty Sold", className: "text-right", render: (p) => <span className="font-bold">{p.qty}</span> },
+              { key: "total", header: "Revenue Contribution", className: "text-right", render: (p) => <span className="font-bold text-primary">{formatCurrency(p.total ?? 0)}</span> }
+            ]}
+          />
+        </div>
+
+        {/* Right: Closing stock */}
+        <div className="min-w-0">
+          <DataTable
+            title="Closing Inventory"
+            description="End-of-day remaining quantities"
+            isLoading={isLoading}
+            data={report?.remainingStock ?? []}
+            keyExtractor={(item) => item.name}
+            hidePagination
+            emptyStateText="No stock levels tracked yet."
+            columns={[
+              {
+                key: "name",
+                header: "Product",
+                render: (item) => (
+                  <div>
+                    <p className="font-semibold text-sm">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">Threshold: {item.lowStockThreshold} {item.unit}</p>
+                  </div>
+                )
+              },
+              {
+                key: "onHandQty",
+                header: "On Hand",
+                className: "text-right",
+                render: (item) => {
+                  const isLow = item.onHandQty <= item.lowStockThreshold;
+                  return (
+                    <div className="flex items-center justify-end gap-2">
+                      <span className={`font-bold text-sm ${isLow ? "text-danger" : ""}`}>
+                        {item.onHandQty} {item.unit}
+                      </span>
+                      {isLow && <Badge variant="danger" className="text-[10px] py-0.5">Low</Badge>}
+                    </div>
+                  );
+                }
+              }
+            ]}
+          />
+        </div>
+
         {/* Bottom Row: Staff Performance */}
-        <Card className="rounded-3xl border border-border/70 shadow-soft lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Staff Shift Performance</CardTitle>
-            <CardDescription>Sales tracked by individual team members</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              isLoading={isLoading}
-              data={report?.staffSales ?? []}
-              keyExtractor={(staff) => staff.name}
-              hidePagination
-              emptyStateText="No staff sales data available."
-              className="border-0 shadow-none"
-              columns={[
-                {
-                  key: "rank",
-                  header: "#",
-                  render: (staff) => {
-                    const idx = (report?.staffSales ?? []).findIndex((s) => s.name === staff.name);
-                    return <span className="font-bold text-primary">{idx + 1}</span>;
-                  }
-                },
-                { key: "name", header: "Staff", render: (staff) => <span className="font-semibold">{staff.name}</span> },
-                { key: "orders", header: "Orders", render: (staff) => <span className="text-sm text-muted">{staff.orders} orders</span> },
-                { key: "revenue", header: "Revenue", className: "text-right", render: (staff) => <span className="font-bold text-primary">{formatCurrency(staff.revenue)}</span> }
-              ]}
-            />
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-2 min-w-0">
+          <DataTable
+            title="Staff Shift Performance"
+            description="Sales tracked by individual team members"
+            isLoading={isLoading}
+            data={report?.staffSales ?? []}
+            keyExtractor={(staff) => staff.name}
+            hidePagination
+            emptyStateText="No staff sales data available."
+            columns={[
+              {
+                key: "rank",
+                header: "#",
+                render: (staff) => {
+                  const idx = (report?.staffSales ?? []).findIndex((s) => s.name === staff.name);
+                  return <span className="font-bold text-primary">{idx + 1}</span>;
+                }
+              },
+              { key: "name", header: "Staff", render: (staff) => <span className="font-semibold">{staff.name}</span> },
+              { key: "orders", header: "Orders", render: (staff) => <span className="text-sm text-muted-foreground">{staff.orders} orders</span> },
+              { key: "revenue", header: "Revenue", className: "text-right", render: (staff) => <span className="font-bold text-primary">{formatCurrency(staff.revenue)}</span> }
+            ]}
+          />
+        </div>
       </div>
     </div>
   );

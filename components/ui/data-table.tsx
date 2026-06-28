@@ -55,6 +55,8 @@ export interface DataTableProps<T> {
   headerActions?: React.ReactNode;
   renderSubComponent?: (row: T) => React.ReactNode;
   expandable?: boolean;
+  title?: string;
+  description?: string;
 }
 
 export function DataTable<T>({
@@ -86,6 +88,8 @@ export function DataTable<T>({
   headerActions,
   renderSubComponent,
   expandable = false,
+  title,
+  description,
 }: DataTableProps<T>) {
   // Normalize legacy props
   const finalIsLoading = newIsLoading ?? loading;
@@ -145,43 +149,100 @@ export function DataTable<T>({
   }
 
   // Determine if header with search/refetch should be shown
-  const showTopBar = onSearchChange || onRefetch || filters || headerActions;
+  const showTopBar = title || description || onSearchChange || onRefetch || filters || headerActions;
 
   return (
     <div className={cn("w-full bg-card border border-border rounded-xl overflow-hidden shadow-sm", className)}>
       {/* Top Header Bar */}
       {showTopBar && (
-        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 p-5 border-b border-border bg-surface/30">
-          <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-3 max-w-2xl">
-            {onSearchChange && (
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  className="pl-9 h-9 text-sm bg-background border-border focus-visible:ring-offset-0"
-                  placeholder={placeholderText}
-                  value={localSearch}
-                  onChange={handleSearchChange}
-                />
+        <div className="p-3 sm:p-4 border-b border-border bg-surface/30 space-y-3">
+          {/* Header Row: Title / Description and Refetch/Actions (if no search/filters) */}
+          {(title || description || (!onSearchChange && !filters && (onRefetch || headerActions))) && (
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                {title && <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>}
+                {description && <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>}
               </div>
-            )}
-            {filters && <div className="flex flex-wrap items-center gap-2">{filters}</div>}
-          </div>
-          {(onRefetch || headerActions) && (
-            <div className="flex items-center gap-3 justify-end">
-              {headerActions}
-              {onRefetch && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleManualRefetch}
-                  disabled={finalIsLoading || countdown > 0}
-                  className="h-9 gap-2 font-semibold active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={countdown > 0 ? "Refetch cooldown active" : "Refetch list"}
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${finalIsLoading ? "animate-spin" : ""}`} />
-                  <span>{countdown > 0 ? `Refetch (${countdown}s)` : "Refetch"}</span>
-                </Button>
+              {/* Actions align to right when no search/filters exist */}
+              {!onSearchChange && !filters && (onRefetch || headerActions) && (
+                <div className="flex items-center gap-2 shrink-0">
+                  {headerActions}
+                  {onRefetch && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleManualRefetch}
+                      disabled={finalIsLoading || countdown > 0}
+                      className="h-8 w-8 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={countdown > 0 ? `Refetch (${countdown}s)` : "Refetch list"}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${finalIsLoading ? "animate-spin" : ""}`} />
+                    </Button>
+                  )}
+                </div>
               )}
+            </div>
+          )}
+
+          {/* Search & Actions Row (only if search/filters exist) */}
+          {(onSearchChange || filters) && (
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center justify-between">
+              {/* Row 1 on Mobile / Left Group on Desktop: Search & Mobile Refetch */}
+              <div className="flex items-center gap-2 flex-grow min-w-0">
+                {onSearchChange && (
+                  <div className="relative flex-grow min-w-0">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
+                    <Input
+                      className="pl-9 h-9 text-sm bg-background border-border focus-visible:ring-offset-0 w-full"
+                      placeholder={placeholderText}
+                      value={localSearch}
+                      onChange={handleSearchChange}
+                    />
+                  </div>
+                )}
+                {/* Mobile-only refetch: inline next to search input when filters are present */}
+                {filters && (onRefetch || headerActions) && (
+                  <div className="flex items-center gap-2 shrink-0 sm:hidden">
+                    {headerActions}
+                    {onRefetch && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleManualRefetch}
+                        disabled={finalIsLoading || countdown > 0}
+                        className="h-9 w-9 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={countdown > 0 ? `Refetch (${countdown}s)` : "Refetch list"}
+                      >
+                        <RefreshCw className={`w-4 h-4 ${finalIsLoading ? "animate-spin" : ""}`} />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Row 2 on Mobile: Filters & Desktop Refetch */}
+              <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                {filters && <div className="flex-1 sm:flex-initial">{filters}</div>}
+                
+                {/* Desktop/Tablet refetch, or if no filters exist (always inline) */}
+                {(onRefetch || headerActions) && (
+                  <div className={cn("items-center gap-2 shrink-0", filters ? "hidden sm:flex" : "flex")}>
+                    {headerActions}
+                    {onRefetch && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleManualRefetch}
+                        disabled={finalIsLoading || countdown > 0}
+                        className="h-9 w-9 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={countdown > 0 ? `Refetch (${countdown}s)` : "Refetch list"}
+                      >
+                        <RefreshCw className={`w-4 h-4 ${finalIsLoading ? "animate-spin" : ""}`} />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -282,70 +343,56 @@ export function DataTable<T>({
 
       {/* Pagination Footer */}
       {!finalHidePagination && (
-        <div className="flex flex-col md:flex-row items-center justify-between p-4 border-t border-border bg-surface/30 gap-4 text-xs">
-          <div className="text-muted-foreground flex flex-wrap items-center gap-4">
-            <div>
-              Showing <span className="font-semibold text-foreground">{data.length}</span> of{" "}
-              <span className="font-semibold text-foreground">{totalItems}</span> entries
-            </div>
+        <div className="flex items-center justify-between p-3 sm:p-4 border-t border-border bg-surface/30 gap-3 text-xs">
+          {/* Left: Entry count + page size (page size hidden on mobile) */}
+          <div className="text-muted-foreground flex items-center gap-3 min-w-0">
+            <span className="whitespace-nowrap">
+              <span className="font-semibold text-foreground">{data.length}</span>
+              <span className="hidden sm:inline"> of <span className="font-semibold text-foreground">{totalItems}</span></span>
+              {" "}entries
+            </span>
             {onLimitChange && (
-              <div className="flex items-center gap-1.5">
-                <span>Page size:</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
+              <div className="hidden sm:flex items-center gap-1.5">
+                <span>·</span>
+                <select
                   value={limit}
                   onChange={(e) => {
-                    const val = Math.min(100, Math.max(1, parseInt(e.target.value) || 1));
-                    onLimitChange(val);
+                    onLimitChange(Number(e.target.value));
                     onPageChange?.(1);
                   }}
-                  className="w-14 px-2 py-1 text-center rounded-md border border-border bg-background text-foreground outline-none focus:border-ring transition"
-                />
+                  className="px-1.5 py-0.5 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:border-ring transition cursor-pointer"
+                >
+                  {[10, 25, 50, 100].map((v) => (
+                    <option key={v} value={v}>{v}/page</option>
+                  ))}
+                </select>
               </div>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <span>Go to page:</span>
-              <input
-                type="number"
-                min={1}
-                max={totalPages}
-                value={page}
-                onChange={(e) => {
-                  const val = Math.min(totalPages, Math.max(1, parseInt(e.target.value) || 1));
-                  onPageChange?.(val);
-                }}
-                className="w-14 px-2 py-1 text-center rounded-md border border-border bg-background text-foreground outline-none focus:border-ring transition"
-              />
+          {/* Right: Prev/Next + page indicator */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange?.(page - 1)}
+              disabled={page <= 1 || finalIsLoading}
+              className="border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer h-7 w-7 p-0"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <div className="px-2 py-1 font-medium text-muted-foreground select-none whitespace-nowrap">
+              <span className="text-foreground">{page}</span>/<span className="text-foreground">{totalPages}</span>
             </div>
-
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange?.(page - 1)}
-                disabled={page <= 1 || finalIsLoading}
-                className="border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer h-7 w-7 p-0"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <div className="px-3 py-1 font-medium text-muted-foreground select-none">
-                Page <span className="text-foreground">{page}</span> of <span className="text-foreground">{totalPages}</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange?.(page + 1)}
-                disabled={page >= totalPages || finalIsLoading}
-                className="border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer h-7 w-7 p-0"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange?.(page + 1)}
+              disabled={page >= totalPages || finalIsLoading}
+              className="border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer h-7 w-7 p-0"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       )}
