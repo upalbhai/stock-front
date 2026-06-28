@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useAuth } from "@/components/auth/auth-provider";
 import { useQuery } from "@tanstack/react-query";
 import { getJson } from "@/lib/api-client";
+import { APP_ROUTES } from "@/lib/routes";
 
 export default function SubscribeSuccessPage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function SubscribeSuccessPage() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          router.push("/");
+          router.push(APP_ROUTES.DASHBOARD);
           return 0;
         }
         return prev - 1;
@@ -76,7 +77,7 @@ export default function SubscribeSuccessPage() {
           </p>
 
           <Button asChild className="w-full rounded-2xl py-6 font-semibold" size="lg">
-            <Link href="/" className="flex items-center justify-center gap-2">
+            <Link href={APP_ROUTES.DASHBOARD} className="flex items-center justify-center gap-2">
               Go to Dashboard <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>

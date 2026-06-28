@@ -11,6 +11,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { apiFetch, apiFetchData, getJson } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
 import { formatCurrency } from "@/lib/format";
+import { APP_ROUTES } from "@/lib/routes";
 import type { Plan } from "@/lib/types";
 
 export default function SubscribePage() {
@@ -34,13 +35,13 @@ export default function SubscribePage() {
   useEffect(() => {
     // If user is superadmin, they shouldn't be here
     if (user?.role === "superadmin") {
-      router.push("/admin");
+      router.push(APP_ROUTES.ADMIN);
     }
   }, [user, router]);
 
   const handleSubscribe = async (plan: Plan) => {
     if (!token) {
-      router.push("/login");
+      router.push(APP_ROUTES.LOGIN);
       return;
     }
 
@@ -84,7 +85,7 @@ export default function SubscribePage() {
 
             if (verifyRes.success) {
               // Force reload to update token and app state
-              window.location.href = "/subscribe/success";
+              window.location.href = APP_ROUTES.SUBSCRIBE_SUCCESS;
             } else {
               setError("Payment verification failed");
             }

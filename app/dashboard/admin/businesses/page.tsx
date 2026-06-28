@@ -15,6 +15,7 @@ import { adminService } from "@/services/admin.service";
 import { planService } from "@/services/plan.service";
 import { userService } from "@/services/user.service";
 import { getErrorMessage } from "@/lib/error";
+import { APP_ROUTES } from "@/lib/routes";
 import type { Business, StaffUser, Plan } from "@/lib/types";
 
 export default function AdminBusinessesPage() {
@@ -133,7 +134,7 @@ export default function AdminBusinessesPage() {
     setImpersonatingId(userId);
     try {
       await impersonate(userId);
-      window.location.href = "/";
+      window.location.href = APP_ROUTES.DASHBOARD;
     } catch (err) {
       toast.error("Impersonation failed: " + getErrorMessage(err));
       setImpersonatingId(null);

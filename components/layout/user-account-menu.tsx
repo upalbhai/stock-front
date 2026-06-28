@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { APP_ROUTES } from "@/lib/routes";
 
 type UserAccountMenuProps = {
   variant?: "header" | "sidebar" | "sidebar-icon";
@@ -41,7 +42,7 @@ export function UserAccountMenu({
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    router.push(APP_ROUTES.LOGIN);
     onNavigate?.();
   };
 
@@ -72,7 +73,7 @@ export function UserAccountMenu({
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuItem
-          onClick={() => run(() => router.push("/settings"))}
+          onClick={() => run(() => router.push(APP_ROUTES.SETTINGS))}
           className="cursor-pointer"
         >
           <User className="mr-2 h-4 w-4" />
@@ -80,7 +81,7 @@ export function UserAccountMenu({
         </DropdownMenuItem>
         {variant === "header" && (
           <DropdownMenuItem
-            onClick={() => run(() => router.push("/"))}
+            onClick={() => run(() => router.push(APP_ROUTES.DASHBOARD))}
             className="cursor-pointer"
           >
             <LayoutDashboard className="mr-2 h-4 w-4" />

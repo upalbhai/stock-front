@@ -21,14 +21,47 @@ export const API_ROUTES = {
 };
 
 // Frontend application routes
+export const APP_BASE_ROUTE = "/dashboard";
+
+export function appRoute(path = "") {
+  if (!path || path === "/") return APP_BASE_ROUTE;
+  return `${APP_BASE_ROUTE}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 export const APP_ROUTES = {
   HOME: "/",
+  ABOUT: "/about",
+  SERVICES: "/services",
+  PRICING: "/pricing",
+  CONTACT: "/contact",
   LOGIN: "/login",
   REGISTER: "/register",
-  DASHBOARD: "/admin",
-  SETTINGS: "/settings",
-  PRODUCTS: "/products",
-  CATEGORIES: "/categories",
-  STOCK: "/stock",
-  OUTLETS: "/outlets",
+  DASHBOARD: APP_BASE_ROUTE,
+  BILLING: appRoute("/billing"),
+  ORDERS: appRoute("/orders"),
+  CUSTOMERS: appRoute("/customers"),
+  INVOICES: appRoute("/invoices"),
+  PRODUCTS: appRoute("/products"),
+  CATEGORIES: appRoute("/categories"),
+  STOCK: appRoute("/stock"),
+  STOCK_TRANSFERS: appRoute("/stock/transfers"),
+  UNITS: appRoute("/units"),
+  PROFIT: appRoute("/profit"),
+  REPORTS: appRoute("/reports"),
+  EXPENSES: appRoute("/expenses"),
+  OUTLETS: appRoute("/outlets"),
+  STAFF: appRoute("/staff"),
+  ROLES: appRoute("/roles"),
+  AUDIT_LOGS: appRoute("/audit-logs"),
+  SETTINGS: appRoute("/settings"),
+  SUBSCRIBE: appRoute("/subscribe"),
+  SUBSCRIBE_SUCCESS: appRoute("/subscribe/success"),
+  ADMIN: appRoute("/admin"),
+  ADMIN_BUSINESSES: appRoute("/admin/businesses"),
+  ADMIN_OUTLETS: appRoute("/admin/outlets"),
+  ADMIN_USERS: appRoute("/admin/users"),
+  ADMIN_AUDIT_LOGS: appRoute("/admin/audit-logs"),
+  ADMIN_PLANS: appRoute("/admin/plans"),
+  customerDetail: (id: string) => appRoute(`/customers/${id}`),
+  invoiceDetail: (id: string) => appRoute(`/invoices/${id}`),
 };

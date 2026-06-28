@@ -37,18 +37,25 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { APP_BASE_ROUTE, APP_ROUTES, appRoute } from "@/lib/routes";
 
 function useBreadcrumbs(pathname: string) {
   return useMemo(() => {
-    const segments = pathname.split("/").filter(Boolean);
-    if (segments.length === 0) return [{ label: "Dashboard", href: "/" }];
+    const relativePath =
+      pathname === APP_BASE_ROUTE
+        ? ""
+        : pathname.startsWith(`${APP_BASE_ROUTE}/`)
+          ? pathname.slice(APP_BASE_ROUTE.length + 1)
+          : pathname.replace(/^\//, "");
+    const segments = relativePath.split("/").filter(Boolean);
+    if (segments.length === 0) return [{ label: "Dashboard", href: APP_ROUTES.DASHBOARD }];
 
     const breadcrumbs: { label: string; href: string }[] = [
-      { label: "Home", href: "/" },
+      { label: "Dashboard", href: APP_ROUTES.DASHBOARD },
     ];
 
     for (let i = 0; i < segments.length; i++) {
-      const href = "/" + segments.slice(0, i + 1).join("/");
+      const href = appRoute(`/${segments.slice(0, i + 1).join("/")}`);
       const matchingItem = allSidebarItems.find((item) => item.path === href);
       const segment = segments[i];
       const label =
@@ -96,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, impersonating, exitImpersonation } = useAuth();
-  const isAuthRoute = pathname.startsWith("/login");
+  const isAuthRoute = pathname.startsWith(APP_ROUTES.LOGIN);
   const isOnline = useOnlineStatus();
   const [commandOpen, setCommandOpen] = useState(false);
   const visibleSidebarGroups = useVisibleSidebarGroups();
@@ -104,17 +111,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pageTitle = breadcrumbs[breadcrumbs.length - 1]?.label ?? "Dashboard";
 
   const isSuperAdmin = user?.role === "superadmin";
-  const isBillingRoute = pathname === "/billing" || pathname.startsWith("/billing/");
+  const isBillingRoute =
+    pathname === APP_ROUTES.BILLING || pathname.startsWith(`${APP_ROUTES.BILLING}/`);
 
   useEffect(() => {
     if (
       user?.role === "superadmin" &&
       !impersonating &&
-      pathname !== "/admin" &&
-      !pathname.startsWith("/admin") &&
+      pathname !== APP_ROUTES.ADMIN &&
+      !pathname.startsWith(`${APP_ROUTES.ADMIN}/`) &&
       !isAuthRoute
     ) {
-      router.push("/admin");
+      router.push(APP_ROUTES.ADMIN);
     }
   }, [user, impersonating, pathname, isAuthRoute, router]);
 
@@ -157,7 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 days remaining
               </span>
               <Button size="xs" variant="default" className="h-6 shrink-0 rounded-full px-2.5 py-0 text-[10px] font-bold shadow-sm" asChild>
-                <Link href="/subscribe">Upgrade</Link>
+                <Link href={APP_ROUTES.SUBSCRIBE}>Upgrade</Link>
               </Button>
             </div>
           )}
@@ -246,12 +254,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {(!isSuperAdmin || impersonating) && (
                   <>
                     <Button asChild size="icon-sm" className="xl:hidden h-8 w-8">
-                      <Link href="/billing" aria-label="New Bill">
+                      <Link href={APP_ROUTES.BILLING} aria-label="New Bill">
                         <Plus className="h-4 w-4" />
                       </Link>
                     </Button>
                     <Button asChild size="sm" className="hidden h-8 gap-1.5 xl:flex">
-                      <Link href="/billing">
+                      <Link href={APP_ROUTES.BILLING}>
                         <Plus className="h-3.5 w-3.5" />
                         New Bill
                       </Link>
@@ -261,7 +269,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
                 {isSuperAdmin && !impersonating && (
                   <Button asChild size="sm" variant="outline" className="hidden h-8 md:flex">
-                    <Link href="/admin">Portal</Link>
+                    <Link href={APP_ROUTES.ADMIN}>Portal</Link>
                   </Button>
                 )}
 

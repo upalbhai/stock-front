@@ -11,6 +11,7 @@ import { getJson } from "@/lib/api-client";
 import { GstInvoicePrint, printGstInvoice } from "@/components/invoices/gst-invoice-print";
 import { exportInvoicePdf } from "@/lib/exportInvoicePdf";
 import type { Order, Customer } from "@/lib/types";
+import { APP_ROUTES } from "@/lib/routes";
 
 type InvoicePayload = {
   order: Order & { customerId?: Customer | null };
@@ -36,7 +37,7 @@ export default function InvoiceDetailPage() {
   if (!data?.order) {
     return (
       <div className="space-y-4">
-        <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
+        <Link href={APP_ROUTES.INVOICES} className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
           <ArrowLeft className="h-4 w-4" /> Invoices
         </Link>
         <p className="text-muted">Invoice not found.</p>
@@ -47,7 +48,7 @@ export default function InvoiceDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 no-print">
-        <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
+        <Link href={APP_ROUTES.INVOICES} className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
           <ArrowLeft className="h-4 w-4" /> Back to invoices
         </Link>
         <div className="flex gap-2">

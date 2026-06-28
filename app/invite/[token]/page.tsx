@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
+import { APP_ROUTES } from "@/lib/routes";
 import { Sparkles } from "lucide-react";
 
 export default function InviteAcceptPage() {
@@ -43,7 +44,7 @@ export default function InviteAcceptPage() {
       } catch {
         localStorage.setItem("outlet-auth", JSON.stringify({ token: data.token, user: data.user }));
       }
-      window.location.href = "/";
+      window.location.href = APP_ROUTES.DASHBOARD;
     },
     onError: (err) => {
       setError(getErrorMessage(err, "Failed to accept invitation"));
@@ -86,7 +87,7 @@ export default function InviteAcceptPage() {
           <CardDescription className="mt-2">
             The link you followed is either expired, invalid, or has already been used. Please request a new invite link from your franchise administrator.
           </CardDescription>
-          <Button className="mt-6 w-full" onClick={() => router.push("/login")}>Go to Login</Button>
+          <Button className="mt-6 w-full" onClick={() => router.push(APP_ROUTES.LOGIN)}>Go to Login</Button>
         </Card>
       </div>
     );

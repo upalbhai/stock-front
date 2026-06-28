@@ -15,6 +15,7 @@ import { getJson, apiFetch } from "@/lib/api-client";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { GstInvoicePrint, printGstInvoice } from "@/components/invoices/gst-invoice-print";
 import type { Order, Customer } from "@/lib/types";
+import { APP_ROUTES } from "@/lib/routes";
 
 type InvoicePayload = {
   order: Order & { customerId?: Customer | null };
@@ -135,7 +136,7 @@ export default function InvoicesPage() {
                 <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => setPrintId(inv._id)}>
                   <Printer className="h-3 w-3" /> Print
                 </Button>
-                <Link href={`/invoices/${inv._id}`}>
+                <Link href={APP_ROUTES.invoiceDetail(inv._id)}>
                   <Button variant="ghost" size="sm" className="text-xs">View</Button>
                 </Link>
               </div>

@@ -7,6 +7,7 @@ import { flushOfflineQueue } from "@/lib/offline-queue";
 import type { AuthUser, UserRole, ApiResponse } from "@/lib/types";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setAuth, setOutlet as setOutletAction, clearAuth } from "@/store/authSlice";
+import { APP_ROUTES } from "@/lib/routes";
 
 export type { AuthUser, UserRole } from "@/lib/types";
 
@@ -141,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: "superadmin"
       };
       dispatch(setAuth({ user: restoredUser, token: orig }));
-      window.location.href = "/admin";
+      window.location.href = APP_ROUTES.ADMIN;
     } catch {
       logout();
     }

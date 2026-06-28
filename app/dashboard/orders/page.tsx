@@ -18,6 +18,7 @@ import { formatCurrency, formatDateTime } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
+import { APP_ROUTES } from "@/lib/routes";
 
 type RecordFilter = "active" | "voided" | "all";
 
@@ -185,7 +186,7 @@ export default function OrdersPage() {
             header: "Invoice",
             render: (o) =>
               o.invoiceNumber ? (
-                <Link href={`/invoices/${o._id}`} className="text-xs text-primary hover:underline">
+                <Link href={APP_ROUTES.invoiceDetail(o._id)} className="text-xs text-primary hover:underline">
                   {o.invoiceNumber}
                 </Link>
               ) : hasGstInvoices && o.tax > 0 && o.status === "completed" ? (

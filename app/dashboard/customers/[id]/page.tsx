@@ -19,6 +19,7 @@ import { formatCurrency, formatDateTime } from "@/lib/format";
 import type { Customer, CustomerTransaction } from "@/lib/types";
 import { toast } from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
+import { APP_ROUTES } from "@/lib/routes";
 
 const TX_LABELS: Record<string, string> = {
   sale: "Credit sale",
@@ -70,7 +71,7 @@ export default function CustomerDetailPage() {
   if (!customer) {
     return (
       <div className="space-y-4">
-        <Link href="/customers" className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
+        <Link href={APP_ROUTES.CUSTOMERS} className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
           <ArrowLeft className="h-4 w-4" /> Back to customers
         </Link>
         <p className="text-muted">Customer not found.</p>
@@ -82,7 +83,7 @@ export default function CustomerDetailPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/customers" className="inline-flex items-center gap-1 text-sm text-muted hover:text-text mb-2">
+          <Link href={APP_ROUTES.CUSTOMERS} className="inline-flex items-center gap-1 text-sm text-muted hover:text-text mb-2">
             <ArrowLeft className="h-4 w-4" /> Customers
           </Link>
           <h1 className="text-2xl font-bold">{customer.name}</h1>

@@ -4,7 +4,6 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { Providers } from "./providers";
 import { ServiceWorkerRegister } from "@/components/service-worker";
-import { AppShell } from "@/components/layout/app-shell";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
@@ -18,8 +17,8 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Retail & Outlet Manager",
-  description: "Fast, mobile-first outlet operations",
+  title: "Outlet Pulse",
+  description: "Retail billing, inventory, outlets, staff, and reports in one operations platform.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <Providers>
           <ServiceWorkerRegister />
-          <AppShell>{children}</AppShell>
+          {children}
         </Providers>
       </body>
     </html>

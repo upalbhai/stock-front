@@ -18,6 +18,7 @@ import { formatCurrency } from "@/lib/format";
 import type { Customer } from "@/lib/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
+import { APP_ROUTES } from "@/lib/routes";
 
 export default function CustomersPage() {
   const { token, outletId } = useAuth();
@@ -129,7 +130,7 @@ export default function CustomersPage() {
             key: "name",
             header: "Name",
             render: (c) => (
-              <Link href={`/customers/${c._id}`} className="font-medium hover:text-primary hover:underline">
+              <Link href={APP_ROUTES.customerDetail(c._id)} className="font-medium hover:text-primary hover:underline">
                 {c.name}
               </Link>
             )
@@ -150,7 +151,7 @@ export default function CustomersPage() {
             key: "actions",
             header: "",
             render: (c) => (
-              <Link href={`/customers/${c._id}`}>
+              <Link href={APP_ROUTES.customerDetail(c._id)}>
                 <Button variant="ghost" size="sm" className="text-xs">Ledger</Button>
               </Link>
             )

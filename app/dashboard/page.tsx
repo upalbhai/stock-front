@@ -15,10 +15,6 @@ import {
   ArrowRight,
   ReceiptText,
   Package,
-  Store,
-  Users,
-  ShieldCheck,
-  ChartNoAxesCombined,
   DollarSign,
   ShoppingBag,
   FileText,
@@ -29,15 +25,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const features = [
-  { title: "Billing", description: "Create bills fast with payment tracking and receipt flow.", icon: ReceiptText },
-  { title: "Stock", description: "Watch products, low stock alerts, and outlet stock movement.", icon: Package },
-  { title: "Outlets", description: "Manage branches and approve new outlets before they go live.", icon: Store },
-  { title: "Users & Roles", description: "Create staff, assign roles, and control permissions safely.", icon: Users },
-  { title: "Approval Flow", description: "Business owners wait for admin approval before activation.", icon: ShieldCheck },
-  { title: "Reports", description: "See daily sales, trends, and outlet performance in one place.", icon: ChartNoAxesCombined }
-];
+import { APP_ROUTES } from "@/lib/routes";
 
 type SummaryData = {
   totalCreditOutstanding: number;
@@ -72,11 +60,11 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
   const quickActions = React.useMemo(
     () =>
       [
-        { href: "/billing", label: "New bill", icon: ReceiptText },
-        { href: "/stock", label: "Stock", icon: Package },
-        hasCreditKhata && { href: "/customers", label: "Customers", icon: UserCircle },
-        hasGstInvoices && { href: "/invoices", label: "Invoices", icon: FileText },
-        { href: "/orders", label: "Order history", icon: History },
+        { href: APP_ROUTES.BILLING, label: "New bill", icon: ReceiptText },
+        { href: APP_ROUTES.STOCK, label: "Stock", icon: Package },
+        hasCreditKhata && { href: APP_ROUTES.CUSTOMERS, label: "Customers", icon: UserCircle },
+        hasGstInvoices && { href: APP_ROUTES.INVOICES, label: "Invoices", icon: FileText },
+        { href: APP_ROUTES.ORDERS, label: "Order history", icon: History },
       ].filter(Boolean) as { href: string; label: string; icon: typeof ReceiptText }[],
     [hasCreditKhata, hasGstInvoices]
   );
@@ -93,12 +81,12 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         </div>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto items-center">
           <Button asChild className="w-full sm:w-auto">
-            <Link href="/billing">
+            <Link href={APP_ROUTES.BILLING}>
               Open Billing <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link href="/reports">Full Reports</Link>
+            <Link href={APP_ROUTES.REPORTS}>Full Reports</Link>
           </Button>
           <Button
             variant="outline"
@@ -235,63 +223,10 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
   );
 }
 
-function MarketingHome({ userName }: { userName?: string }) {
-  return (
-    <div className="space-y-6">
-      <section className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <Card className="border-border/70 shadow-sm">
-          <CardHeader>
-            <Badge className="w-fit">Retail SaaS</Badge>
-            <CardTitle className="text-3xl font-bold tracking-tight">Run billing, stock, outlets, and staff from one panel</CardTitle>
-            <CardDescription className="text-base max-w-2xl">
-              Outlet Pulse is built for retail owners who need approval-based onboarding, outlet control, role-based access, and daily reporting without extra noise.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            <Button asChild><Link href="/login">Go to Login <ArrowRight className="h-4 w-4" /></Link></Button>
-            <Button asChild variant="outline"><Link href="/reports">Open Reports</Link></Button>
-            <Button asChild variant="soft"><Link href="/stock">Check Stock</Link></Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">Current access</CardTitle>
-            <CardDescription>Simple status for the signed-in user</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p><span className="font-medium">User:</span> {userName || "Guest"}</p>
-            <p><span className="font-medium">Mode:</span> Public homepage</p>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {features.map((feature) => {
-          const Icon = feature.icon;
-          return (
-            <Card key={feature.title} className="border-border/70 shadow-sm">
-              <CardHeader>
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <CardTitle className="text-lg">{feature.title}</CardTitle>
-                <CardDescription>{feature.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          );
-        })}
-      </section>
-    </div>
-  );
-}
-
 export default function HomePage() {
-  const { user, token, outletId } = useAuth();
+  const { token, outletId } = useAuth();
 
-  if (user && token) {
-    return <DashboardHome token={token} outletId={outletId} />;
-  }
+  if (!token) return null;
 
-  return <MarketingHome userName={user?.name} />;
+  return <DashboardHome token={token} outletId={outletId} />;
 }

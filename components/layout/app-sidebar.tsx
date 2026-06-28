@@ -19,6 +19,7 @@ import {
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { useVisibleSidebarGroups } from "@/components/layout/use-visible-sidebar";
 import { cn } from "@/lib/utils";
+import { APP_ROUTES } from "@/lib/routes";
 
 export function AppSidebar() {
   const router = useRouter();
@@ -64,7 +65,7 @@ export function AppSidebar() {
                 {group.items.map((item) => {
                   const isActive =
                     pathname === item.path ||
-                    (item.path !== "/" && pathname.startsWith(item.path + "/"));
+                    (item.path !== APP_ROUTES.DASHBOARD && pathname.startsWith(item.path + "/"));
                   const Icon = item.icon;
                   return (
                     <SidebarMenuItem key={item.path}>

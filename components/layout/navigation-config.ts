@@ -22,6 +22,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { UserRole } from "@/lib/types";
+import { APP_ROUTES } from "@/lib/routes";
 
 export type SidebarItem = {
   title: string;
@@ -43,21 +44,21 @@ export const sidebarGroups: SidebarGroupDef[] = [
     items: [
       {
         title: "Dashboard",
-        path: "/",
+        path: APP_ROUTES.DASHBOARD,
         icon: LayoutDashboard,
         keywords: ["home", "stats", "overview", "analytics"],
         roles: ["owner", "manager", "staff"],
       },
       {
         title: "Billing",
-        path: "/billing",
+        path: APP_ROUTES.BILLING,
         icon: Receipt,
         keywords: ["bill", "pos", "sale", "invoice", "checkout"],
         roles: ["owner", "manager", "staff"],
       },
       {
         title: "Orders",
-        path: "/orders",
+        path: APP_ROUTES.ORDERS,
         icon: History,
         keywords: ["orders", "history", "sales"],
         roles: ["owner", "manager"],
@@ -65,7 +66,7 @@ export const sidebarGroups: SidebarGroupDef[] = [
       },
       {
         title: "Customers",
-        path: "/customers",
+        path: APP_ROUTES.CUSTOMERS,
         icon: UserCircle,
         keywords: ["customers", "clients", "khata"],
         roles: ["owner", "manager"],
@@ -73,7 +74,7 @@ export const sidebarGroups: SidebarGroupDef[] = [
       },
       {
         title: "Invoices",
-        path: "/invoices",
+        path: APP_ROUTES.INVOICES,
         icon: FileText,
         keywords: ["invoices", "gst", "tax"],
         roles: ["owner", "manager"],
@@ -81,14 +82,14 @@ export const sidebarGroups: SidebarGroupDef[] = [
       },
       {
         title: "Products",
-        path: "/products",
+        path: APP_ROUTES.PRODUCTS,
         icon: Tag,
         keywords: ["products", "items", "catalog"],
         roles: ["owner", "manager", "staff"],
       },
       {
         title: "Categories",
-        path: "/categories",
+        path: APP_ROUTES.CATEGORIES,
         icon: FolderOpen,
         keywords: ["categories", "groups"],
         roles: ["owner", "manager"],
@@ -100,21 +101,21 @@ export const sidebarGroups: SidebarGroupDef[] = [
     items: [
       {
         title: "Stock",
-        path: "/stock",
+        path: APP_ROUTES.STOCK,
         icon: Package,
         keywords: ["inventory", "stock", "quantity"],
         roles: ["owner", "manager", "staff"],
       },
       {
         title: "Units",
-        path: "/units",
+        path: APP_ROUTES.UNITS,
         icon: Gauge,
         keywords: ["units", "measurement"],
         roles: ["owner", "manager"],
       },
       {
         title: "Transfers",
-        path: "/stock/transfers",
+        path: APP_ROUTES.STOCK_TRANSFERS,
         icon: ArrowLeftRight,
         keywords: ["transfers", "move stock"],
         roles: ["owner", "manager"],
@@ -126,56 +127,56 @@ export const sidebarGroups: SidebarGroupDef[] = [
     items: [
       {
         title: "Profit & Loss",
-        path: "/profit",
+        path: APP_ROUTES.PROFIT,
         icon: TrendingUp,
         keywords: ["profit", "loss", "pnl", "finance"],
         roles: ["owner", "manager"],
       },
       {
         title: "Reports",
-        path: "/reports",
+        path: APP_ROUTES.REPORTS,
         icon: LineChart,
         keywords: ["reports", "analytics", "charts"],
         roles: ["owner", "manager"],
       },
       {
         title: "Expenses",
-        path: "/expenses",
+        path: APP_ROUTES.EXPENSES,
         icon: DollarSign,
         keywords: ["expenses", "costs"],
         roles: ["owner", "manager"],
       },
       {
         title: "Outlets",
-        path: "/outlets",
+        path: APP_ROUTES.OUTLETS,
         icon: Store,
         keywords: ["outlets", "branches", "locations"],
         roles: ["owner"],
       },
       {
         title: "Staff",
-        path: "/staff",
+        path: APP_ROUTES.STAFF,
         icon: Users,
         keywords: ["staff", "employees", "team"],
         roles: ["owner", "manager"],
       },
       {
         title: "Roles",
-        path: "/roles",
+        path: APP_ROUTES.ROLES,
         icon: Shield,
         keywords: ["roles", "permissions", "access"],
         roles: ["owner"],
       },
       {
         title: "Audit Logs",
-        path: "/audit-logs",
+        path: APP_ROUTES.AUDIT_LOGS,
         icon: ClipboardList,
         keywords: ["audit", "logs", "history", "trail"],
         roles: ["owner"],
       },
       {
         title: "Settings",
-        path: "/settings",
+        path: APP_ROUTES.SETTINGS,
         icon: Settings,
         keywords: ["settings", "configuration", "preferences"],
         roles: ["owner", "manager", "staff"],
@@ -190,7 +191,7 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
     items: [
       {
         title: "Platform Dashboard",
-        path: "/admin/businesses",
+        path: APP_ROUTES.ADMIN_BUSINESSES,
         icon: Sparkles,
         keywords: ["dashboard", "stats", "overview", "platform"],
         roles: ["superadmin"],
@@ -202,35 +203,35 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
     items: [
       {
         title: "Businesses",
-        path: "/admin/businesses",
+        path: APP_ROUTES.ADMIN_BUSINESSES,
         icon: Store,
         keywords: ["businesses", "clients", "accounts"],
         roles: ["superadmin"],
       },
       {
         title: "Outlets",
-        path: "/admin/outlets",
+        path: APP_ROUTES.ADMIN_OUTLETS,
         icon: Store,
         keywords: ["outlets", "branches"],
         roles: ["superadmin"],
       },
       {
         title: "Users Registry",
-        path: "/admin/users",
+        path: APP_ROUTES.ADMIN_USERS,
         icon: Users,
         keywords: ["users", "accounts", "registry"],
         roles: ["superadmin"],
       },
       {
         title: "Audit Trails",
-        path: "/admin/audit-logs",
+        path: APP_ROUTES.ADMIN_AUDIT_LOGS,
         icon: ClipboardList,
         keywords: ["audit", "logs", "trails"],
         roles: ["superadmin"],
       },
       {
         title: "Plans",
-        path: "/admin/plans",
+        path: APP_ROUTES.ADMIN_PLANS,
         icon: CreditCard,
         keywords: ["plans", "subscriptions", "pricing"],
         roles: ["superadmin"],
@@ -245,9 +246,9 @@ export const allSidebarItems = [
 ];
 
 export const bottomNavItems = [
-  { href: "/", label: "Home", icon: LayoutDashboard, roles: ["owner", "manager", "staff"] as UserRole[] },
-  { href: "/billing", label: "Billing", icon: Receipt, roles: ["owner", "manager", "staff"] as UserRole[] },
-  { href: "/products", label: "Products", icon: Tag, roles: ["owner", "manager", "staff"] as UserRole[] },
-  { href: "/stock", label: "Stock", icon: Package, roles: ["owner", "manager", "staff"] as UserRole[] },
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["owner", "manager", "staff"] as UserRole[] },
+  { href: APP_ROUTES.DASHBOARD, label: "Home", icon: LayoutDashboard, roles: ["owner", "manager", "staff"] as UserRole[] },
+  { href: APP_ROUTES.BILLING, label: "Billing", icon: Receipt, roles: ["owner", "manager", "staff"] as UserRole[] },
+  { href: APP_ROUTES.PRODUCTS, label: "Products", icon: Tag, roles: ["owner", "manager", "staff"] as UserRole[] },
+  { href: APP_ROUTES.STOCK, label: "Stock", icon: Package, roles: ["owner", "manager", "staff"] as UserRole[] },
+  { href: APP_ROUTES.SETTINGS, label: "Settings", icon: Settings, roles: ["owner", "manager", "staff"] as UserRole[] },
 ];

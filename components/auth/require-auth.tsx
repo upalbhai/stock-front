@@ -3,8 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "./auth-provider";
-
-const PUBLIC_ROUTES = ["/login", "/subscribe"];
+import { APP_ROUTES } from "@/lib/routes";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isTrialExpired } = useAuth();
@@ -15,22 +14,22 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     if (isLoading) {
       return;
     }
-    const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
-    if (!isPublic && !user) {
-      router.replace("/login");
+    if (!user) {
+      router.replace(APP_ROUTES.LOGIN);
       return;
     }
     
     // Redirect to subscribe if trial expired and not on subscribe page
-    if (user && isTrialExpired && !pathname.startsWith("/subscribe") && user.role !== "superadmin") {
-      router.replace("/subscribe");
+    if (
+      user &&
+      isTrialExpired &&
+      !pathname.startsWith(APP_ROUTES.SUBSCRIBE) &&
+      user.role !== "superadmin"
+    ) {
+      router.replace(APP_ROUTES.SUBSCRIBE);
     }
   }, [isLoading, pathname, router, user, isTrialExpired]);
 
-  const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
-  if (isPublic) {
-    return <>{children}</>;
-  }
   if (isLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted">
@@ -42,7 +41,11 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     return null;
   }
   
-  if (isTrialExpired && user.role !== "superadmin" && !pathname.startsWith("/subscribe")) {
+  if (
+    isTrialExpired &&
+    user.role !== "superadmin" &&
+    !pathname.startsWith(APP_ROUTES.SUBSCRIBE)
+  ) {
     return null;
   }
 

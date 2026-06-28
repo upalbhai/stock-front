@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/input-otp";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getErrorMessage } from "@/lib/error";
+import { APP_ROUTES } from "@/lib/routes";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -93,9 +94,9 @@ export default function LoginPage() {
       }
 
       if (loggedInUser?.role === "superadmin") {
-        router.push("/admin");
+        router.push(APP_ROUTES.ADMIN);
       } else {
-        router.push("/");
+        router.push(APP_ROUTES.DASHBOARD);
       }
     } catch (err) {
       setError(getErrorMessage(err, "Authentication failed"));
@@ -126,9 +127,9 @@ export default function LoginPage() {
       } else {
         const loggedInUser = (res as any).user;
         if (loggedInUser?.role === "superadmin") {
-          router.push("/admin");
+          router.push(APP_ROUTES.ADMIN);
         } else {
-          router.push("/");
+          router.push(APP_ROUTES.DASHBOARD);
         }
       }
     } catch (err) {
