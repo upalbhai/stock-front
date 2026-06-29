@@ -1,8 +1,25 @@
+import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "MiniHisab | Retail Billing & Inventory",
+  description: "A service-first platform for retail owners who need billing, stock, outlets, staff, credit, GST invoices, and reports in one place.",
+  keywords: ["retail billing", "inventory management", "hisab book", "pos system", "gst billing", "retail operations"],
+  alternates: {
+    canonical: "https://minihisab.com/",
+  },
+  openGraph: {
+    title: "MiniHisab | Retail Billing & Inventory",
+    description: "A service-first platform for retail owners who need billing, stock, outlets, staff, credit, GST invoices, and reports in one place.",
+    url: "https://minihisab.com/",
+    siteName: "MiniHisab",
+    type: "website",
+  },
+};
 
 const navItems = [
   { href: APP_ROUTES.SERVICES, label: "Services" },
@@ -18,10 +35,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link href={APP_ROUTES.HOME} className="flex min-w-0 items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-primary text-xs font-extrabold text-primary-foreground">
-              OP
+              MH
             </span>
             <span className="truncate font-heading text-sm font-extrabold uppercase tracking-wide">
-              Outlet Pulse
+              MiniHisab
             </span>
           </Link>
 
@@ -61,10 +78,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div>
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-primary text-xs font-extrabold text-primary-foreground">
-                OP
+                MH
               </span>
               <span className="font-heading text-sm font-extrabold uppercase tracking-wide">
-                Outlet Pulse
+                MiniHisab
               </span>
             </div>
             <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
