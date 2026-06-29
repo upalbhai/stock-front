@@ -3,7 +3,7 @@ import { Business, AuditLog } from "@/lib/types";
 
 export const adminService = {
   getDashboardStats: async (token?: string | null) => {
-    return getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number }>("/admin/dashboard", token);
+    return getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number }>("/admin/stats", token);
   },
   getAuditLogs: async (token?: string | null) => {
     return getJson<{ logs: AuditLog[]; total: number }>("/audit-logs", token);

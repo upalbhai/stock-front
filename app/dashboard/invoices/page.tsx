@@ -58,7 +58,7 @@ export default function InvoicesPage() {
 
   if (!hasGstInvoices) {
     return (
-      <div className="rounded-3xl border border-border/70 bg-surface/50 p-8 text-center">
+      <div className="rounded-xl border border-border/70 bg-surface/50 p-8 text-center">
         <FileText className="mx-auto h-10 w-10 text-muted" />
         <h1 className="mt-4 text-xl font-bold">GST Invoices</h1>
         <p className="mt-2 text-sm text-muted">GST invoicing is not available on your current plan.</p>

@@ -35,6 +35,9 @@ export type AuthUser = {
   enabledFeatures?: string[];
   businessProfile?: "retail" | "wholesale" | "hybrid";
   planType?: "retail" | "wholesale" | "hybrid";
+  customPermissions?: { module: string; actions: string[] }[];
+  permissions?: { module: string; actions: string[] }[];
+  preferredLoginMethod?: "password" | "otp";
 };
 
 export type Plan = {
@@ -283,6 +286,7 @@ export type StaffUser = {
   roleId?: Role | string | null;
   isActive: boolean;
   lastLoginAt?: string;
+  customPermissions?: { module: string; actions: string[] }[];
 };
 
 export type Expense = {

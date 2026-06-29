@@ -32,7 +32,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <Dialog.Content
             className={cn(
-              "relative flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,920px)] flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-soft animate-rise outline-none sm:w-full",
+              "relative flex w-[calc(100%-1.5rem)] max-h-[min(90dvh,920px)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-soft animate-rise outline-none sm:w-full",
               sizeMap[size],
               className
             )}

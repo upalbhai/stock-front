@@ -157,13 +157,13 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
       </div>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="border-border/70 shadow-sm">
+        <Card className="border-border/70 shadow-sm md:col-span-2 xl:col-span-1">
           <CardHeader className="">
             <CardTitle className="text-lg">Quick actions</CardTitle>
             <CardDescription>Jump into daily workflows</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {quickActions.map((action) => {
                 const Icon = action.icon;
                 return (
@@ -171,15 +171,14 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                     key={action.href}
                     href={action.href}
                     className={cn(
-                      "group flex min-h-[4rem] flex-col items-center justify-center gap-2 rounded-2xl border border-border/80 bg-muted/30 px-2 py-2 text-center transition-all",
-                      "hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98]",
-                      "sm:min-h-0 sm:flex-row sm:justify-start sm:rounded-xl sm:px-2 sm:py-2 sm:text-left"
+                      "group flex items-center gap-3 rounded-xl border border-border/80 bg-muted/20 p-2.5 transition-all text-left",
+                      "hover:border-primary/30 hover:bg-primary/5 active:scale-[0.97]"
                     )}
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15 sm:h-8 sm:w-8 sm:rounded-lg">
-                      <Icon className="h-4 w-4" />
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                      <Icon className="h-4.5 w-4.5" />
                     </span>
-                    <span className="text-xs font-semibold leading-tight text-foreground sm:text-sm">
+                    <span className="text-sm font-semibold leading-none text-foreground">
                       {action.label}
                     </span>
                   </Link>

@@ -26,7 +26,7 @@ export interface ColumnDef<T> {
 export interface DataTableProps<T> {
   columns: ColumnDef<T>[];
   data: T[];
-  
+
   // Legacy compatibility props
   loading?: boolean;
   keyExtractor?: (row: T) => string;
@@ -68,7 +68,7 @@ export function DataTable<T>({
   className,
   error,
   errorMessage,
-  
+
   isLoading: newIsLoading,
   totalItems = data.length,
   page = 1,
@@ -141,7 +141,7 @@ export function DataTable<T>({
   // Legacy error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-3xl border border-danger/40 bg-danger/5 py-16 text-center">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-danger/40 bg-danger/5 py-16 text-center">
         <p className="text-4xl">⚠️</p>
         <p className="mt-3 font-medium text-danger">{errorMessage || "Failed to load data."}</p>
       </div>
@@ -223,7 +223,7 @@ export function DataTable<T>({
               {/* Row 2 on Mobile: Filters & Desktop Refetch */}
               <div className={cn("flex items-center justify-between sm:justify-start gap-2 sm:w-auto", filters ? "w-full" : "w-auto")}>
                 {filters && <div className="flex-1 sm:flex-initial">{filters}</div>}
-                
+
                 {/* Desktop/Tablet refetch, or if no filters exist (always inline) */}
                 {(onRefetch || headerActions) && (
                   <div className={cn("items-center gap-2 shrink-0", filters ? "hidden sm:flex" : "flex")}>
@@ -266,14 +266,14 @@ export function DataTable<T>({
           </TableHeader>
           <TableBody className="divide-y divide-border/40">
             {finalIsLoading ? (
-               <TableRow className="border-border/60">
-               <TableCell colSpan={expandable ? columns.length + 1 : columns.length} className="text-center py-16 text-muted-foreground">
-                 <div className="flex flex-col items-center gap-3">
-                   <RefreshCw className="w-8 h-8 animate-spin text-muted" />
-                   <span className="text-sm font-medium">Loading data...</span>
-                 </div>
-               </TableCell>
-             </TableRow>
+              <TableRow className="border-border/60">
+                <TableCell colSpan={expandable ? columns.length + 1 : columns.length} className="text-center py-16 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-3">
+                    <RefreshCw className="w-8 h-8 animate-spin text-muted" />
+                    <span className="text-sm font-medium">Loading data...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : data.length === 0 ? (
               <TableRow className="border-border/60">
                 <TableCell colSpan={expandable ? columns.length + 1 : columns.length} className="text-center py-16 text-muted-foreground">
@@ -318,10 +318,10 @@ export function DataTable<T>({
                             {col.render
                               ? col.render(row)
                               : col.accessorKey
-                              ? String((row as Record<string, unknown>)[col.accessorKey as string] ?? "")
-                              : col.key 
-                              ? String((row as Record<string, unknown>)[col.key] ?? "")
-                              : null}
+                                ? String((row as Record<string, unknown>)[col.accessorKey as string] ?? "")
+                                : col.key
+                                  ? String((row as Record<string, unknown>)[col.key] ?? "")
+                                  : null}
                           </TableCell>
                         );
                       })}

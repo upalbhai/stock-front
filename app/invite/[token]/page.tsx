@@ -82,7 +82,7 @@ export default function InviteAcceptPage() {
   if (!invite) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center rounded-3xl border border-border shadow-soft p-6">
+        <Card className="w-full max-w-md text-center rounded-xl border border-border shadow-soft p-6">
           <CardTitle className="text-xl font-bold text-danger">Invalid or Expired Invitation</CardTitle>
           <CardDescription className="mt-2">
             The link you followed is either expired, invalid, or has already been used. Please request a new invite link from your franchise administrator.

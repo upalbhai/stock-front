@@ -306,9 +306,26 @@ export default function LoginPage() {
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-xs font-medium text-muted-foreground">Password *</label>
-                    <button type="button" onClick={() => setMode("forgot")} className="text-xs text-primary font-medium hover:underline">Forgot password?</button>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={async () => {
+                        setLoading(true);
+                        setError(null);
+                        setSuccess(null);
+                        try {
+                          await sendOtp(form.email);
+                          setSuccess("OTP sent to your email!");
+                          setLoginStep("otp");
+                        } catch (e) {
+                          setError(getErrorMessage(e, "Failed to send code"));
+                        } finally {
+                          setLoading(false);
+                        }
+                      }} className="text-xs text-primary font-medium hover:underline">Login with OTP</button>
+                      <span className="text-xs text-muted-foreground">•</span>
+                      <button type="button" onClick={() => setMode("forgot")} className="text-xs text-primary font-medium hover:underline">Forgot password?</button>
+                    </div>
                   </div>
-                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="��������" autoFocus />
+                  <Input required type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" autoFocus />
                 </div>
               </div>
             )}

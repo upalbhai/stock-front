@@ -163,13 +163,27 @@ export default function AdminBusinessesPage() {
         }
         columns={[
           {
-            key: "name", header: "Business & Owner",
+            key: "name", header: "Business",
             render: (b) => (
               <div>
                 <p className="font-semibold text-sm">{b.name}</p>
-                <p className="text-xs text-muted-foreground">Owner: {b.ownerId?.name || "No owner"} ({b.ownerId?.phone || "No phone"})</p>
-                {b.ownerId?.email && <p className="text-[10px] text-muted-foreground font-mono">{b.ownerId.email}</p>}
+                <p className="text-[10px] text-muted-foreground font-mono">ID: {b._id}</p>
               </div>
+            )
+          },
+          {
+            key: "owner", header: "Owner Name",
+            render: (b) => (
+              <div>
+                <p className="font-medium text-sm">{b.ownerId?.name || "No owner"}</p>
+                {b.ownerId?.email && <p className="text-[10px] text-muted-foreground">{b.ownerId.email}</p>}
+              </div>
+            )
+          },
+          {
+            key: "phone", header: "Owner Contact",
+            render: (b) => (
+              <span className="text-xs text-muted-foreground">{b.ownerId?.phone || "No phone"}</span>
             )
           },
           {

@@ -6,12 +6,13 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Modal } from "@/components/ui/modal";
+import { Drawer } from "@/components/ui/drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
+import { cn } from "@/lib/utils";
 import { userService } from "@/services/user.service";
 import { roleService } from "@/services/role.service";
 import { outletService } from "@/services/outlet.service";
@@ -22,21 +23,25 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-const getStaffSchema = (isEdit: boolean) => z.object({
+const ALL_MODULES = ["billing","inventory","products","reports","expenses","users","outlets","roles","dashboard","settings","transactions","analytics","stock_transfers","audit_logs","categories","units","customers","invoices"];
+const ALL_ACTIONS = ["create","read","update","delete","refund","print","export","approve","void","collect"];
+const MODULE_ICONS: Record<string, string> = {
+  billing: "🧾", inventory: "📦", products: "🏷️", reports: "📊", expenses: "💸",
+  users: "👥", outlets: "🏪", roles: "🛡️", dashboard: "🏠", settings: "⚙️",
+  transactions: "💰", analytics: "📈", stock_transfers: "🔄", audit_logs: "📋", categories: "📁"
+};
+
+const staffSchema = z.object({
   name: z.string().min(1, "Full name is required"),
   phone: z.string().min(10, "Phone number must be at least 10 characters"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  password: isEdit
-    ? z.string().optional().refine((val) => !val || val.length >= 6, {
-        message: "Password must be at least 6 characters",
-      })
-    : z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Invalid email address"),
   role: z.string().min(1, "Role is required"),
   roleId: z.string().optional(),
   outletIds: z.array(z.string()),
+  customPermissions: z.record(z.string(), z.array(z.string())).optional()
 });
 
-type StaffFormValues = z.infer<ReturnType<typeof getStaffSchema>>;
+type StaffFormValues = z.infer<typeof staffSchema>;
 
 export default function StaffPage() {
   const { token } = useAuth();
@@ -45,8 +50,6 @@ export default function StaffPage() {
   const [showModal, setShowModal] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
-
-  const staffSchema = getStaffSchema(!!editId);
 
   const {
     register,
@@ -64,14 +67,20 @@ export default function StaffPage() {
       role: "staff",
       roleId: "",
       outletIds: [],
-      password: "",
+      customPermissions: {}
     },
   });
 
-  // Watch values for custom controlled fields/UI updates
   const watchedRole = watch("role");
   const watchedRoleId = watch("roleId");
   const watchedOutletIds = watch("outletIds") || [];
+  const watchedCustomPermissions = watch("customPermissions") || {};
+
+  const toggleAction = (module: string, action: string) => {
+    const cur = watchedCustomPermissions[module] || [];
+    const next = cur.includes(action) ? cur.filter((a) => a !== action) : [...cur, action];
+    setValue("customPermissions", { ...watchedCustomPermissions, [module]: next });
+  };
 
   const { data: staffData, isLoading, refetch } = useQuery({
     queryKey: ["staff", search],
@@ -83,11 +92,14 @@ export default function StaffPage() {
 
   const saveMutation = useMutation({
     mutationFn: (body: StaffFormValues) => {
-      // Clean up body (remove empty strings or empty password on edit)
       const cleanBody: any = { ...body };
-      if (!cleanBody.email) delete cleanBody.email;
       cleanBody.roleId = cleanBody.roleId || null;
-      if (editId && !cleanBody.password) delete cleanBody.password;
+      
+      const permissionsArray = Object.entries(cleanBody.customPermissions || {})
+        .filter(([, actions]: any) => actions.length > 0)
+        .map(([module, actions]) => ({ module, actions }));
+      cleanBody.customPermissions = permissionsArray;
+
       return editId ? userService.updateUser(editId, cleanBody, token) : userService.createUser(cleanBody, token);
     },
     onSuccess: () => {
@@ -102,6 +114,7 @@ export default function StaffPage() {
     mutationFn: (id: string) => userService.deleteUser(id, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff"] });
+      setDeleteId(null);
       toast.success("Staff deleted");
     },
     onError: (err: any) => toast.error(getErrorMessage(err, "Failed to delete staff"))
@@ -113,12 +126,16 @@ export default function StaffPage() {
 
   const openCreate = () => {
     setEditId(null);
-    reset({ name: "", phone: "", email: "", role: "staff", roleId: "", outletIds: [], password: "" });
+    reset({ name: "", phone: "", email: "", role: "staff", roleId: "", outletIds: [], customPermissions: {} });
     setShowModal(true);
   };
 
   const openEdit = (u: StaffUser) => {
     setEditId(u._id);
+    const perms: Record<string, string[]> = {};
+    for (const p of (u.customPermissions || [])) {
+      perms[p.module] = p.actions;
+    }
     reset({
       name: u.name,
       phone: u.phone,
@@ -126,7 +143,7 @@ export default function StaffPage() {
       role: u.role,
       roleId: typeof u.roleId === "object" ? u.roleId?._id ?? "" : u.roleId ?? "",
       outletIds: u.outletIds || [],
-      password: ""
+      customPermissions: perms
     });
     setShowModal(true);
   };
@@ -194,91 +211,124 @@ export default function StaffPage() {
         ]}
       />
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Staff" : "Add Staff"} size="md">
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Full Name *</label>
-              <Input id="staff-name" {...register("name")} />
-              {errors.name && <p className="text-[10px] text-danger mt-1">{errors.name.message}</p>}
+      <Drawer open={showModal} onClose={() => setShowModal(false)} title={editId ? "Edit Staff" : "Add Staff"} size="lg">
+        <form className="flex flex-col h-full overflow-hidden" onSubmit={handleSubmit(onSubmit)}>
+          {/* Scrollable Body */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Full Name *</label>
+                <Input id="staff-name" {...register("name")} />
+                {errors.name && <p className="text-[10px] text-danger mt-1">{errors.name.message}</p>}
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Phone *</label>
+                <Input id="staff-phone" {...register("phone")} />
+                {errors.phone && <p className="text-[10px] text-danger mt-1">{errors.phone.message}</p>}
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Email *</label>
+                <Input id="staff-email" type="email" placeholder="e.g. staff@business.com" {...register("email")} />
+                {errors.email && <p className="text-[10px] text-danger mt-1">{errors.email.message}</p>}
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Role</label>
+                <Select
+                  id="staff-role"
+                  value={watchedRole}
+                  onValueChange={(v) => setValue("role", v, { shouldValidate: true })}
+                  options={[
+                    { value: "manager", label: "Manager" },
+                    { value: "staff", label: "Staff" }
+                  ]}
+                />
+                {errors.role && <p className="text-[10px] text-danger mt-1">{errors.role.message}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Assigned Role</label>
+                <Select
+                  id="staff-role-id"
+                  value={watchedRoleId}
+                  onValueChange={(v) => setValue("roleId", v, { shouldValidate: true })}
+                  options={[
+                    { value: "", label: "Default" },
+                    ...roles.map((r) => ({ value: r._id, label: r.name }))
+                  ]}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Outlets</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {outlets.map((o) => {
+                    const isSelected = watchedOutletIds.includes(o._id);
+                    return (
+                      <button
+                        key={o._id}
+                        type="button"
+                        onClick={() => {
+                          const nextOutlets = isSelected
+                            ? watchedOutletIds.filter((id) => id !== o._id)
+                            : [...watchedOutletIds, o._id];
+                          setValue("outletIds", nextOutlets, { shouldValidate: true });
+                        }}
+                        className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                          isSelected
+                            ? "bg-primary text-white border-primary"
+                            : "border-border text-muted"
+                        }`}
+                      >
+                        {o.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Phone *</label>
-              <Input id="staff-phone" {...register("phone")} />
-              {errors.phone && <p className="text-[10px] text-danger mt-1">{errors.phone.message}</p>}
+              <div className="mb-3 flex justify-between items-center">
+                <p className="text-sm font-semibold">Custom User Permissions</p>
+                <p className="text-xs text-muted">Permissions selected here will be combined with the Assigned Role.</p>
+              </div>
+              <div className="overflow-x-auto rounded-2xl border border-border">
+                <table className="w-full text-xs">
+                  <thead><tr className="border-b border-border bg-surface/60">
+                    <th className="px-3 py-2 text-left font-semibold text-muted">Module</th>
+                    {ALL_ACTIONS.map((a) => <th key={a} className="px-2 py-2 text-center font-semibold text-muted capitalize">{a}</th>)}
+                  </tr></thead>
+                  <tbody className="divide-y divide-border/40">
+                    {ALL_MODULES.map((mod) => (
+                      <tr key={mod} className="hover:bg-surface/60">
+                        <td className="px-3 py-2 font-medium">{MODULE_ICONS[mod]} {mod}</td>
+                        {ALL_ACTIONS.map((action) => {
+                          const checked = (watchedCustomPermissions[mod] ?? []).includes(action);
+                          return (
+                            <td key={action} className="px-2 py-2 text-center">
+                              <button type="button" onClick={() => toggleAction(mod, action)}
+                                className={cn("h-5 w-5 rounded-md border transition mx-auto flex items-center justify-center",
+                                  checked ? "bg-primary border-primary text-white" : "border-border hover:border-primary/50"
+                                )}>
+                                {checked && <span className="text-[10px]">✓</span>}
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Email</label>
-              <Input id="staff-email" type="email" placeholder="e.g. staff@business.com" {...register("email")} />
-              {errors.email && <p className="text-[10px] text-danger mt-1">{errors.email.message}</p>}
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Password {editId ? "(leave blank to keep)" : "*"}</label>
-              <Input id="staff-password" type="password" {...register("password")} placeholder="At least 6 characters" />
-              {errors.password && <p className="text-[10px] text-danger mt-1">{errors.password.message}</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Role</label>
-              <Select
-                id="staff-role"
-                value={watchedRole}
-                onValueChange={(v) => setValue("role", v, { shouldValidate: true })}
-                options={[
-                  { value: "manager", label: "Manager" },
-                  { value: "staff", label: "Staff" }
-                ]}
-              />
-              {errors.role && <p className="text-[10px] text-danger mt-1">{errors.role.message}</p>}
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Permission Set</label>
-              <Select
-                id="staff-role-id"
-                value={watchedRoleId}
-                onValueChange={(v) => setValue("roleId", v, { shouldValidate: true })}
-                options={[
-                  { value: "", label: "Default" },
-                  ...roles.map((r) => ({ value: r._id, label: r.name }))
-                ]}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Outlets</label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {outlets.map((o) => {
-                const isSelected = watchedOutletIds.includes(o._id);
-                return (
-                  <button
-                    key={o._id}
-                    type="button"
-                    onClick={() => {
-                      const nextOutlets = isSelected
-                        ? watchedOutletIds.filter((id) => id !== o._id)
-                        : [...watchedOutletIds, o._id];
-                      setValue("outletIds", nextOutlets, { shouldValidate: true });
-                    }}
-                    className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-                      isSelected
-                        ? "bg-primary text-white border-primary"
-                        : "border-border text-muted"
-                    }`}
-                  >
-                    {o.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
+          {/* Sticky Footer */}
+          <div className="p-6 border-t border-border/60 bg-surface flex gap-3">
             <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
@@ -287,7 +337,7 @@ export default function StaffPage() {
             </Button>
           </div>
         </form>
-      </Modal>
+      </Drawer>
 
       <ConfirmDialog
         open={!!deleteId}

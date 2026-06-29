@@ -13,6 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useAppDispatch } from "@/store/hooks";
+import { updateUser } from "@/store/authSlice";
+import { Select } from "@/components/ui/select";
 import { authService } from "@/services/auth.service";
 import { getJson, apiFetch } from "@/lib/api-client";
 import { toast } from "react-hot-toast";
@@ -49,13 +52,15 @@ function DeviceIcon({ type }: { type: string }) {
 }
 
 export function SecuritySettings() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const dispatch = useAppDispatch();
   const qc = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revokeId, setRevokeId] = useState<string | null>(null);
   const [showRevokeAll, setShowRevokeAll] = useState(false);
+  const [loginMethod, setLoginMethod] = useState(user?.preferredLoginMethod || "password");
   const [form, setForm] = useState({
     oldPassword: "",
     newPassword: "",
@@ -114,12 +119,12 @@ export function SecuritySettings() {
         newPassword: form.newPassword,
         oldPassword: form.oldPassword || undefined,
       });
-      
+
       if ((res as any).success === false) {
         setError((res as any).message || "Failed to update password");
         return;
       }
-      
+
       setSuccess("Password updated successfully.");
       setForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
     } catch (err: any) {
@@ -134,7 +139,7 @@ export function SecuritySettings() {
   return (
     <div className="space-y-6">
       {/* Password Section */}
-      <Card className="rounded-3xl border border-border/70 shadow-soft">
+      <Card className="rounded-xl border border-border/70 shadow-soft">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <KeyRound className="h-5 w-5 text-primary" /> Security & Access
@@ -143,7 +148,7 @@ export function SecuritySettings() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            
+
             {error && (
               <div className="p-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-sm flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -159,36 +164,59 @@ export function SecuritySettings() {
 
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">Current Password</label>
-              <Input 
-                type="password" 
-                placeholder="Leave blank if not set" 
-                value={form.oldPassword} 
-                onChange={e => setForm(f => ({ ...f, oldPassword: e.target.value }))} 
+              <Input
+                type="password"
+                placeholder="Leave blank if not set"
+                value={form.oldPassword}
+                onChange={e => setForm(f => ({ ...f, oldPassword: e.target.value }))}
               />
               <p className="mt-1 text-[10px] text-muted">Only required if you already have a password</p>
             </div>
-            
+
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">New Password *</label>
-              <Input 
+              <Input
                 required
-                type="password" 
-                placeholder="Min 6 characters" 
-                value={form.newPassword} 
-                onChange={e => setForm(f => ({ ...f, newPassword: e.target.value }))} 
+                type="password"
+                placeholder="Min 6 characters"
+                value={form.newPassword}
+                onChange={e => setForm(f => ({ ...f, newPassword: e.target.value }))}
                 minLength={6}
               />
             </div>
 
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">Confirm New Password *</label>
-              <Input 
+              <Input
                 required
-                type="password" 
-                placeholder="Min 6 characters" 
-                value={form.confirmPassword} 
-                onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))} 
+                type="password"
+                placeholder="Min 6 characters"
+                value={form.confirmPassword}
+                onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
                 minLength={6}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Preferred Login Method</label>
+              <Select
+                value={loginMethod}
+                onValueChange={async (val) => {
+                  setLoginMethod(val as "password" | "otp");
+                  try {
+                    await authService.setupPassword({ preferredLoginMethod: val });
+                    if (user) {
+                      dispatch(updateUser({ ...user, preferredLoginMethod: val as "password" | "otp" }));
+                    }
+                    toast.success("Preferred login method updated");
+                  } catch (err: any) {
+                    toast.error(err.message || "Failed to update login method");
+                  }
+                }}
+                options={[
+                  { value: "password", label: "Password" },
+                  { value: "otp", label: "Email OTP" }
+                ]}
               />
             </div>
 
@@ -200,7 +228,7 @@ export function SecuritySettings() {
       </Card>
 
       {/* Active Sessions Section */}
-      <Card className="rounded-3xl border border-border/70 shadow-soft">
+      <Card className="rounded-xl border border-border/70 shadow-soft">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -240,16 +268,14 @@ export function SecuritySettings() {
                 return (
                   <div
                     key={session.id}
-                    className={`flex items-start gap-4 p-4 rounded-2xl border transition-all ${
-                      session.isCurrent
-                        ? "border-primary/30 bg-primary/[0.03]"
-                        : "border-border/50 hover:border-border"
-                    }`}
+                    className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${session.isCurrent
+                      ? "border-primary/30 bg-primary/[0.03]"
+                      : "border-border/50 hover:border-border"
+                      }`}
                   >
                     {/* Device icon */}
-                    <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                      session.isCurrent ? "bg-primary/10 text-primary" : "bg-border/40 text-muted"
-                    }`}>
+                    <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${session.isCurrent ? "bg-primary/10 text-primary" : "bg-border/40 text-muted"
+                      }`}>
                       <DeviceIcon type={session.deviceType} />
                     </div>
 

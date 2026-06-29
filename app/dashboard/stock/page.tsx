@@ -722,7 +722,7 @@ export default function StockPage() {
       {/* TAB CONTENT: Start of Day */}
       {activeTab === "start-of-day" && (
         <div className="space-y-6 animate-rise">
-          <div className="glass-panel rounded-3xl border border-border/70 p-5 shadow-soft space-y-4">
+          <div className="glass-panel rounded-xl border border-border/70 p-5 shadow-soft space-y-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
                 <h3 className="font-semibold text-lg">Start of Day Counting</h3>

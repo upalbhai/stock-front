@@ -98,7 +98,7 @@ export default function SettingsPage() {
         <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
           <div className="space-y-6">
             {/* Business/Brand Profile Settings */}
-            <Card className="rounded-3xl border border-border/70 shadow-soft">
+            <Card className="rounded-xl border border-border/70 shadow-soft">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Building2 className="h-5 w-5 text-primary" /> Franchise Brand settings
@@ -133,7 +133,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* Active Outlet Settings */}
-            <Card className="rounded-3xl border border-border/70 shadow-soft">
+            <Card className="rounded-xl border border-border/70 shadow-soft">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Store className="h-5 w-5 text-primary" /> Active Location (Outlet) Settings
@@ -172,7 +172,7 @@ export default function SettingsPage() {
             <SecuritySettings />
 
             {/* System Preferences & Operational toggles */}
-            <Card className="rounded-3xl border border-border/70 shadow-soft">
+            <Card className="rounded-xl border border-border/70 shadow-soft">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Database className="h-5 w-5 text-primary" /> Preferences
@@ -207,7 +207,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* License Settings */}
-            <Card className="rounded-3xl border border-border/70 shadow-soft bg-primary/[0.02]">
+            <Card className="rounded-xl border border-border/70 shadow-soft bg-primary/[0.02]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                   <ShieldCheck className="h-4 w-4 text-primary" /> Subscription License
