@@ -108,15 +108,13 @@ export function UnitPickerModal({ open, product, onClose, onConfirm }: UnitPicke
               key={opt.key}
               type="button"
               onClick={() => setSelected(opt)}
-              className={`w-full rounded-xl border p-3 text-left transition ${
-                selected?.key === opt.key
-                  ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                  : "border-border hover:border-primary/40"
-              }`}
+              className={`w-full rounded-xl border p-3 text-left transition ${selected?.key === opt.key
+                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                : "border-border hover:border-primary/40"
+                }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold capitalize">{opt.unitDetail}</p>
-
+                <p className="font-semibold capitalize">{opt.unitDetail || opt.label}</p>
               </div>
               <p className="text-xs text-muted mt-0.5">{opt.description}</p>
             </button>

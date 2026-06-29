@@ -260,7 +260,7 @@ export default function StockPage() {
   // Overview Tab State
   const [prodSearch, setProdSearch] = React.useState("");
   const [prodPage, setProdPage] = React.useState(1);
-  const [prodLimit, setProdLimit] = React.useState(50);
+  const [prodLimit, setProdLimit] = React.useState(10);
   // History Tab State
   const [historySearch, setHistorySearch] = React.useState("");
   const [historyDirection, setHistoryDirection] = React.useState<"all" | "in" | "out">("all");
@@ -534,12 +534,12 @@ export default function StockPage() {
     const packagingMeta =
       selectedAdjustUnit && selectedAdjustUnit.key !== "base"
         ? {
-            soldQty: adjustCount,
-            soldUnit: selectedAdjustUnit.soldUnit,
-            packagingUnitId: selectedAdjustUnit.packagingUnitId,
-            conversionFactor: selectedAdjustUnit.conversionFactor,
-            baseUnit
-          }
+          soldQty: adjustCount,
+          soldUnit: selectedAdjustUnit.soldUnit,
+          packagingUnitId: selectedAdjustUnit.packagingUnitId,
+          conversionFactor: selectedAdjustUnit.conversionFactor,
+          baseUnit
+        }
         : { baseUnit };
 
     if (usePackagingEntry) {
@@ -685,13 +685,23 @@ export default function StockPage() {
               {
                 key: "onHandQty", header: "Available Stock",
                 render: (p) => (
-                  <div className="flex items-center gap-2">
-                    <span className={`font-bold ${p.onHandQty <= p.lowStockThreshold ? "text-danger" : ""}`}>
-                      {p.onHandQty}
-                    </span>
-                    {p.onHandQty <= p.lowStockThreshold && (
-                      <Badge variant="warning" className="text-[10px]">Low Stock</Badge>
-                    )}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-bold ${p.onHandQty <= p.lowStockThreshold ? "text-danger" : ""}`}>
+                        {p.onHandQty} {p.unit}
+                      </span>
+                      {p.onHandQty <= p.lowStockThreshold && (
+                        <Badge variant="warning" className="text-[10px]">Low Stock</Badge>
+                      )}
+                    </div>
+                    {p.packagingUnits?.filter((pkg: any) => pkg.isActive !== false).map((pkg: any, idx: number) => {
+                      const label = typeof pkg.unitId === "object" ? pkg.unitId.name || pkg.unitId.abbreviation : "Bulk";
+                      return (
+                        <div key={idx} className="text-xs text-muted font-medium bg-muted/20 px-1.5 py-0.5 rounded-sm inline-block w-fit">
+                          {pkg.onHandBulkQty ?? Math.floor(p.onHandQty / pkg.qtyPerUnit)} {label} left
+                        </div>
+                      );
+                    })}
                   </div>
                 )
               },

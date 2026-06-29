@@ -186,7 +186,7 @@ export function DataTable<T>({
 
           {/* Search & Actions Row (only if search/filters exist) */}
           {(onSearchChange || filters) && (
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center justify-between">
+            <div className={cn("flex gap-2.5 sm:items-center justify-between", filters ? "flex-col sm:flex-row" : "flex-row")}>
               {/* Row 1 on Mobile / Left Group on Desktop: Search & Mobile Refetch */}
               <div className="flex items-center gap-2 flex-grow min-w-0">
                 {onSearchChange && (
@@ -221,7 +221,7 @@ export function DataTable<T>({
               </div>
 
               {/* Row 2 on Mobile: Filters & Desktop Refetch */}
-              <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+              <div className={cn("flex items-center justify-between sm:justify-start gap-2 sm:w-auto", filters ? "w-full" : "w-auto")}>
                 {filters && <div className="flex-1 sm:flex-initial">{filters}</div>}
                 
                 {/* Desktop/Tablet refetch, or if no filters exist (always inline) */}

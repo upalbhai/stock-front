@@ -84,6 +84,9 @@ export default function UnitsPage() {
           <h1 className="text-2xl font-bold">Units</h1>
           <p className="text-sm text-muted">Manage measurement units (kg, liter, pcs, etc.)</p>
         </div>
+        <Button id="create-unit-btn" onClick={openCreate}>
+          <Plus className="h-4 w-4 mr-1.5" /> Add Unit
+        </Button>
       </div>
 
       <DataTable
@@ -101,11 +104,6 @@ export default function UnitsPage() {
         placeholderText="Search units..."
         emptyStateIcon={<Zap className="h-12 w-12 text-muted/30" />}
         emptyStateText='No units yet. Create your first unit like "kg", "liter", "pieces".'
-        filters={
-          <Button id="create-unit-btn" onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1.5" /> Add Unit
-          </Button>
-        }
         columns={[
           { key: "name", header: "Unit Name", render: (u) => <span className="font-medium">{u.name}</span> },
           { key: "key", header: "Key", render: (u) => <code className="text-xs bg-border/40 px-2 py-1 rounded">{u.key}</code> },

@@ -10,12 +10,7 @@ export function getUnitDisplayLabel(
   }
 
   const label = unit.abbreviation || unit.name || unit.key || fallback;
-  const detail =
-    unit.key && unit.key.toLowerCase() !== label.toLowerCase()
-      ? unit.key
-      : unit.name && unit.name.toLowerCase() !== label.toLowerCase()
-        ? unit.name
-        : undefined;
+  const detail = unit.name || unit.key || undefined;
 
   return { label, detail };
 }

@@ -10,8 +10,10 @@ type ModalProps = {
   title?: string;
   description?: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "full";
   className?: string;
+  bodyClassName?: string;
 };
 
 const sizeMap = {
@@ -22,7 +24,7 @@ const sizeMap = {
   full: "max-w-5xl"
 };
 
-export function Modal({ open, onClose, title, description, children, size = "md", className }: ModalProps) {
+export function Modal({ open, onClose, title, description, children, footer, size = "md", className, bodyClassName }: ModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()}>
       <Dialog.Portal>
@@ -47,9 +49,14 @@ export function Modal({ open, onClose, title, description, children, size = "md"
                 )}
               </div>
             )}
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6 sm:py-5">
+            <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6 sm:py-5", bodyClassName)}>
               {children}
             </div>
+            {footer && (
+              <div className="shrink-0 border-t border-border/60 bg-surface px-5 py-4 sm:px-6">
+                {footer}
+              </div>
+            )}
             <Dialog.Close asChild>
               <button
                 onClick={onClose}

@@ -5,6 +5,9 @@ import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tansta
 import { useInView } from "react-intersection-observer";
 import { Plus, Pencil, Trash2, Search, Package, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { z } from "zod";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +27,54 @@ import { unitService } from "@/services/unit.service";
 import { outletService } from "@/services/outlet.service";
 import { categoryService } from "@/services/category.service";
 import Pagination from "@/components/ui/pagination";
+
+const packagingUnitSchema = z.object({
+  unitId: z.string().min(1, "Required"),
+  unitName: z.string(),
+  qtyPerUnit: z.string().min(1, "Required"),
+  price: z.string().optional(),
+  costPrice: z.string().optional()
+});
+
+const productSchema = z.object({
+  name: z.string().min(1, "Product Name is required"),
+  description: z.string().optional(),
+  sku: z.string().optional(),
+  barcode: z.string().optional(),
+  unit: z.string().min(1, "Unit name is required"),
+  unitId: z.string().optional(), // Can be empty if it's a new unit
+  price: z.string().min(1, "Selling Price is required").refine(val => !isNaN(Number(val)) && Number(val) >= 0, "Invalid price"),
+  costPrice: z.string().min(1, "Cost Price is required").refine(val => !isNaN(Number(val)) && Number(val) >= 0, "Invalid cost price"),
+  categoryId: z.string().min(1, "Category is required"),
+  taxRate: z.string().optional(),
+  gstRate: z.string().optional(),
+  hsnCode: z.string().optional(),
+  onHandQty: z.string().optional(),
+  lowStockThreshold: z.string().optional(),
+  sortOrder: z.string().optional(),
+  packagingUnits: z.array(packagingUnitSchema).optional()
+}).superRefine((data, ctx) => {
+  if (data.packagingUnits && data.packagingUnits.length > 0) {
+    const validUnits = data.packagingUnits.filter((p) => p.unitId && p.qtyPerUnit);
+    if (validUnits.some(p => p.unitId === data.unitId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Packaging unit cannot be the same as the base unit.",
+        path: ["packagingUnits"]
+      });
+    }
+    const uniqueUnitIds = new Set(validUnits.map(p => p.unitId));
+    if (uniqueUnitIds.size !== validUnits.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Each packaging unit must have a unique unit name.",
+        path: ["packagingUnits"]
+      });
+    }
+  }
+});
+
+type ProductFormValues = z.infer<typeof productSchema>;
 
 function unitLabel(u: Pick<Unit, "name" | "abbreviation">) {
   return u.abbreviation || u.name;
@@ -86,8 +137,22 @@ export default function ProductsPage() {
   const hasPackaging = useFeature("packaging_units");
   const hasGstInvoices = useFeature("gst_invoices");
   const showHsn = hasPackaging || hasGstInvoices;
-  const [packagingUnits, setPackagingUnits] = React.useState<{ unitId: string; unitName: string; qtyPerUnit: string; price: string; costPrice: string }[]>([]);
-  const [form, setForm] = React.useState({ name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" });
+
+  const { register, control, handleSubmit, reset, setValue, watch, clearErrors, formState: { errors } } = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema),
+    defaultValues: { name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0", packagingUnits: [] }
+  });
+
+  const { fields: pkgFields, append: appendPkg, remove: removePkg } = useFieldArray({
+    control,
+    name: "packagingUnits"
+  });
+
+  const formUnit = watch("unit");
+  const formUnitId = watch("unitId");
+  const formCategoryId = watch("categoryId");
+  const formBarcode = watch("barcode");
+
   const { ref, inView } = useInView();
 
   const [page, setPage] = React.useState(1);
@@ -205,7 +270,12 @@ export default function ProductsPage() {
   );
 
   const handleUnitChange = async (opt: Parameters<NonNullable<React.ComponentProps<typeof AsyncSelect>["onChange"]>>[0]) => {
-    if (!opt) return setForm((f) => ({ ...f, unit: "", unitId: "" }));
+    clearErrors("unit");
+    if (!opt) {
+      setValue("unit", "");
+      setValue("unitId", "");
+      return;
+    }
     const o = Array.isArray(opt) ? opt[0] : opt;
     if (String(o.id).startsWith("new_")) {
       const name = (o.name ?? o.label ?? "").trim();
@@ -213,25 +283,24 @@ export default function ProductsPage() {
       try {
         const resolved = await resolveUnitSelection(o);
         if (resolved) {
-          setForm((f) => ({ ...f, unit: resolved.unitName, unitId: resolved.unitId }));
+          setValue("unit", resolved.unitName);
+          setValue("unitId", resolved.unitId);
           return;
         }
       } catch (err) {
         toast.error(getErrorMessage(err, "Failed to create unit"));
       }
-      setForm((f) => ({ ...f, unit: name, unitId: "" }));
+      setValue("unit", name);
+      setValue("unitId", "");
       return;
     }
-    setForm((f) => ({
-      ...f,
-      unit: o.abbreviation ?? o.name ?? o.label ?? "",
-      unitId: o.id ?? o._id ?? ""
-    }));
+    setValue("unit", o.abbreviation ?? o.name ?? o.label ?? "");
+    setValue("unitId", o.id ?? o._id ?? "");
   };
 
   const selectedFormCategory = React.useMemo(() => {
-    if (!form.categoryId) return null;
-    const cat = categories.find((c) => c._id === form.categoryId);
+    if (!formCategoryId) return null;
+    const cat = categories.find((c) => c._id === formCategoryId);
     if (cat) {
       const label = `${cat.icon ? `${cat.icon} ` : ""}${cat.name}`;
       return { id: cat._id, name: label, label };
@@ -239,32 +308,22 @@ export default function ProductsPage() {
     if (editId) {
       const product = products.find((p) => p._id === editId);
       const pc = product?.categoryId;
-      if (typeof pc === "object" && pc && pc._id === form.categoryId) {
+      if (typeof pc === "object" && pc && pc._id === formCategoryId) {
         const label = `${pc.icon ? `${pc.icon} ` : ""}${pc.name}`;
         return { id: pc._id, name: label, label };
       }
     }
-    return { id: form.categoryId, name: "Category", label: "Category" };
-  }, [form.categoryId, categories, editId, products]);
+    return { id: formCategoryId, name: "Category", label: "Category" };
+  }, [formCategoryId, categories, editId, products]);
 
   const openCreate = () => {
     setEditId(null);
-    setPackagingUnits([]);
-    setForm({ name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0" });
+    reset({ name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0", packagingUnits: [] });
     setShowModal(true);
   };
   const openEdit = (p: Product) => {
     setEditId(p._id);
-    setPackagingUnits(
-      (p.packagingUnits ?? []).map((pkg) => ({
-        unitId: typeof pkg.unitId === "object" ? pkg.unitId._id : pkg.unitId,
-        unitName: typeof pkg.unitId === "object" ? (pkg.unitId.abbreviation || pkg.unitId.name) : "",
-        qtyPerUnit: String(pkg.qtyPerUnit),
-        price: pkg.price != null ? String(pkg.price) : "",
-        costPrice: pkg.costPrice != null ? String(pkg.costPrice) : ""
-      }))
-    );
-    setForm({
+    reset({
       name: p.name,
       description: p.description ?? "",
       sku: p.sku ?? "",
@@ -274,47 +333,39 @@ export default function ProductsPage() {
       price: String(p.price),
       costPrice: String(p.costPrice ?? 0),
       categoryId: typeof p.categoryId === "object" ? p.categoryId?._id ?? "" : p.categoryId ?? "",
-      taxRate: String(p.taxRate),
-      gstRate: String(p.gstRate),
+      taxRate: String(p.taxRate ?? 0),
+      gstRate: String(p.gstRate ?? 0),
       hsnCode: p.hsnCode ?? "",
-      onHandQty: String(p.onHandQty),
-      lowStockThreshold: String(p.lowStockThreshold),
-      sortOrder: String(p.sortOrder)
+      onHandQty: String(p.onHandQty ?? 0),
+      lowStockThreshold: String(p.lowStockThreshold ?? 10),
+      sortOrder: String(p.sortOrder ?? 0),
+      packagingUnits: (p.packagingUnits ?? []).map((pkg) => ({
+        unitId: typeof pkg.unitId === "object" ? pkg.unitId._id : pkg.unitId,
+        unitName: typeof pkg.unitId === "object" ? (pkg.unitId.abbreviation || pkg.unitId.name) : "",
+        qtyPerUnit: String(pkg.qtyPerUnit),
+        price: pkg.price != null ? String(pkg.price) : "",
+        costPrice: pkg.costPrice != null ? String(pkg.costPrice) : ""
+      }))
     });
     setShowModal(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (data: ProductFormValues) => {
     const body: Record<string, unknown> = {
-      ...form,
+      ...data,
       outletId,
-      price: Number(form.price),
-      costPrice: Number(form.costPrice),
-      taxRate: Number(form.taxRate),
-      gstRate: Number(form.gstRate),
-      onHandQty: Number(form.onHandQty),
-      lowStockThreshold: Number(form.lowStockThreshold),
-      sortOrder: Number(form.sortOrder),
-      categoryId: form.categoryId || undefined,
-      hsnCode: form.hsnCode || undefined
+      price: Number(data.price),
+      costPrice: Number(data.costPrice || 0),
+      taxRate: Number(data.taxRate || 0),
+      gstRate: Number(data.gstRate || 0),
+      onHandQty: Number(data.onHandQty || 0),
+      lowStockThreshold: Number(data.lowStockThreshold || 0),
+      sortOrder: Number(data.sortOrder || 0),
+      categoryId: data.categoryId || undefined,
+      hsnCode: data.hsnCode || undefined
     };
-    if (hasPackaging && packagingUnits.length) {
-      const validUnits = packagingUnits.filter((p) => p.unitId && p.qtyPerUnit);
-      
-      // Validation: Packaging unit cannot be the same as the base product unit
-      if (validUnits.some(p => p.unitId === form.unitId)) {
-        toast.error("Packaging unit cannot be the same as the base unit. Please type a new unit name like 'Crate' or 'Box'.");
-        return;
-      }
-      
-      // Validation: Packaging units must be unique
-      const uniqueUnitIds = new Set(validUnits.map(p => p.unitId));
-      if (uniqueUnitIds.size !== validUnits.length) {
-        toast.error("Each packaging unit must have a unique unit name.");
-        return;
-      }
-
+    if (hasPackaging && data.packagingUnits && data.packagingUnits.length) {
+      const validUnits = data.packagingUnits.filter((p) => p.unitId && p.qtyPerUnit);
       body.packagingUnits = validUnits.map((p) => ({
         unitId: p.unitId,
         qtyPerUnit: Number(p.qtyPerUnit),
@@ -380,28 +431,42 @@ export default function ProductsPage() {
         title={editId ? "Edit Product" : "Add Product"}
         size="full"
         className="max-w-3xl md:max-w-4xl lg:max-w-5xl"
+        bodyClassName="pb-0 sm:pb-0"
+        footer={
+          <div className="flex justify-end gap-3 w-full">
+            <Button variant="outline" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button type="submit" form="product-form" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Product")}</Button>
+          </div>
+        }
       >
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form id="product-form" className="space-y-4 pb-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="md:col-span-3"><label className="mb-1 block text-xs font-medium text-muted">Product Name *</label><Input id="product-name" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Mango Lassi" /></div>
+            <div className="md:col-span-3">
+              <label className="mb-1 block text-xs font-medium text-muted">Product Name *</label>
+              <Input id="product-name" {...register("name", { onChange: () => clearErrors("name") })} placeholder="e.g. Mango Lassi" className={errors.name ? "border-danger" : ""} />
+              {errors.name && <p className="text-danger text-[10px] mt-1">{errors.name.message}</p>}
+            </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Category</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Category *</label>
               <AsyncSelect
                 value={selectedFormCategory}
                 onChange={(opt) => {
-                  if (!opt) return setForm((f) => ({ ...f, categoryId: "" }));
+                  clearErrors("categoryId");
+                  if (!opt) return setValue("categoryId", "");
                   const o = Array.isArray(opt) ? opt[0] : opt;
-                  setForm((f) => ({ ...f, categoryId: o.id ?? o._id ?? "" }));
+                  setValue("categoryId", o.id ?? o._id ?? "");
                 }}
                 loadOptions={loadCategoryFormOptions}
                 placeholder="Select category"
                 searchable
                 pageSize={25}
               />
+              {errors.categoryId && <p className="text-danger text-[10px] mt-1">{errors.categoryId.message}</p>}
             </div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Unit</label>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Unit *</label>
               <AsyncSelect
-                value={form.unitId ? { id: form.unitId, name: form.unit, label: form.unit } : null}
+                value={formUnitId ? { id: formUnitId, name: formUnit, label: formUnit } : null}
                 onChange={handleUnitChange}
                 loadOptions={loadUnitOptions}
                 placeholder="Select unit"
@@ -409,35 +474,55 @@ export default function ProductsPage() {
                 pageSize={25}
                 creatable
               />
+              {errors.unit && <p className="text-danger text-[10px] mt-1">{errors.unit.message}</p>}
+              {formUnit && ["crate", "peti", "box", "case", "carton", "pack", "bundle"].some(w => formUnit.toLowerCase().includes(w)) && (
+                <p className="mt-1 text-[10px] text-amber-500 dark:text-amber-400 font-semibold flex items-start gap-1 leading-tight animate-in fade-in duration-300">
+                  <span>⚠️ Base units should be individual items (e.g. piece, bottle, kg). Add bulk units (Crate/Peti) under "Packaging Units" below.</span>
+                </p>
+              )}
             </div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Selling Price (₹) *</label><Input id="product-price" required type="number" min={0} value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0.00" /></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Cost Price (₹)</label><Input id="product-cost" type="number" min={0} value={form.costPrice} onChange={(e) => setForm((f) => ({ ...f, costPrice: e.target.value }))} placeholder="0.00" /></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} value={form.onHandQty} onChange={(e) => setForm((f) => ({ ...f, onHandQty: e.target.value }))} /></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Low Stock Alert</label><Input id="product-threshold" type="number" min={0} value={form.lowStockThreshold} onChange={(e) => setForm((f) => ({ ...f, lowStockThreshold: e.target.value }))} /></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">SKU</label><Input id="product-sku" value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} placeholder="Optional" /></div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Selling Price (₹) *</label>
+              <Input id="product-price" type="number" min={0} step="0.01" {...register("price", { onChange: () => clearErrors("price") })} placeholder="0.00" className={errors.price ? "border-danger" : ""} />
+              {errors.price && <p className="text-danger text-[10px] mt-1">{errors.price.message}</p>}
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Cost Price (₹) *</label>
+              <Input id="product-cost" type="number" min={0} step="0.01" {...register("costPrice", { onChange: () => clearErrors("costPrice") })} placeholder="0.00" className={errors.costPrice ? "border-danger" : ""} />
+              {errors.costPrice && <p className="text-danger text-[10px] mt-1">{errors.costPrice.message}</p>}
+            </div>
+            <div><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} {...register("onHandQty")} /></div>
+            <div><label className="mb-1 block text-xs font-medium text-muted">Low Stock Alert</label><Input id="product-threshold" type="number" min={0} {...register("lowStockThreshold")} /></div>
+            <div><label className="mb-1 block text-xs font-medium text-muted">SKU</label><Input id="product-sku" {...register("sku")} placeholder="Optional" /></div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">Barcode</label>
               <div className="relative">
-                <Input id="product-barcode" value={form.barcode} onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))} placeholder="Scan or type" className="pr-10" />
+                <Input id="product-barcode" {...register("barcode")} placeholder="Scan or type" className="pr-10" />
                 <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted z-10" onPointerDown={(e) => { e.preventDefault(); setShowScanner(true); }} onClick={(e) => { e.preventDefault(); setShowScanner(true); }}>
                   <span className="text-lg">📷</span>
                 </Button>
               </div>
             </div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} value={form.gstRate} onChange={(e) => setForm((f) => ({ ...f, gstRate: e.target.value }))} /></div>
+            <div><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} {...register("gstRate")} /></div>
+
             {hasPackaging && (
-              <div className="md:col-span-3 space-y-2 rounded-xl border border-border/60 p-3">
+              <div className="md:col-span-3 space-y-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-muted uppercase tracking-wide">Packaging Units (Peti/Crate)</label>
-                  <Button type="button" variant="soft" size="sm" onClick={() => setPackagingUnits((rows) => [...rows, { unitId: "", unitName: "", qtyPerUnit: "", price: "", costPrice: "" }])}>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Packaging Units (Peti/Crate)</label>
+                  <Button type="button" variant="soft" size="sm" onClick={() => appendPkg({ unitId: "", unitName: "", qtyPerUnit: "", price: "", costPrice: "" })}>
                     + Add
                   </Button>
                 </div>
-                {packagingUnits.length === 0 && (
-                  <p className="text-xs text-muted">Optional — bulk units with qty per peti/crate, selling price, and cost price for margin tracking.</p>
+                {errors.packagingUnits?.root && (
+                  <p className="text-danger font-medium text-xs mt-1 animate-pulse bg-danger/10 px-2 py-1 rounded">
+                    {errors.packagingUnits.root.message}
+                  </p>
                 )}
-                {packagingUnits.length > 0 && (
-                  <div className="hidden sm:grid sm:grid-cols-[1.4fr_0.8fr_1fr_1fr_2.5rem] gap-2 px-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
+                {pkgFields.length === 0 && (
+                  <p className="text-xs text-muted leading-relaxed">Optional — bulk units with qty per peti/crate, selling price, and cost price for margin tracking.</p>
+                )}
+                {pkgFields.length > 0 && (
+                  <div className="hidden sm:grid sm:grid-cols-[1.4fr_0.8fr_1fr_1fr_2.5rem] gap-2 px-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">
                     <span>Unit</span>
                     <span>Qty / unit</span>
                     <span>Sell price (₹)</span>
@@ -445,63 +530,72 @@ export default function ProductsPage() {
                     <span />
                   </div>
                 )}
-                {packagingUnits.map((row, idx) => (
-                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-[1.4fr_0.8fr_1fr_1fr_2.5rem] gap-2 items-end">
-                    <div>
-                      {packagingUnits.length > 0 && (
-                        <label className="mb-1 block text-[10px] font-medium text-muted sm:hidden">Unit</label>
-                      )}
-                      <AsyncSelect
-                        value={row.unitId ? { id: row.unitId, name: row.unitName } : null}
-                        onChange={async (opt) => {
-                          const o = Array.isArray(opt) ? opt[0] : opt as any;
-                          if (!o) return;
-                          try {
-                            const resolved = String(o.id).startsWith("new_")
-                              ? await resolveUnitSelection(o)
-                              : { unitId: o.id ?? o._id, unitName: o.name ?? o.label };
-                            if (!resolved?.unitId) return;
-                            setPackagingUnits((rows) =>
-                              rows.map((r, i) => (i === idx ? { ...r, unitId: resolved.unitId, unitName: resolved.unitName } : r))
-                            );
-                          } catch (err) {
-                            toast.error(getErrorMessage(err, "Failed to create unit"));
-                          }
-                        }}
-                        loadOptions={loadUnitOptions}
-                        placeholder="Package name (e.g. Crate)"
-                        searchable
-                        pageSize={25}
-                        creatable
+                {pkgFields.map((row, idx) => (
+                  <div key={row.id} className="grid grid-cols-1 sm:grid-cols-[1.4fr_0.8fr_1fr_1fr_2.5rem] gap-3 sm:gap-2 items-end border-b border-border/40 pb-3 sm:border-0 sm:pb-0">
+                    <div className="min-w-0">
+                      <label className="mb-1 block text-[10px] font-bold text-muted uppercase tracking-wider sm:hidden">Unit</label>
+                      <Controller
+                        control={control}
+                        name={`packagingUnits.${idx}.unitId`}
+                        render={({ field }) => (
+                          <AsyncSelect
+                            value={field.value ? { id: field.value, name: watch(`packagingUnits.${idx}.unitName`) } : null}
+                            onChange={async (opt) => {
+                              const o = Array.isArray(opt) ? opt[0] : opt as any;
+                              if (!o) {
+                                field.onChange("");
+                                setValue(`packagingUnits.${idx}.unitName`, "");
+                                return;
+                              }
+                              try {
+                                const resolved = String(o.id).startsWith("new_")
+                                  ? await resolveUnitSelection(o)
+                                  : { unitId: o.id ?? o._id, unitName: o.name ?? o.label };
+                                if (!resolved?.unitId) return;
+                                field.onChange(resolved.unitId);
+                                setValue(`packagingUnits.${idx}.unitName`, resolved.unitName);
+                                clearErrors(`packagingUnits.${idx}.unitId`);
+                                clearErrors("packagingUnits.root" as any);
+                              } catch (err) {
+                                toast.error(getErrorMessage(err, "Failed to create unit"));
+                              }
+                            }}
+                            loadOptions={loadUnitOptions}
+                            placeholder="e.g. Crate"
+                            searchable
+                            pageSize={25}
+                            creatable
+                          />
+                        )}
                       />
+                      {errors.packagingUnits?.[idx]?.unitId && <p className="text-danger text-[10px] mt-1">{errors.packagingUnits[idx]?.unitId?.message}</p>}
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-medium text-muted sm:hidden">Qty / unit</label>
-                      <Input type="number" min={1} placeholder="Qty/unit" value={row.qtyPerUnit} onChange={(e) => setPackagingUnits((rows) => rows.map((r, i) => i === idx ? { ...r, qtyPerUnit: e.target.value } : r))} />
+                      <label className="mb-1 block text-[10px] font-bold text-muted uppercase tracking-wider sm:hidden">Qty / unit</label>
+                      <Input type="number" min={1} placeholder="Qty" {...register(`packagingUnits.${idx}.qtyPerUnit`, { onChange: () => { clearErrors(`packagingUnits.${idx}.qtyPerUnit`); clearErrors("packagingUnits.root" as any); } })} className={errors.packagingUnits?.[idx]?.qtyPerUnit ? "border-danger" : ""} />
+                      {errors.packagingUnits?.[idx]?.qtyPerUnit && <p className="text-danger text-[10px] mt-1">{errors.packagingUnits[idx]?.qtyPerUnit?.message}</p>}
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-medium text-muted sm:hidden">Sell price (₹)</label>
-                      <Input type="number" min={0} step="0.01" placeholder="Sell ₹" value={row.price} onChange={(e) => setPackagingUnits((rows) => rows.map((r, i) => i === idx ? { ...r, price: e.target.value } : r))} />
+                      <label className="mb-1 block text-[10px] font-bold text-muted uppercase tracking-wider sm:hidden">Sell price (₹)</label>
+                      <Input type="number" min={0} step="0.01" placeholder="Sell ₹" {...register(`packagingUnits.${idx}.price`)} />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-medium text-muted sm:hidden">Cost price (₹)</label>
-                      <Input type="number" min={0} step="0.01" placeholder="Cost ₹" value={row.costPrice} onChange={(e) => setPackagingUnits((rows) => rows.map((r, i) => i === idx ? { ...r, costPrice: e.target.value } : r))} />
+                      <label className="mb-1 block text-[10px] font-bold text-muted uppercase tracking-wider sm:hidden">Cost price (₹)</label>
+                      <Input type="number" min={0} step="0.01" placeholder="Cost ₹" {...register(`packagingUnits.${idx}.costPrice`)} />
                     </div>
-                    <Button type="button" variant="ghost" size="icon" className="text-danger shrink-0" onClick={() => setPackagingUnits((rows) => rows.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button>
+                    <div className="flex justify-end">
+                      <Button type="button" variant="ghost" size="icon" className="text-danger shrink-0 h-9 w-9 sm:h-8 sm:w-8" onClick={() => removePkg(idx)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
             {showHsn && (
-              <div><label className="mb-1 block text-xs font-medium text-muted">HSN Code</label><Input value={form.hsnCode} onChange={(e) => setForm((f) => ({ ...f, hsnCode: e.target.value }))} placeholder="e.g. 2202" /></div>
+              <div><label className="mb-1 block text-xs font-medium text-muted">HSN Code</label><Input {...register("hsnCode")} placeholder="e.g. 2202" /></div>
             )}
           </div>
-          <div className="sticky bottom-0 -mx-5 flex justify-end gap-3 border-t border-border/60 bg-surface px-5 py-4 sm:-mx-6 sm:px-6">
-            <Button variant="outline" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Product")}</Button>
-          </div>
         </form>
-        <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={(text) => setForm((f) => ({ ...f, barcode: text }))} continuous={true} />
+        <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={(text) => setValue("barcode", text)} continuous={true} />
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && remove.mutate(deleteId)} title="Delete Product?" message="This product will be hidden from billing." confirmLabel="Delete" loading={remove.isPending} />

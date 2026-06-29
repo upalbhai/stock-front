@@ -28,36 +28,51 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState("");
   const listEndRef = useRef<HTMLDivElement | null>(null);
+  const cacheRef = useRef<Record<string, { items: Option[], hasMore: boolean, page: number }>>({});
 
   useEffect(() => {
-    if (!open) {
-      setItems([]);
-      setPage(1);
-      setHasMore(true);
+    if (!open && q !== "") {
       setQ("");
     }
-  }, [open]);
+  }, [open, q]);
 
   useEffect(() => {
     if (!open) return;
-    setItems([]);
-    setPage(1);
-    setHasMore(true);
-  }, [q]);
+    const cached = cacheRef.current[q];
+    if (cached) {
+      setItems(cached.items);
+      setPage(cached.page);
+      setHasMore(cached.hasMore);
+    } else {
+      setItems([]);
+      setPage(1);
+      setHasMore(true);
+    }
+  }, [q, open]);
 
   useEffect(() => {
     let mounted = true;
     async function fetchPage() {
+      const cached = cacheRef.current[q];
+      if (cached && cached.page >= page && cached.items.length > 0) return;
       if (!hasMore || loading) return;
+      
       setLoading(true);
       try {
         const res = await loadOptions({ page, limit: pageSize, q });
         if (!mounted) return;
         const newItems = res.data.map((d: any) => ({ ...d, id: d[idKey] ?? d.id, label: d[labelKey] ?? d.name ?? d.label }));
-        setItems((s) => (page === 1 ? newItems : [...s, ...newItems]));
-        const total = res.meta?.pagination?.total ?? newItems.length;
+        
         const totalPages = res.meta?.pagination?.totalPages ?? (res.data.length < pageSize ? page : page + 1);
-        setHasMore(page < totalPages);
+        const more = page < totalPages;
+        
+        setItems((s) => {
+          const finalItems = page === 1 ? newItems : [...s, ...newItems];
+          cacheRef.current[q] = { items: finalItems, page, hasMore: more };
+          return finalItems;
+        });
+        
+        setHasMore(more);
       } catch (e) {
         // ignore
       } finally {
@@ -119,47 +134,68 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
 
   return (
     <div className={`relative ${className}`}>
-      <button type="button" onClick={toggle} className="w-full rounded-2xl border px-3 py-2 text-left flex items-center justify-between">
-        <div className="flex-1">
+      <button 
+        type="button" 
+        onClick={toggle} 
+        className="w-full rounded-2xl border border-border bg-surface px-3.5 py-2 text-left flex items-center justify-between focus:border-primary focus:outline-none transition text-foreground"
+      >
+        <div className="flex-1 min-w-0">
           {multi ? (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {Array.isArray(value) && (value as Option[]).length ? (value as Option[]).map((v) => (
-                <span key={v.id ?? v._id} className="text-sm bg-gray-100 px-2 py-1 rounded">{v[labelKey] ?? v.label}</span>
-              )) : <span className="text-gray-500">{placeholder}</span>}
+                <span key={v.id ?? v._id} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-lg font-medium">{v[labelKey] ?? v.label}</span>
+              )) : <span className="text-muted-foreground text-sm">{placeholder}</span>}
             </div>
           ) : (
-            <span className="text-gray-700">{(value && ((value as any)[labelKey] ?? (value as any).label)) ?? <span className="text-gray-500">{placeholder}</span>}</span>
+            <span className="text-sm font-medium">
+              {(value && ((value as any)[labelKey] ?? (value as any).label)) ?? <span className="text-muted-foreground">{placeholder}</span>}
+            </span>
           )}
         </div>
-        <svg className="h-4 w-4 text-gray-600" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <svg className="h-4 w-4 text-muted-foreground ml-2 shrink-0 transition" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border rounded shadow max-h-72 overflow-auto">
+        <div className="absolute z-50 mt-1.5 w-full bg-popover border border-border text-popover-foreground rounded-2xl shadow-soft max-h-72 overflow-auto p-1.5">
           {searchable && (
-            <div className="p-2">
-              <input autoFocus value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search..." className="w-full border rounded px-2 py-1" />
+            <div className="p-1">
+              <input 
+                autoFocus 
+                value={q} 
+                onChange={(e) => { setQ(e.target.value); setPage(1); }} 
+                placeholder="Search..." 
+                className="w-full bg-surface border border-border rounded-xl px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary outline-none transition" 
+              />
             </div>
           )}
 
-          <ul>
+          <ul className="space-y-0.5 mt-1">
             {items.map((opt) => (
-              <li key={opt.id ?? opt._id} onClick={() => handleSelect(opt)} className={`px-3 py-2 cursor-pointer hover:bg-gray-50 flex justify-between ${isSelected(opt) ? "bg-gray-100" : ""}`}>
-                <span>{opt[labelKey] ?? opt.label}</span>
-                {isSelected(opt) && <span className="text-sm text-gray-500">✓</span>}
+              <li 
+                key={opt.id ?? opt._id} 
+                onClick={() => handleSelect(opt)} 
+                className={`px-3 py-2 text-sm rounded-xl cursor-pointer hover:bg-muted/50 flex justify-between items-center transition ${isSelected(opt) ? "bg-muted/80 font-semibold text-primary" : "text-foreground"}`}
+              >
+                <span className="truncate">{opt[labelKey] ?? opt.label}</span>
+                {isSelected(opt) && <span className="text-xs text-primary font-bold">✓</span>}
               </li>
             ))}
           </ul>
 
           {creatable && q && !items.some(i => (i[labelKey] ?? i.label).toLowerCase() === q.toLowerCase()) && (
-            <div className="border-t p-2">
-              <button onClick={() => handleCreateLabel(q)} className="w-full rounded bg-indigo-600 text-white px-2 py-1">Create "{q}"</button>
+            <div className="border-t border-border mt-1.5 p-1">
+              <button 
+                onClick={() => handleCreateLabel(q)} 
+                className="w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 text-sm font-semibold transition"
+              >
+                Create "{q}"
+              </button>
             </div>
           )}
 
           <div ref={listEndRef} className="h-2" />
-          {loading && <div className="p-2 text-center text-sm text-gray-500">Loading...</div>}
-          {!loading && items.length === 0 && <div className="p-2 text-center text-sm text-gray-500">No results</div>}
+          {loading && <div className="p-2 text-center text-xs text-muted-foreground animate-pulse">Loading...</div>}
+          {!loading && items.length === 0 && <div className="p-2 text-center text-xs text-muted-foreground">No results</div>}
         </div>
       )}
     </div>
