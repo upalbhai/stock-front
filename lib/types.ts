@@ -102,6 +102,7 @@ export type Outlet = {
     printReceiptDefault?: boolean;
   };
   managerId?: { _id: string; name: string; phone: string } | null;
+  status?: "pending" | "active" | "suspended" | "banned";
 };
 
 export type Category = {

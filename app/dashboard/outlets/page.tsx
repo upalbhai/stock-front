@@ -76,6 +76,9 @@ export default function OutletsPage() {
           <h1 className="text-2xl font-bold">Outlets</h1>
           <p className="text-sm text-muted">Manage all your business locations</p>
         </div>
+        <Button id="create-outlet-btn" onClick={() => { setEditId(null); setForm({ ...emptyForm }); setShowModal(true); }}>
+          <Plus className="h-4 w-4 mr-1.5" /> Add Outlet
+        </Button>
       </div>
 
       <DataTable
@@ -85,11 +88,6 @@ export default function OutletsPage() {
         onRefetch={() => refetch()}
         emptyStateIcon={<Store className="h-12 w-12 text-muted/30" />}
         emptyStateText="No outlets yet. Add your first business location."
-        filters={
-          <Button id="create-outlet-btn" onClick={() => { setEditId(null); setForm({ ...emptyForm }); setShowModal(true); }}>
-            <Plus className="h-4 w-4 mr-1.5" /> Add Outlet
-          </Button>
-        }
         columns={[
           {
             key: "name",
@@ -141,11 +139,16 @@ export default function OutletsPage() {
           {
             key: "status",
             header: "Status",
-            render: (outlet) => (
-              <Badge variant={outlet.isActive ? "soft" : "danger"}>
-                {outlet.isActive ? "Active" : "Inactive"}
-              </Badge>
-            )
+            render: (outlet) => {
+              if (outlet.status === "pending") {
+                return <Badge variant="warning">Pending Approval</Badge>;
+              }
+              return (
+                <Badge variant={outlet.isActive ? "soft" : "danger"}>
+                  {outlet.isActive ? "Active" : "Inactive"}
+                </Badge>
+              );
+            }
           },
           {
             key: "actions",
