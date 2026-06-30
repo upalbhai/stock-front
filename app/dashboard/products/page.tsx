@@ -440,13 +440,17 @@ export default function ProductsPage() {
         }
       >
         <form id="product-form" className="space-y-4 pb-4" onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="md:col-span-3">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <div className="col-span-2 md:col-span-3">
               <label className="mb-1 block text-xs font-medium text-muted">Product Name *</label>
               <Input id="product-name" {...register("name", { onChange: () => clearErrors("name") })} placeholder="e.g. Mango Lassi" className={errors.name ? "border-danger" : ""} />
               {errors.name && <p className="text-danger text-[10px] mt-1">{errors.name.message}</p>}
             </div>
-            <div>
+            <div className="col-span-2 md:col-span-3">
+              <label className="mb-1 block text-xs font-medium text-muted">Description</label>
+              <Input id="product-description" {...register("description")} placeholder="Optional description" />
+            </div>
+            <div className="col-span-2 md:col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Category *</label>
               <AsyncSelect
                 value={selectedFormCategory}
@@ -463,7 +467,7 @@ export default function ProductsPage() {
               />
               {errors.categoryId && <p className="text-danger text-[10px] mt-1">{errors.categoryId.message}</p>}
             </div>
-            <div>
+            <div className="col-span-2 md:col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Unit *</label>
               <AsyncSelect
                 value={formUnitId ? { id: formUnitId, name: formUnit, label: formUnit } : null}
@@ -481,20 +485,20 @@ export default function ProductsPage() {
                 </p>
               )}
             </div>
-            <div>
+            <div className="col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Selling Price (₹) *</label>
               <Input id="product-price" type="number" min={0} step="0.01" {...register("price", { onChange: () => clearErrors("price") })} placeholder="0.00" className={errors.price ? "border-danger" : ""} />
               {errors.price && <p className="text-danger text-[10px] mt-1">{errors.price.message}</p>}
             </div>
-            <div>
+            <div className="col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Cost Price (₹) *</label>
               <Input id="product-cost" type="number" min={0} step="0.01" {...register("costPrice", { onChange: () => clearErrors("costPrice") })} placeholder="0.00" className={errors.costPrice ? "border-danger" : ""} />
               {errors.costPrice && <p className="text-danger text-[10px] mt-1">{errors.costPrice.message}</p>}
             </div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} {...register("onHandQty")} /></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">Low Stock Alert</label><Input id="product-threshold" type="number" min={0} {...register("lowStockThreshold")} /></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">SKU</label><Input id="product-sku" {...register("sku")} placeholder="Optional" /></div>
-            <div>
+            <div className="col-span-1"><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} {...register("onHandQty")} /></div>
+            <div className="col-span-1"><label className="mb-1 block text-xs font-medium text-muted">Low Stock Alert</label><Input id="product-threshold" type="number" min={0} {...register("lowStockThreshold")} /></div>
+            <div className="col-span-2 md:col-span-1"><label className="mb-1 block text-xs font-medium text-muted">SKU</label><Input id="product-sku" {...register("sku")} placeholder="Optional" /></div>
+            <div className="col-span-2 md:col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Barcode</label>
               <div className="relative">
                 <Input id="product-barcode" {...register("barcode")} placeholder="Scan or type" className="pr-10" />
@@ -503,10 +507,10 @@ export default function ProductsPage() {
                 </Button>
               </div>
             </div>
-            <div><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} {...register("gstRate")} /></div>
+            <div className="col-span-2 md:col-span-1"><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} {...register("gstRate")} /></div>
 
             {hasPackaging && (
-              <div className="md:col-span-3 space-y-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:p-4">
+              <div className="col-span-2 md:col-span-3 space-y-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:p-4">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-muted uppercase tracking-wider">Packaging Units (Peti/Crate)</label>
                   <Button type="button" variant="soft" size="sm" onClick={() => appendPkg({ unitId: "", unitName: "", qtyPerUnit: "", price: "", costPrice: "" })}>
@@ -591,7 +595,7 @@ export default function ProductsPage() {
               </div>
             )}
             {showHsn && (
-              <div><label className="mb-1 block text-xs font-medium text-muted">HSN Code</label><Input {...register("hsnCode")} placeholder="e.g. 2202" /></div>
+              <div className="col-span-2 md:col-span-1"><label className="mb-1 block text-xs font-medium text-muted">HSN Code</label><Input {...register("hsnCode")} placeholder="e.g. 2202" /></div>
             )}
           </div>
         </form>
