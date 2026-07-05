@@ -17,7 +17,7 @@ import AsyncSelect from "@/components/ui/async-select";
 import { DataTable } from "@/components/ui/data-table";
 import { BarcodeScanner } from "@/components/ui/barcode-scanner";
 import { useAuth } from "@/components/auth/auth-provider";
-import { useFeature } from "@/hooks/useFeature";
+import { useFeature, useBusinessProfile } from "@/hooks/useFeature";
 import { getJson, getJsonWithMeta, apiFetch, apiFetchData } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
 import type { Product, Category, Unit } from "@/lib/types";
@@ -134,7 +134,8 @@ export default function ProductsPage() {
   const [showScanner, setShowScanner] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const hasPackaging = useFeature("packaging_units");
+  const businessProfile = useBusinessProfile();
+  const hasPackaging = useFeature("packaging_units") || businessProfile === "retail";
   const hasGstInvoices = useFeature("gst_invoices");
   const showHsn = hasPackaging || hasGstInvoices;
 
@@ -419,7 +420,7 @@ export default function ProductsPage() {
           { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image && <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />}{/* No placeholder icon */}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
           { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm font-medium">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },
           { key: "price", header: "Price", render: (p) => <span className="font-bold text-lg">{formatCurrency(p.price)}</span> },
-          { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {(p as any).unitId?.abbreviation ?? p.unit}</p>{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
+          { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {(p as any).unitId?.abbreviation ?? p.unit}</p>{p.packagingUnits && p.packagingUnits.length > 0 && <div className="mt-0.5">{p.packagingUnits.map((pkg: any, idx: number) => <p key={idx} className="text-[11px] text-muted-foreground font-semibold">{pkg.onHandBulkQty ?? Math.floor(p.onHandQty / (pkg.qtyPerUnit || 1))} {typeof pkg.unitId === 'object' ? (pkg.unitId?.abbreviation || pkg.unitId?.name) : ''}</p>)}</div>}{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
           { key: "isActive", header: "Status", render: (p) => <Badge variant={p.isActive ? "soft" : "danger"}>{p.isActive ? "Active" : "Inactive"}</Badge> },
           { key: "actions", header: "", render: (p) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(p._id)}><Trash2 className="h-4 w-4" /></Button></div>) }
         ]}
@@ -487,12 +488,12 @@ export default function ProductsPage() {
             </div>
             <div className="col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Selling Price (₹) *</label>
-              <Input id="product-price" type="number" min={0} step="0.01" {...register("price", { onChange: () => clearErrors("price") })} placeholder="0.00" className={errors.price ? "border-danger" : ""} />
+              <Input id="product-price" type="number" min={0} step="0.001" {...register("price", { onChange: () => clearErrors("price") })} placeholder="0.00" className={errors.price ? "border-danger" : ""} />
               {errors.price && <p className="text-danger text-[10px] mt-1">{errors.price.message}</p>}
             </div>
             <div className="col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Cost Price (₹) *</label>
-              <Input id="product-cost" type="number" min={0} step="0.01" {...register("costPrice", { onChange: () => clearErrors("costPrice") })} placeholder="0.00" className={errors.costPrice ? "border-danger" : ""} />
+              <Input id="product-cost" type="number" min={0} step="0.001" {...register("costPrice", { onChange: () => clearErrors("costPrice") })} placeholder="0.00" className={errors.costPrice ? "border-danger" : ""} />
               {errors.costPrice && <p className="text-danger text-[10px] mt-1">{errors.costPrice.message}</p>}
             </div>
             <div className="col-span-1"><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} {...register("onHandQty")} /></div>

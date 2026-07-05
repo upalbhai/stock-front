@@ -241,9 +241,11 @@ export default function StaffPage() {
                   value={watchedRole}
                   onValueChange={(v) => setValue("role", v, { shouldValidate: true })}
                   options={[
+                    ...(watchedRole === "owner" ? [{ value: "owner", label: "Owner" }] : []),
                     { value: "manager", label: "Manager" },
                     { value: "staff", label: "Staff" }
                   ]}
+                  disabled={watchedRole === "owner"}
                 />
                 {errors.role && <p className="text-[10px] text-danger mt-1">{errors.role.message}</p>}
               </div>
