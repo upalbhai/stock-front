@@ -11,13 +11,15 @@ import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { Textarea } from "@/components/ui/textarea";
 import { StatsCard } from "@/components/ui/stats-card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/auth-provider";
 import { expenseService } from "@/services/expense.service";
 import { formatCurrency } from "@/lib/format";
 import type { Expense } from "@/lib/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
+import { useQueryStates, parseAsString, parseAsInteger, parseAsStringEnum } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 
 const CATEGORIES = ["rent", "salary", "utilities", "supplies", "marketing", "maintenance", "other"];
 const catOptions = CATEGORIES.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }));
@@ -38,13 +40,18 @@ export default function ExpensesPage() {
   const qc = useQueryClient();
   const canVoid = user?.role === "owner" || user?.role === "manager" || user?.role === "superadmin";
 
+  const [query, setQuery] = useQueryStates({
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50),
+    category: parseAsString.withDefault(""),
+    status: parseAsStringEnum<RecordFilter>(["active", "voided", "all"]).withDefault("active"),
+    from: parseAsString.withDefault(""),
+    to: parseAsString.withDefault("")
+  });
+
   const [showModal, setShowModal] = React.useState(false);
   const [voidTarget, setVoidTarget] = React.useState<Expense | null>(null);
   const [voidReason, setVoidReason] = React.useState("");
-  const [catFilter, setCatFilter] = React.useState("");
-  const [recordFilter, setRecordFilter] = React.useState<RecordFilter>("active");
-  const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(50);
   const [form, setForm] = React.useState({
     category: "rent",
     amount: "",
@@ -54,14 +61,16 @@ export default function ExpensesPage() {
   });
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["expenses", outletId, catFilter, recordFilter, page, limit],
+    queryKey: ["expenses", outletId, query.category, query.status, query.page, query.limit, query.from, query.to],
     queryFn: () =>
       expenseService.getExpenses(token, {
         outletId: outletId ?? undefined,
-        category: catFilter || undefined,
-        recordStatus: recordFilter,
-        page,
-        limit
+        category: query.category || undefined,
+        recordStatus: query.status,
+        page: query.page,
+        limit: query.limit,
+        from: query.from || undefined,
+        to: query.to || undefined
       }),
     enabled: Boolean(token)
   });
@@ -110,11 +119,26 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Expenses</h1>
           <p className="text-sm text-muted">Track operational costs — voided entries stay in history</p>
         </div>
+        <JollyDateRangePicker 
+          label="Date Filter"
+          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+          onChange={(val) => {
+            if (val) {
+              setQuery({ 
+                from: val.start.toString() + "T00:00:00.000Z", 
+                to: val.end.toString() + "T23:59:59.999Z", 
+                page: 1 
+              });
+            } else {
+              setQuery({ from: "", to: "", page: 1 });
+            }
+          }}
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -131,23 +155,23 @@ export default function ExpensesPage() {
         data={expenses}
         keyExtractor={(e) => e._id}
         totalItems={data?.total ?? expenses.length}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={(size) => { setLimit(size); setPage(1); }}
+        page={query.page}
+        limit={query.limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onLimitChange={(size) => setQuery({ limit: size, page: 1 })}
         onRefetch={() => refetch()}
-        emptyStateText="No expenses recorded yet."
+        emptyStateText="No expenses recorded yet in this date range."
         filters={
           <div className="flex w-full gap-2 sm:w-auto">
             <Select
-              value={catFilter}
-              onValueChange={(v) => { setCatFilter(v); setPage(1); }}
+              value={query.category}
+              onValueChange={(v) => setQuery({ category: v, page: 1 })}
               options={[{ value: "", label: "All Categories" }, ...catOptions]}
               className="flex-1 sm:w-40 h-9"
             />
             <Select
-              value={recordFilter}
-              onValueChange={(v) => { setRecordFilter(v as RecordFilter); setPage(1); }}
+              value={query.status}
+              onValueChange={(v) => setQuery({ status: v as RecordFilter, page: 1 })}
               options={[
                 { value: "active", label: "Active" },
                 { value: "voided", label: "Voided" },

@@ -16,6 +16,9 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
 import { getJson } from "@/lib/api-client";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/format";
+import { useQueryStates, parseAsString } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 
 type ReportData = {
   totalSales: number;
@@ -44,11 +47,19 @@ export default function ReportsPage() {
   const hasCreditKhata = useFeature("credit_khata");
   const hasGstInvoices = useFeature("gst_invoices");
   const hasWholesale = useFeature("wholesale_billing");
-  const [selectedDate, setSelectedDate] = React.useState(new Date().toISOString().split("T")[0]);
+  
+  const [query, setQuery] = useQueryStates({
+    from: parseAsString.withDefault(""),
+    to: parseAsString.withDefault("")
+  });
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["reports-daily", outletId, selectedDate],
-    queryFn: () => getJson<ReportData>("/reports/daily", token, { outletId: outletId ?? undefined, date: selectedDate }),
+    queryKey: ["reports-daily", outletId, query.from, query.to],
+    queryFn: () => getJson<ReportData>("/reports/daily", token, { 
+      outletId: outletId ?? undefined, 
+      from: query.from || undefined, 
+      to: query.to || undefined 
+    }),
     enabled: Boolean(token && outletId)
   });
 
@@ -66,25 +77,26 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-primary" /> Reports & Analytics
           </h1>
-          <p className="text-sm text-muted-foreground">Generate end-of-day reports and monitor closing indicators</p>
+          <p className="text-sm text-muted-foreground">Generate periodic reports and monitor closing indicators</p>
         </div>
-        {/* <Button variant="outline" size="sm" className="gap-1.5 w-full sm:w-auto justify-center shrink-0" onClick={handlePrint}>
-          <Printer className="h-4 w-4" /> Print Summary
-        </Button> */}
       </div>
 
       {/* Date Filter & Selector (Single Line on Mobile) */}
-      <div className=" p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-soft flex items-center justify-between gap-3 print:hidden">
-        <div className="flex items-center gap-2 flex-grow min-w-0">
-          {/* <Calendar className="h-4 w-4 text-muted-foreground shrink-0" /> */}
-          <span className="text-xs sm:text-sm font-semibold text-muted-foreground hidden xs:inline shrink-0">Date:</span>
-          <Input
-            type="date"
-            className="w-full max-w-[155px] sm:max-w-[200px] rounded-xl border border-border bg-surface px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm focus:border-primary outline-none transition"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-        </div>
+      <div className="p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-soft flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <JollyDateRangePicker 
+          label="Report Period"
+          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+          onChange={(val) => {
+            if (val) {
+              setQuery({ 
+                from: val.start.toString() + "T00:00:00.000Z", 
+                to: val.end.toString() + "T23:59:59.999Z" 
+              });
+            } else {
+              setQuery({ from: "", to: "" });
+            }
+          }}
+        />
         <Button variant="soft" size="sm" onClick={() => refetch()} className="shrink-0 flex items-center gap-1.5 px-3 sm:px-4">
           <RefreshCw className="h-4 w-4" />
           <span className="hidden sm:inline">Refresh Report</span>
@@ -93,8 +105,10 @@ export default function ReportsPage() {
 
       {/* Printable Heading */}
       <div className="hidden print:block border-b pb-4 mb-6">
-        <h2 className="text-2xl font-bold">Outlet Pulse — EOD Report</h2>
-        <p className="text-sm text-muted">Date: {formatDate(selectedDate)} | Outlet Session Summary</p>
+        <h2 className="text-2xl font-bold">Outlet Pulse — Period Report</h2>
+        <p className="text-sm text-muted">
+          Period: {query.from && query.to ? `${formatDate(query.from.split('T')[0])} to ${formatDate(query.to.split('T')[0])}` : "Today"} | Outlet Session Summary
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -103,7 +117,7 @@ export default function ReportsPage() {
           className="min-w-0"
           label="Total Net Revenue"
           value={formatCurrency(report?.totalSales || 0)}
-          hint={`For ${formatDate(selectedDate)}`}
+          hint={query.from && query.to ? "For selected period" : "For today"}
           icon={<DollarSign className="h-5 w-5" />}
           color="primary"
         />
@@ -182,7 +196,7 @@ export default function ReportsPage() {
             keyExtractor={(p) => p.name}
             hidePagination
             onRefetch={() => refetch()}
-            emptyStateText="No sales recorded on this business date."
+            emptyStateText="No sales recorded in this period."
             columns={[
               {
                 key: "rank",
@@ -203,7 +217,7 @@ export default function ReportsPage() {
         <div className="min-w-0">
           <DataTable
             title="Closing Inventory"
-            description="End-of-day remaining quantities"
+            description="End-of-period remaining quantities"
             isLoading={isLoading}
             data={report?.remainingStock ?? []}
             keyExtractor={(item) => item.name}

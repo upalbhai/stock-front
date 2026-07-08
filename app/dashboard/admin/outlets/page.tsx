@@ -12,17 +12,20 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { apiFetch } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
 import { adminService } from "@/services/admin.service";
+import { useQueryStates, parseAsString } from "nuqs";
 
 export default function AdminOutletsPage() {
   const { token } = useAuth();
   const qc = useQueryClient();
 
-  const [search, setSearch] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [query, setQuery] = useQueryStates({
+    search: parseAsString.withDefault(""),
+    statusFilter: parseAsString.withDefault("all")
+  });
 
   const { data: outletsData, isLoading: loadingOutlets, refetch } = useQuery({
-    queryKey: ["admin-outlets", search, statusFilter],
-    queryFn: () => adminService.getAdminOutlets(token, { search: search || undefined, status: statusFilter !== "all" ? statusFilter : undefined }),
+    queryKey: ["admin-outlets", query.search, query.statusFilter],
+    queryFn: () => adminService.getAdminOutlets(token, { search: query.search || undefined, status: query.statusFilter !== "all" ? query.statusFilter : undefined }),
     enabled: Boolean(token)
   });
 
@@ -52,13 +55,13 @@ export default function AdminOutletsPage() {
         isLoading={loadingOutlets}
         data={outlets}
         keyExtractor={(o) => o._id}
-        searchQuery={search}
-        onSearchChange={setSearch}
+        searchQuery={query.search}
+        onSearchChange={(s) => setQuery({ search: s })}
         onRefetch={() => refetch()}
         placeholderText="Search outlets..."
         emptyStateText="No outlets registered on the platform matching search."
         filters={
-          <Select id="status-filter" value={statusFilter} onValueChange={setStatusFilter} className="w-48 h-9" options={[
+          <Select id="status-filter" value={query.statusFilter} onValueChange={(v) => setQuery({ statusFilter: v })} className="w-48 h-9" options={[
             { value: "all", label: "All Statuses" },
             { value: "pending", label: "Pending Approval" },
             { value: "active", label: "Active" },

@@ -16,6 +16,7 @@ import { planService } from "@/services/plan.service";
 import { getErrorMessage } from "@/lib/error";
 import { formatNumber } from "@/lib/format";
 import type { Plan } from "@/lib/types";
+import { useQueryState, parseAsString } from "nuqs";
 
 const EMPTY_FORM = {
   name: "",
@@ -35,7 +36,7 @@ export default function AdminPlansPage() {
   const qc = useQueryClient();
 
   const [showPlanCrudModal, setShowPlanCrudModal] = React.useState(false);
-  const [planSearch, setPlanSearch] = React.useState("");
+  const [planSearch, setPlanSearch] = useQueryState("search", parseAsString.withDefault(""));
   const [editPlanId, setEditPlanId] = React.useState<string | null>(null);
   const [planCrudForm, setPlanCrudForm] = React.useState(EMPTY_FORM);
 

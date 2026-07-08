@@ -19,15 +19,24 @@ import type { Customer } from "@/lib/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
 import { APP_ROUTES } from "@/lib/routes";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 
 export default function CustomersPage() {
   const { token, outletId } = useAuth();
   const qc = useQueryClient();
   const hasCustomers = useFeature("customers");
-  const [search, setSearch] = React.useState("");
-  const [balanceFilter, setBalanceFilter] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(50);
+  
+  const [query, setQuery] = useQueryStates({
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50),
+    search: parseAsString.withDefault(""),
+    balanceFilter: parseAsString.withDefault(""),
+    from: parseAsString.withDefault(""),
+    to: parseAsString.withDefault("")
+  });
+
   const [showModal, setShowModal] = React.useState(false);
   const emptyForm = {
     name: "",
@@ -41,14 +50,16 @@ export default function CustomersPage() {
   const [form, setForm] = React.useState(emptyForm);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["customers", outletId, search, balanceFilter, page, limit],
+    queryKey: ["customers", outletId, query.search, query.balanceFilter, query.page, query.limit, query.from, query.to],
     queryFn: () =>
       customerService.getCustomers(token, {
         outletId: outletId ?? undefined,
-        search: search || undefined,
-        hasBalance: balanceFilter === "due" ? "true" : undefined,
-        page,
-        limit
+        search: query.search || undefined,
+        hasBalance: query.balanceFilter === "due" ? "true" : undefined,
+        page: query.page,
+        limit: query.limit,
+        from: query.from || undefined,
+        to: query.to || undefined
       }),
     enabled: Boolean(token) && hasCustomers
   });
@@ -79,11 +90,26 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Customers</h1>
           <p className="text-sm text-muted">Khata ledger — track who owes what</p>
         </div>
+        <JollyDateRangePicker 
+          label="Date Filter"
+          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+          onChange={(val) => {
+            if (val) {
+              setQuery({ 
+                from: val.start.toString() + "T00:00:00.000Z", 
+                to: val.end.toString() + "T23:59:59.999Z", 
+                page: 1 
+              });
+            } else {
+              setQuery({ from: "", to: "", page: 1 });
+            }
+          }}
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -100,20 +126,20 @@ export default function CustomersPage() {
         data={customers}
         keyExtractor={(c) => c._id}
         totalItems={data?.total ?? customers.length}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={(size) => { setLimit(size); setPage(1); }}
-        searchQuery={search}
-        onSearchChange={setSearch}
+        page={query.page}
+        limit={query.limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onLimitChange={(size) => setQuery({ limit: size, page: 1 })}
+        searchQuery={query.search}
+        onSearchChange={(s) => setQuery({ search: s, page: 1 })}
         onRefetch={() => refetch()}
         placeholderText="Search name, phone, GSTIN..."
-        emptyStateText="No customers yet. Add your first wholesale buyer."
+        emptyStateText="No customers yet in this date range."
         filters={
           <>
             <Select
-              value={balanceFilter}
-              onValueChange={(v) => { setBalanceFilter(v); setPage(1); }}
+              value={query.balanceFilter}
+              onValueChange={(v) => setQuery({ balanceFilter: v, page: 1 })}
               className="w-44 h-9"
               options={[
                 { value: "", label: "All customers" },

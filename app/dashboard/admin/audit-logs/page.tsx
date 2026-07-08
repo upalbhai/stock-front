@@ -8,24 +8,65 @@ import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
 import { adminService } from "@/services/admin.service";
 import type { AuditLog } from "@/lib/types";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 
 export default function AdminAuditLogsPage() {
   const { token } = useAuth();
 
+  const [query, setQuery] = useQueryStates({
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50),
+    from: parseAsString.withDefault(""),
+    to: parseAsString.withDefault("")
+  });
+
   const { data: auditData, isLoading: loadingAudit, refetch } = useQuery({
-    queryKey: ["admin-audit-logs"],
-    queryFn: () => adminService.getAuditLogs(token),
+    queryKey: ["admin-audit-logs", query.page, query.limit, query.from, query.to],
+    queryFn: () => adminService.getAuditLogs(token, {
+      page: query.page,
+      limit: query.limit,
+      from: query.from || undefined,
+      to: query.to || undefined
+    }),
     enabled: Boolean(token)
   });
 
-  const auditLogs = auditData?.logs ?? [];
+  const auditLogs = auditData?.logs ?? auditData ?? []; // Handle potential structure differences
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold">Platform Audit Logs</h1>
+          <p className="text-xs text-muted">Track superadmin actions</p>
+        </div>
+        <JollyDateRangePicker 
+          label="Date Filter"
+          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+          onChange={(val) => {
+            if (val) {
+              setQuery({ 
+                from: val.start.toString() + "T00:00:00.000Z", 
+                to: val.end.toString() + "T23:59:59.999Z", 
+                page: 1 
+              });
+            } else {
+              setQuery({ from: "", to: "", page: 1 });
+            }
+          }}
+        />
+      </div>
       <DataTable
         isLoading={loadingAudit}
-        data={auditLogs}
+        data={Array.isArray(auditLogs) ? auditLogs : []}
         keyExtractor={(l) => l._id}
+        totalItems={auditData?.meta?.pagination?.total ?? (Array.isArray(auditLogs) ? auditLogs.length : 0)}
+        page={query.page}
+        limit={query.limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onLimitChange={(l) => setQuery({ limit: l, page: 1 })}
         onRefetch={() => refetch()}
         emptyStateText="No platform-wide audit activities found."
         columns={[

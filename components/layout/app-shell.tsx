@@ -171,14 +171,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
 
           {impersonating && (
-            <div className="flex shrink-0 animate-fade flex-col items-center justify-center gap-2 bg-destructive px-4 py-2.5 text-center text-xs font-semibold text-destructive-foreground sm:flex-row sm:gap-4">
+            <div className="flex shrink-0 animate-fade flex-col items-center justify-center gap-2 bg-red-100 px-4 py-2.5 text-center text-xs font-semibold text-red-500 sm:flex-row sm:gap-4">
               <span className="leading-snug">
                 Impersonation active: Viewing session as {user?.name}. All actions are audited.
               </span>
               <Button
                 size="xs"
-                variant="outline"
-                className="shrink-0 rounded-xl border-white px-3 py-1 font-bold text-white shadow-sm hover:bg-white hover:text-destructive"
+                variant="soft"
+                className=""
                 onClick={exitImpersonation}
               >
                 Exit Session

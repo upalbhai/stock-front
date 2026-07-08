@@ -17,13 +17,16 @@ import { userService } from "@/services/user.service";
 import { getErrorMessage } from "@/lib/error";
 import { APP_ROUTES } from "@/lib/routes";
 import type { Business, StaffUser, Plan } from "@/lib/types";
+import { useQueryStates, parseAsString } from "nuqs";
 
 export default function AdminBusinessesPage() {
   const { token, impersonate } = useAuth();
   const qc = useQueryClient();
 
-  const [search, setSearch] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState("");
+  const [query, setQuery] = useQueryStates({
+    search: parseAsString.withDefault(""),
+    statusFilter: parseAsString.withDefault("all")
+  });
 
   const [showPlanModal, setShowPlanModal] = React.useState(false);
   const [showManualSubModal, setShowManualSubModal] = React.useState(false);
@@ -40,8 +43,8 @@ export default function AdminBusinessesPage() {
   });
 
   const { data: bizData, isLoading: loadingBiz, refetch } = useQuery({
-    queryKey: ["admin-businesses", search, statusFilter],
-    queryFn: () => adminService.getAdminBusinesses(token, { search: search || undefined, status: statusFilter !== "all" ? statusFilter : undefined }),
+    queryKey: ["admin-businesses", query.search, query.statusFilter],
+    queryFn: () => adminService.getAdminBusinesses(token, { search: query.search || undefined, status: query.statusFilter !== "all" ? query.statusFilter : undefined }),
     enabled: Boolean(token)
   });
 
@@ -147,14 +150,14 @@ export default function AdminBusinessesPage() {
         isLoading={loadingBiz}
         data={businesses}
         keyExtractor={(b) => b._id}
-        searchQuery={search}
-        onSearchChange={setSearch}
+        searchQuery={query.search}
+        onSearchChange={(s) => setQuery({ search: s })}
         onRefetch={() => refetch()}
         placeholderText="Search businesses..."
         emptyStateText="No businesses registered on the platform matching search."
         filters={
-          <Select id="status-filter" value={statusFilter} onValueChange={setStatusFilter} className="w-48 h-9" options={[
-            { value: "", label: "All Statuses" },
+          <Select id="status-filter" value={query.statusFilter} onValueChange={(v) => setQuery({ statusFilter: v })} className="w-48 h-9" options={[
+            { value: "all", label: "All Statuses" },
             { value: "pending", label: "Pending Approval" },
             { value: "active", label: "Active" },
             { value: "suspended", label: "Suspended" },

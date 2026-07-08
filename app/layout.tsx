@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { Providers } from "./providers";
 import { ServiceWorkerRegister } from "@/components/service-worker";
 import { cn } from "@/lib/utils";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,7 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <Providers>
           <ServiceWorkerRegister />
-          {children}
+          <NuqsAdapter>
+            {children}
+          </NuqsAdapter>
         </Providers>
       </body>
     </html>

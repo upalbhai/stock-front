@@ -22,6 +22,7 @@ import { getErrorMessage } from "@/lib/error";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useQueryState, parseAsString } from "nuqs";
 
 const ALL_MODULES = ["billing","inventory","products","reports","expenses","users","outlets","roles","dashboard","settings","transactions","analytics","stock_transfers","audit_logs","categories","units","customers","invoices"];
 const ALL_ACTIONS = ["create","read","update","delete","refund","print","export","approve","void","collect"];
@@ -46,7 +47,7 @@ type StaffFormValues = z.infer<typeof staffSchema>;
 export default function StaffPage() {
   const { token } = useAuth();
   const qc = useQueryClient();
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = useQueryState("search", parseAsString.withDefault(""));
   const [showModal, setShowModal] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);

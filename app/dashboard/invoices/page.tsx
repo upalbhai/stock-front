@@ -16,6 +16,9 @@ import { formatCurrency, formatDateTime } from "@/lib/format";
 import { GstInvoicePrint, printGstInvoice } from "@/components/invoices/gst-invoice-print";
 import type { Order, Customer } from "@/lib/types";
 import { APP_ROUTES } from "@/lib/routes";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 
 type InvoicePayload = {
   order: Order & { customerId?: Customer | null };
@@ -27,15 +30,27 @@ export default function InvoicesPage() {
   const { token, outletId } = useAuth();
   const qc = useQueryClient();
   const hasGstInvoices = useFeature("gst_invoices");
-  const [search, setSearch] = React.useState("");
+  
+  const [query, setQuery] = useQueryStates({
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50),
+    search: parseAsString.withDefault(""),
+    from: parseAsString.withDefault(""),
+    to: parseAsString.withDefault("")
+  });
+
   const [printId, setPrintId] = React.useState<string | null>(null);
   const printRef = React.useRef<HTMLDivElement>(null);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["invoices", outletId],
+    queryKey: ["invoices", outletId, query.page, query.limit, query.from, query.to],
     queryFn: () =>
       getJson<{ invoices: Order[]; total: number }>("/invoices", token, {
-        outletId: outletId ?? undefined
+        outletId: outletId ?? undefined,
+        page: query.page,
+        limit: query.limit,
+        from: query.from || undefined,
+        to: query.to || undefined
       }),
     enabled: Boolean(token) && hasGstInvoices
   });
@@ -47,8 +62,8 @@ export default function InvoicesPage() {
   });
 
   const invoices = (data?.invoices ?? []).filter((inv) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
+    if (!query.search.trim()) return true;
+    const q = query.search.toLowerCase();
     return (
       inv.invoiceNumber?.toLowerCase().includes(q) ||
       inv.orderNumber?.toLowerCase().includes(q) ||
@@ -68,19 +83,39 @@ export default function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">GST Invoices</h1>
           <p className="text-sm text-muted">Tax invoices with CGST/SGST breakdown — print or share</p>
         </div>
+        <JollyDateRangePicker 
+          label="Date Filter"
+          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+          onChange={(val) => {
+            if (val) {
+              setQuery({ 
+                from: val.start.toString() + "T00:00:00.000Z", 
+                to: val.end.toString() + "T23:59:59.999Z", 
+                page: 1 
+              });
+            } else {
+              setQuery({ from: "", to: "", page: 1 });
+            }
+          }}
+        />
       </div>
 
       <DataTable
         isLoading={isLoading}
         data={invoices}
         keyExtractor={(inv) => inv._id}
-        searchQuery={search}
-        onSearchChange={setSearch}
+        totalItems={data?.total ?? invoices.length}
+        page={query.page}
+        limit={query.limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onLimitChange={(l) => setQuery({ limit: l, page: 1 })}
+        searchQuery={query.search}
+        onSearchChange={(s) => setQuery({ search: s, page: 1 })}
         onRefetch={() => refetch()}
         placeholderText="Search invoice #, bill #, customer..."
         emptyStateText="No GST invoices yet. Generate one from Billing or Orders."
@@ -132,7 +167,7 @@ export default function InvoicesPage() {
             key: "actions",
             header: "",
             render: (inv) => (
-              <div className="flex gap-1">
+              <div className="flex gap-1 justify-end">
                 <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => setPrintId(inv._id)}>
                   <Printer className="h-3 w-3" /> Print
                 </Button>

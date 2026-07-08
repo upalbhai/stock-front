@@ -27,6 +27,7 @@ import { unitService } from "@/services/unit.service";
 import { outletService } from "@/services/outlet.service";
 import { categoryService } from "@/services/category.service";
 import Pagination from "@/components/ui/pagination";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
 
 const packagingUnitSchema = z.object({
   unitId: z.string().min(1, "Required"),
@@ -128,7 +129,13 @@ export default function ProductsPage() {
   const { token, outletId } = useAuth();
   const qc = useQueryClient();
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const [search, setSearch] = React.useState("");
+  
+  const [query, setQuery] = useQueryStates({
+    search: parseAsString.withDefault(""),
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(10)
+  });
+
   const [catFilter, setCatFilter] = React.useState("");
   const [showModal, setShowModal] = React.useState(false);
   const [showScanner, setShowScanner] = React.useState(false);
@@ -154,15 +161,20 @@ export default function ProductsPage() {
   const formCategoryId = watch("categoryId");
   const formBarcode = watch("barcode");
 
-  const { ref, inView } = useInView();
+  const { data: unitsData } = useQuery({ queryKey: ["units", outletId], queryFn: () => unitService.getUnitsWithMeta(token, { outletId: outletId ?? undefined, limit: 100 }), enabled: Boolean(token) });
+  const { data: catData } = useQuery({ queryKey: ["categories"], queryFn: () => categoryService.getCategories(token), enabled: Boolean(token) });
 
-  const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(50);
-
-  const { data: unitsData } = useQuery({
-    queryKey: ["units"],
-    queryFn: () => unitService.getUnits(token),
-    enabled: Boolean(token),
+  const { data: productsData, isLoading, refetch: refetchProducts } = useQuery({
+    queryKey: ["products", outletId, query.search, catFilter, query.page, query.limit],
+    queryFn: () =>
+      getJsonWithMeta<Product[]>("/products", token, {
+        outletId: outletId ?? undefined,
+        search: query.search || undefined,
+        categoryId: catFilter || undefined,
+        page: query.page,
+        limit: query.limit
+      }),
+    enabled: Boolean(token)
   });
 
   const { data: outletsData } = useQuery({
@@ -170,31 +182,6 @@ export default function ProductsPage() {
     queryFn: () => outletService.getOutlets(token),
     enabled: Boolean(token),
   });
-
-  const { data: catData } = useQuery({
-    queryKey: ["categories", "flat"],
-    queryFn: () => categoryService.getCategoriesWithMeta(token, { flat: "true", page: 1, limit: 100 }),
-    enabled: Boolean(token),
-  });
-
-  const { data: prodData, isLoading, isError, error, refetch: refetchProducts } = useQuery({
-    queryKey: ["products", outletId, catFilter, search, page, limit],
-    queryFn: () => productService.getProductsWithOffset(token!, { outletId: outletId ?? undefined, categoryId: catFilter || undefined, search: search || undefined, page, limit }),
-    enabled: Boolean(token)
-  });
-
-  const { data: allCats } = useQuery({
-    queryKey: ["all-categories"],
-    queryFn: () => categoryService.getCategories(token, { flat: "true", limit: 200 }),
-    enabled: Boolean(token),
-  });
-
-  React.useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
-
 
   const save = useMutation({
     mutationFn: (body: unknown) => {
@@ -212,8 +199,10 @@ export default function ProductsPage() {
     onError: (err) => { toast.error(getErrorMessage(err, "Failed to delete product")); }
   });
 
-  const products: Product[] = prodData?.data ?? [];
-  const pagination = prodData?.meta?.pagination ?? { page: 1, limit, total: products.length, totalPages: 1 };
+  const products: Product[] = productsData?.data ?? [];
+  const meta = productsData?.meta?.pagination;
+  const totalItems = meta?.total ?? products.length;
+  const totalPages = meta?.totalPages ?? 1;
   const categories = Array.isArray(catData)
     ? catData
     : ((catData as { categories?: Category[] } | undefined)?.categories ?? []);
@@ -338,7 +327,7 @@ export default function ProductsPage() {
       gstRate: String(p.gstRate ?? 0),
       hsnCode: p.hsnCode ?? "",
       onHandQty: String(p.onHandQty ?? 0),
-      lowStockThreshold: String(p.lowStockThreshold ?? 10),
+      lowStockThreshold: String(p.lowStockThreshold || 10),
       sortOrder: String(p.sortOrder ?? 0),
       packagingUnits: (p.packagingUnits ?? []).map((pkg) => ({
         unitId: typeof pkg.unitId === "object" ? pkg.unitId._id : pkg.unitId,
@@ -380,7 +369,7 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div><h1 className="text-2xl font-bold">Products</h1><p className="text-sm text-muted">{pagination.total} products</p></div>
+        <div><h1 className="text-2xl font-bold">Products</h1><p className="text-sm text-muted">{totalItems} products</p></div>
         <div className="flex gap-2">
           <Button id="create-product-btn" onClick={openCreate}><Plus className="h-4 w-4" /> Add Product</Button>
         </div>
@@ -388,36 +377,48 @@ export default function ProductsPage() {
 
       <DataTable
         isLoading={isLoading}
-        error={isError}
-        errorMessage={error ? getErrorMessage(error) : undefined}
         data={products}
         keyExtractor={(p) => p._id}
         emptyStateText="No products yet. Add your first product."
-        totalItems={pagination.total}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
-        searchQuery={search}
-        onSearchChange={setSearch}
+        totalItems={totalItems}
+        page={query.page}
+        limit={query.limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onLimitChange={(l) => setQuery({ limit: l, page: 1 })}
+        searchQuery={query.search}
+        onSearchChange={(s) => setQuery({ search: s, page: 1 })}
         onRefetch={() => refetchProducts()}
         filters={
-          <AsyncSelect
-            className="sm:w-56 min-w-[200px]"
-            value={selectedCatFilter}
-            onChange={(opt) => {
-              const o = Array.isArray(opt) ? opt[0] : opt;
-              setCatFilter(o?.id ?? o?._id ?? "");
-              setPage(1);
-            }}
-            loadOptions={loadCategoryFilterOptions}
-            placeholder="All Categories"
-            searchable
-            pageSize={25}
-          />
+          <div className="flex items-center gap-4">
+            <div className="flex-1 flex items-center gap-2 min-w-[200px] bg-background px-3 rounded-lg border focus-within:ring-2 focus-within:ring-primary/20">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <input
+                type="text"
+                placeholder="Search products, SKU, or barcode..."
+                className="flex-1 bg-transparent border-0 h-10 text-sm focus:outline-none focus:ring-0 placeholder:text-muted-foreground"
+                value={query.search}
+                onChange={(e) => {
+                  setQuery({ search: e.target.value, page: 1 });
+                }}
+              />
+            </div>
+            <select
+              className="h-10 px-3 py-2 text-sm bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+              value={catFilter}
+              onChange={(e) => {
+                setCatFilter(e.target.value);
+                setQuery({ page: 1 });
+              }}
+            >
+              <option value="">All Categories</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>{c.icon} {c.name}</option>
+              ))}
+            </select>
+          </div>
         }
         columns={[
-          { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image && <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />}{/* No placeholder icon */}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
+          { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image && <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
           { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm font-medium">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },
           { key: "price", header: "Price", render: (p) => <span className="font-bold text-lg">{formatCurrency(p.price)}</span> },
           { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {(p as any).unitId?.abbreviation ?? p.unit}</p>{p.packagingUnits && p.packagingUnits.length > 0 && <div className="mt-0.5">{p.packagingUnits.map((pkg: any, idx: number) => <p key={idx} className="text-[11px] text-muted-foreground font-semibold">{pkg.onHandBulkQty ?? Math.floor(p.onHandQty / (pkg.qtyPerUnit || 1))} {typeof pkg.unitId === 'object' ? (pkg.unitId?.abbreviation || pkg.unitId?.name) : ''}</p>)}</div>}{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },

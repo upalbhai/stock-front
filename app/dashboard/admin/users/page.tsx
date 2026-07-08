@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
 import { userService } from "@/services/user.service";
+import { useQueryState, parseAsString } from "nuqs";
 
 export default function AdminUsersPage() {
   const { token } = useAuth();
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = useQueryState("search", parseAsString.withDefault(""));
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-users", search],

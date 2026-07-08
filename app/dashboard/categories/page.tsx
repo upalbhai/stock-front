@@ -15,6 +15,7 @@ import { getErrorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
 import type { Category } from "@/lib/types";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
 
 const EMOJI_OPTIONS = ["🍽️","🥤","🧃","☕","🍵","🥛","🧁","🍰","🍕","🥗","🌮","🍜","🥚","🥗","🫙","🍱","🍦","🧊","🍹","🍺"];
 const COLOR_OPTIONS = ["#6366f1","#f59e0b","#10b981","#ef4444","#8b5cf6","#06b6d4","#f97316","#84cc16","#ec4899","#14b8a6"];
@@ -28,14 +29,18 @@ export default function CategoriesPage() {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [isRefetching, setIsRefetching] = React.useState(false);
   const [cooldownSeconds, setCooldownSeconds] = React.useState(0);
-  const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(50);
-  const [search, setSearch] = React.useState("");
+  
+  const [query, setQuery] = useQueryStates({
+    search: parseAsString.withDefault(""),
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50)
+  });
+
   const [form, setForm] = React.useState({ name: "", parentId: "", icon: "🍽️", color: "#6366f1", description: "", sortOrder: "0" });
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["categories", page, limit, search],
-    queryFn: () => categoryService.getCategoriesWithMeta(token, { flat: "true", page, limit, search }),
+    queryKey: ["categories", query.page, query.limit, query.search],
+    queryFn: () => categoryService.getCategoriesWithMeta(token, { flat: "true", page: query.page, limit: query.limit, search: query.search }),
     enabled: Boolean(token),
   });
 
@@ -78,7 +83,7 @@ export default function CategoriesPage() {
 
   const allCategories = data?.data ?? [];
   const topLevel = allCategories.filter((c) => !c.parentId || c.parentId === c._id);
-  const pagination = data?.meta?.pagination ?? { page: 1, limit, total: allCategories.length, totalPages: 1 };
+  const pagination = data?.meta?.pagination ?? { page: 1, limit: query.limit, total: allCategories.length, totalPages: 1 };
 
   const openCreate = (parentId = "") => {
     setEditId(null);
@@ -104,12 +109,12 @@ export default function CategoriesPage() {
         data={topLevel}
         keyExtractor={(c) => c._id}
         totalItems={pagination.total}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
-        searchQuery={search}
-        onSearchChange={setSearch}
+        page={query.page}
+        limit={query.limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onLimitChange={(l) => setQuery({ limit: l, page: 1 })}
+        searchQuery={query.search}
+        onSearchChange={(s) => setQuery({ search: s, page: 1 })}
         onRefetch={() => refetch()}
         filters={<Button id="create-category-btn" onClick={() => openCreate("")}><Plus className="h-4 w-4 mr-1.5" /> Add Category</Button>}
         emptyStateIcon={<FolderOpen className="h-12 w-12 text-muted/30" />}

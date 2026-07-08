@@ -24,6 +24,9 @@ import toast from "react-hot-toast";
 import { buildStockUnitOptions, formatStockMovementQty, getProductUnitLabel, getStockPriceDefaults, calcStockEntryProfit } from "@/lib/productUtils";
 import { Switch } from "@/components/ui/switch";
 import type { Product, StockTransfer, Outlet } from "@/lib/types";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 
 type StockHistoryEntry = {
   _id: string;
@@ -232,7 +235,25 @@ export default function StockPage() {
   const { token, outletId } = useAuth();
   const hasPackaging = useFeature("packaging_units");
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState<"overview" | "start-of-day" | "history" | "transfers">("overview");
+
+  const [query, setQuery] = useQueryStates({
+    tab: parseAsString.withDefault("overview"),
+    prodSearch: parseAsString.withDefault(""),
+    prodPage: parseAsInteger.withDefault(1),
+    prodLimit: parseAsInteger.withDefault(10),
+    historySearch: parseAsString.withDefault(""),
+    historyDirection: parseAsString.withDefault("all"),
+    historyType: parseAsString.withDefault(""),
+    from: parseAsString.withDefault(""),
+    to: parseAsString.withDefault(""),
+    historyPage: parseAsInteger.withDefault(1),
+    historyLimit: parseAsInteger.withDefault(50),
+    transferSearch: parseAsString.withDefault(""),
+    transferPage: parseAsInteger.withDefault(1),
+    transferLimit: parseAsInteger.withDefault(50),
+  });
+
+  const activeTab = query.tab;
 
   // Adjust Dialog State
   const [showAdjustModal, setShowAdjustModal] = React.useState(false);
@@ -257,27 +278,12 @@ export default function StockPage() {
   // Start of day count state
   const [startOfDayCounts, setStartOfDayCounts] = React.useState<Record<string, number>>({});
 
-  // Overview Tab State
-  const [prodSearch, setProdSearch] = React.useState("");
-  const [prodPage, setProdPage] = React.useState(1);
-  const [prodLimit, setProdLimit] = React.useState(10);
-  // History Tab State
-  const [historySearch, setHistorySearch] = React.useState("");
-  const [historyDirection, setHistoryDirection] = React.useState<"all" | "in" | "out">("all");
-  const [historyTypeFilter, setHistoryTypeFilter] = React.useState("");
-  const [historyStartDate, setHistoryStartDate] = React.useState("");
-  const [historyEndDate, setHistoryEndDate] = React.useState("");
-  const [historyPage, setHistoryPage] = React.useState(1);
-  const [historyLimit, setHistoryLimit] = React.useState(50);
-  // Transfers Tab State
-  const [transferSearch, setTransferSearch] = React.useState("");
-  const [transferPage, setTransferPage] = React.useState(1);
-  const [transferLimit, setTransferLimit] = React.useState(50);
+  // Use state from nuqs query object directly.
 
   // API Queries
   const { data: prodData, isLoading: loadingProds, refetch: refetchProducts } = useQuery({
-    queryKey: ["products", outletId, prodSearch, prodPage, prodLimit],
-    queryFn: () => getJsonWithMeta<Product[]>("/products", token, { outletId: outletId ?? undefined, search: prodSearch || undefined, page: prodPage, limit: prodLimit }),
+    queryKey: ["products", outletId, query.prodSearch, query.prodPage, query.prodLimit],
+    queryFn: () => getJsonWithMeta<Product[]>("/products", token, { outletId: outletId ?? undefined, search: query.prodSearch || undefined, page: query.prodPage, limit: query.prodLimit }),
     // enable when we have a token and the tab needs it
     enabled: Boolean(token) && activeTab !== "history"
   });
@@ -289,24 +295,24 @@ export default function StockPage() {
   });
 
   const { data: historyData, isLoading: loadingHistory, refetch: refetchHistory } = useQuery({
-    queryKey: ["stock-history", outletId, historySearch, historyDirection, historyTypeFilter, historyStartDate, historyEndDate, historyPage, historyLimit],
+    queryKey: ["stock-history", outletId, query.historySearch, query.historyDirection, query.historyType, query.from, query.to, query.historyPage, query.historyLimit],
     queryFn: () =>
       getJson<{ entries: StockHistoryEntry[]; total: number; summary: StockHistorySummary }>("/stock/history", token, {
         outletId: outletId ?? undefined,
-        search: historySearch || undefined,
-        direction: historyDirection === "all" ? undefined : historyDirection,
-        type: historyTypeFilter || undefined,
-        startDate: historyStartDate || undefined,
-        endDate: historyEndDate || undefined,
-        page: historyPage,
-        limit: historyLimit
+        search: query.historySearch || undefined,
+        direction: query.historyDirection === "all" ? undefined : query.historyDirection,
+        type: query.historyType || undefined,
+        startDate: query.from || undefined,
+        endDate: query.to || undefined,
+        page: query.historyPage,
+        limit: query.historyLimit
       }),
     enabled: Boolean(token && outletId) && activeTab === "history"
   });
 
   const { data: transfersData, isLoading: loadingTransfers, refetch: refetchTransfers } = useQuery({
-    queryKey: ["stock-transfers", transferSearch, transferPage, transferLimit],
-    queryFn: () => getJson<{ transfers: StockTransfer[]; total: number }>("/stock/transfers", token, { search: transferSearch || undefined, page: transferPage, limit: transferLimit }),
+    queryKey: ["stock-transfers", query.transferSearch, query.transferPage, query.transferLimit],
+    queryFn: () => getJson<{ transfers: StockTransfer[]; total: number }>("/stock/transfers", token, { search: query.transferSearch || undefined, page: query.transferPage, limit: query.transferLimit }),
     enabled: Boolean(token) && activeTab === "transfers"
   });
 
@@ -364,7 +370,7 @@ export default function StockPage() {
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["stock-summary"] });
       qc.invalidateQueries({ queryKey: ["stock-history"] });
-      setActiveTab("overview");
+      setQuery({ tab: "overview" });
       toast.success("Opening stock saved");
     },
     onError: (err: unknown) => toast.error(getErrorMessage(err, "Failed to save opening stock"))
@@ -375,7 +381,7 @@ export default function StockPage() {
   const history = historyData?.entries ?? [];
   const historyTotal = historyData?.total ?? 0;
   const historySummary = historyData?.summary;
-  const historyTotalPages = Math.ceil(historyTotal / historyLimit) || 1;
+  const historyTotalPages = Math.ceil(historyTotal / query.historyLimit) || 1;
   const historyColumns = React.useMemo(() => buildHistoryColumns(), []);
   const historyInEntries = history.filter((e) => e.qty > 0);
   const historyOutEntries = history.filter((e) => e.qty < 0);
@@ -390,46 +396,51 @@ export default function StockPage() {
   const historyFilters = (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted shrink-0" />
-        <Input
-          type="date"
-          value={historyStartDate}
-          onChange={(e) => { setHistoryStartDate(e.target.value); setHistoryPage(1); }}
-          className="w-36 h-9"
+        <JollyDateRangePicker 
+          label="Date Filter"
+          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+          onChange={(val) => {
+            if (val) {
+              setQuery({ 
+                from: val.start.toString() + "T00:00:00.000Z", 
+                to: val.end.toString() + "T23:59:59.999Z",
+                historyPage: 1
+              });
+            } else {
+              setQuery({ from: "", to: "", historyPage: 1 });
+            }
+          }}
         />
-        <span className="text-xs text-muted">to</span>
-        <Input
-          type="date"
-          value={historyEndDate}
-          onChange={(e) => { setHistoryEndDate(e.target.value); setHistoryPage(1); }}
-          className="w-36 h-9"
-        />
-        {(historyStartDate || historyEndDate || historySearch || historyTypeFilter) && (
+        {(query.from || query.to || query.historySearch || query.historyType) && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              setHistorySearch("");
-              setHistoryStartDate("");
-              setHistoryEndDate("");
-              setHistoryTypeFilter("");
-              setHistoryPage(1);
+              setQuery({
+                historySearch: "",
+                from: "",
+                to: "",
+                historyType: "",
+                historyPage: 1
+              });
             }}
           >
             Clear
           </Button>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 hidden">
         {HISTORY_DATE_PRESETS.map((p) => (
           <button
             key={p.key}
             type="button"
             onClick={() => {
               const { startDate, endDate } = getHistoryDatePreset(p.key);
-              setHistoryStartDate(startDate);
-              setHistoryEndDate(endDate);
-              setHistoryPage(1);
+              setQuery({
+                from: startDate + "T00:00:00.000Z",
+                to: endDate + "T23:59:59.999Z",
+                historyPage: 1
+              });
             }}
             className="rounded-full border border-border px-3 py-1 text-[10px] font-semibold text-muted hover:text-text hover:border-primary/40 transition"
           >
@@ -442,8 +453,8 @@ export default function StockPage() {
           <button
             key={f.value || "all"}
             type="button"
-            onClick={() => { setHistoryTypeFilter(f.value); setHistoryPage(1); }}
-            className={`rounded-full px-3 py-1 text-[10px] font-semibold transition ${historyTypeFilter === f.value ? "bg-primary/10 text-primary border border-primary/30" : "bg-surface border border-border text-muted hover:text-text"}`}
+            onClick={() => setQuery({ historyType: f.value, historyPage: 1 })}
+            className={`rounded-full px-3 py-1 text-[10px] font-semibold transition ${query.historyType === f.value ? "bg-primary/10 text-primary border border-primary/30" : "bg-surface border border-border text-muted hover:text-text"}`}
           >
             {f.label}
           </button>
@@ -638,7 +649,7 @@ export default function StockPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              onClick={() => setQuery({ tab: tab.id })}
               className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition ${activeTab === tab.id ? "bg-primary text-white shadow-soft" : "text-muted hover:text-text"}`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -662,12 +673,12 @@ export default function StockPage() {
             data={products}
             keyExtractor={(p) => p._id}
             totalItems={prodTotal}
-            page={prodPage}
-            limit={prodLimit}
-            onPageChange={setProdPage}
-            onLimitChange={(size) => { setProdLimit(size); setProdPage(1); }}
-            searchQuery={prodSearch}
-            onSearchChange={setProdSearch}
+            page={query.prodPage}
+            limit={query.prodLimit}
+            onPageChange={(p) => setQuery({ prodPage: p })}
+            onLimitChange={(size) => setQuery({ prodLimit: size, prodPage: 1 })}
+            searchQuery={query.prodSearch}
+            onSearchChange={(s) => setQuery({ prodSearch: s, prodPage: 1 })}
             onRefetch={() => refetchProducts()}
             placeholderText="Search products by name..."
             emptyStateText="No products in catalog."
@@ -773,8 +784,8 @@ export default function StockPage() {
                 <button
                   key={f.value}
                   type="button"
-                  onClick={() => { setHistoryDirection(f.value); setHistoryPage(1); }}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition ${historyDirection === f.value ? "bg-primary text-white shadow-soft" : "text-muted hover:text-text"}`}
+                  onClick={() => setQuery({ historyDirection: f.value, historyPage: 1 })}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition ${query.historyDirection === f.value ? "bg-primary text-white shadow-soft" : "text-muted hover:text-text"}`}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {f.label}
@@ -802,7 +813,7 @@ export default function StockPage() {
             <StatsCard
               label="Net Movement"
               value={formatNumber((historySummary?.totalInQty ?? 0) - (historySummary?.totalOutQty ?? 0))}
-              hint={historyStartDate || historyEndDate ? `${historyStartDate || "…"} → ${historyEndDate || "…"}` : "All time in filter"}
+              hint={query.from || query.to ? `Stock impact from ${query.from.split('T')[0]} to ${query.to.split('T')[0]}` : "All time in filter"}
               icon={<History className="h-5 w-5" />}
             />
             <StatsCard
@@ -826,7 +837,7 @@ export default function StockPage() {
           </div>
 
           {/* Split view when All Ledger selected */}
-          {historyDirection === "all" ? (
+          {query.historyDirection === "all" ? (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-3 items-center justify-between flex-wrap rounded-xl border border-border bg-card p-4">
                 <div className="flex-1 flex items-center gap-2 min-w-0">
@@ -834,8 +845,8 @@ export default function StockPage() {
                   <Input
                     type="text"
                     placeholder="Search product, SKU, or note..."
-                    value={historySearch}
-                    onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1); }}
+                    value={query.historySearch}
+                    onChange={(e) => setQuery({ historySearch: e.target.value, historyPage: 1 })}
                     className="flex-1 h-9"
                   />
                 </div>
@@ -881,11 +892,11 @@ export default function StockPage() {
               </div>
               {historyTotal > 0 && (
                 <Pagination
-                  page={historyPage}
+                  page={query.historyPage}
                   totalPages={historyTotalPages}
-                  pageSize={historyLimit}
-                  onPageChange={setHistoryPage}
-                  onPageSizeChange={(size) => { setHistoryLimit(size); setHistoryPage(1); }}
+                  pageSize={query.historyLimit}
+                  onPageChange={(p) => setQuery({ historyPage: p })}
+                  onPageSizeChange={(size) => setQuery({ historyLimit: size, historyPage: 1 })}
                 />
               )}
             </div>
@@ -895,15 +906,15 @@ export default function StockPage() {
               data={history}
               keyExtractor={(e: StockHistoryEntry) => e._id}
               totalItems={historyTotal}
-              page={historyPage}
-              limit={historyLimit}
-              onPageChange={setHistoryPage}
-              onLimitChange={(size) => { setHistoryLimit(size); setHistoryPage(1); }}
-              searchQuery={historySearch}
-              onSearchChange={setHistorySearch}
+              page={query.historyPage}
+              limit={query.historyLimit}
+              onPageChange={(p) => setQuery({ historyPage: p })}
+              onLimitChange={(size) => setQuery({ historyLimit: size, historyPage: 1 })}
+              searchQuery={query.historySearch}
+              onSearchChange={(s) => setQuery({ historySearch: s, historyPage: 1 })}
               onRefetch={() => refetchHistory()}
               placeholderText="Search product, SKU, or note..."
-              emptyStateText={historyDirection === "in" ? "No stock in entries for this filter." : "No stock out entries for this filter."}
+              emptyStateText={query.historyDirection === "in" ? "No stock in entries for this filter." : "No stock out entries for this filter."}
               filters={historyFilters}
               columns={historyColumns}
             />
@@ -919,12 +930,12 @@ export default function StockPage() {
             data={transfers}
             keyExtractor={(t: StockTransfer) => t._id}
             totalItems={transferTotal}
-            page={transferPage}
-            limit={transferLimit}
-            onPageChange={setTransferPage}
-            onLimitChange={(size) => { setTransferLimit(size); setTransferPage(1); }}
-            searchQuery={transferSearch}
-            onSearchChange={setTransferSearch}
+            page={query.transferPage}
+            limit={query.transferLimit}
+            onPageChange={(p) => setQuery({ transferPage: p })}
+            onLimitChange={(size) => setQuery({ transferLimit: size, transferPage: 1 })}
+            searchQuery={query.transferSearch}
+            onSearchChange={(s) => setQuery({ transferSearch: s, transferPage: 1 })}
             onRefetch={() => refetchTransfers()}
             placeholderText="Search transfers..."
             emptyStateText="No inventory transfers logged."

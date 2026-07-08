@@ -8,6 +8,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth/auth-provider";
 import { adminService } from "@/services/admin.service";
 import type { AuditLog } from "@/lib/types";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 
 const actionColors: Record<string, "soft" | "warning" | "danger" | "secondary"> = {
   create: "soft", update: "warning", delete: "danger", refund: "danger",
@@ -16,28 +19,63 @@ const actionColors: Record<string, "soft" | "warning" | "danger" | "secondary"> 
 
 export default function AuditLogsPage() {
   const { token } = useAuth();
+  
+  const [query, setQuery] = useQueryStates({
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50),
+    from: parseAsString.withDefault(""),
+    to: parseAsString.withDefault("")
+  });
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["audit-logs"],
-    queryFn: () => adminService.getAuditLogs(token),
+    queryKey: ["audit-logs", query.page, query.limit, query.from, query.to],
+    queryFn: () => adminService.getAuditLogs(token, {
+      page: query.page,
+      limit: query.limit,
+      from: query.from || undefined,
+      to: query.to || undefined
+    }),
     enabled: Boolean(token)
   });
 
-  const logs = data?.logs ?? [];
+  const logs = data?.logs ?? data ?? []; // Adjust depending on response format
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Audit Logs</h1>
-        <p className="text-sm text-muted">Track all system activities and changes</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Audit Logs</h1>
+          <p className="text-sm text-muted">Track all system activities and changes</p>
+        </div>
+        <JollyDateRangePicker 
+          label="Date Filter"
+          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+          onChange={(val) => {
+            if (val) {
+              setQuery({ 
+                from: val.start.toString() + "T00:00:00.000Z", 
+                to: val.end.toString() + "T23:59:59.999Z", 
+                page: 1 
+              });
+            } else {
+              setQuery({ from: "", to: "", page: 1 });
+            }
+          }}
+        />
       </div>
 
       <DataTable
         isLoading={isLoading}
-        data={logs}
+        data={Array.isArray(logs) ? logs : []}
         keyExtractor={(l) => l._id}
+        totalItems={data?.meta?.pagination?.total ?? (Array.isArray(logs) ? logs.length : 0)}
+        page={query.page}
+        limit={query.limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onLimitChange={(l) => setQuery({ limit: l, page: 1 })}
         onRefetch={() => refetch()}
         emptyStateIcon={<ClipboardList className="h-12 w-12 text-muted/30" />}
-        emptyStateText="No audit logs yet."
+        emptyStateText="No audit logs found in the selected date range."
         columns={[
           {
             key: "actor", header: "Actor",

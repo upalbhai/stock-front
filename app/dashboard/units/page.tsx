@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { unitService } from "@/services/unit.service";
 import { getErrorMessage } from "@/lib/error";
 import type { Unit } from "@/lib/types";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
 
 export default function UnitsPage() {
   const { token } = useAuth();
@@ -20,15 +21,19 @@ export default function UnitsPage() {
   const [showModal, setShowModal] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
-  const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(50);
-  const [search, setSearch] = React.useState("");
+  
+  const [query, setQuery] = useQueryStates({
+    search: parseAsString.withDefault(""),
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50)
+  });
+
   const emptyForm = { name: "", key: "", abbreviation: "", sortOrder: "0" };
   const [form, setForm] = React.useState(emptyForm);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["units", page, limit, search],
-    queryFn: () => unitService.getUnitsWithMeta(token, { flat: "true", page, limit, search: search || undefined }),
+    queryKey: ["units", query.page, query.limit, query.search],
+    queryFn: () => unitService.getUnitsWithMeta(token, { flat: "true", page: query.page, limit: query.limit, search: query.search || undefined }),
     enabled: Boolean(token)
   });
 
@@ -58,7 +63,7 @@ export default function UnitsPage() {
   });
 
   const units: Unit[] = data?.data ?? [];
-  const pagination = data?.meta?.pagination ?? { page: 1, limit, total: units.length, totalPages: 1 };
+  const pagination = data?.meta?.pagination ?? { page: 1, limit: query.limit, total: units.length, totalPages: 1 };
 
   const openCreate = () => {
     setEditId(null);
@@ -94,12 +99,12 @@ export default function UnitsPage() {
         data={units}
         keyExtractor={(u) => u._id}
         totalItems={pagination.total}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
-        searchQuery={search}
-        onSearchChange={setSearch}
+        page={query.page}
+        limit={query.limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onLimitChange={(l) => setQuery({ limit: l, page: 1 })}
+        searchQuery={query.search}
+        onSearchChange={(s) => setQuery({ search: s, page: 1 })}
         onRefetch={() => refetch()}
         placeholderText="Search units..."
         emptyStateIcon={<Zap className="h-12 w-12 text-muted/30" />}

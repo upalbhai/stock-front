@@ -5,8 +5,8 @@ export const adminService = {
   getDashboardStats: async (token?: string | null) => {
     return getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number }>("/admin/stats", token);
   },
-  getAuditLogs: async (token?: string | null) => {
-    return getJson<{ logs: AuditLog[]; total: number }>("/audit-logs", token);
+  getAuditLogs: async (token?: string | null, params?: Record<string, any>) => {
+    return getJson<{ logs?: AuditLog[]; data?: AuditLog[]; total?: number; meta?: any }>("/audit-logs", token, params);
   },
   getAdminOutlets: async (token?: string | null, params?: { search?: string; status?: string }) => {
     return getJson<{ outlets: any[] }>("/admin/outlets", token, params);

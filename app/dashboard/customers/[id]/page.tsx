@@ -20,6 +20,9 @@ import type { Customer, CustomerTransaction } from "@/lib/types";
 import { toast } from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
 import { APP_ROUTES } from "@/lib/routes";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 
 const TX_LABELS: Record<string, string> = {
   sale: "Credit sale",
@@ -39,13 +42,25 @@ export default function CustomerDetailPage() {
     hasCreditKhata &&
     (user?.role === "owner" || user?.role === "manager" || user?.role === "superadmin");
 
+  const [query, setQuery] = useQueryStates({
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50),
+    from: parseAsString.withDefault(""),
+    to: parseAsString.withDefault("")
+  });
+
   const EMPTY_FORM = { amount: "", method: "cash", note: "" };
   const [showPay, setShowPay] = React.useState(false);
   const [payForm, setPayForm] = React.useState(EMPTY_FORM);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["customer-details", id],
-    queryFn: () => customerService.getCustomerLedger(id, token),
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["customer-details", id, query.page, query.limit, query.from, query.to],
+    queryFn: () => customerService.getCustomerLedger(id, token, {
+      page: query.page,
+      limit: query.limit,
+      from: query.from || undefined,
+      to: query.to || undefined
+    }),
     enabled: Boolean(token && id)
   });
 
@@ -92,11 +107,28 @@ export default function CustomerDetailPage() {
             {customer.gstin && <span>· GSTIN: {customer.gstin}</span>}
           </div>
         </div>
-        {canCollect && customer.outstandingBalance > 0 && (
-          <Button onClick={() => setShowPay(true)}>
-            <IndianRupee className="h-4 w-4" /> Receive Payment
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <JollyDateRangePicker 
+            label="Filter Ledger"
+            value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+            onChange={(val) => {
+              if (val) {
+                setQuery({ 
+                  from: val.start.toString() + "T00:00:00.000Z", 
+                  to: val.end.toString() + "T23:59:59.999Z", 
+                  page: 1 
+                });
+              } else {
+                setQuery({ from: "", to: "", page: 1 });
+              }
+            }}
+          />
+          {canCollect && customer.outstandingBalance > 0 && (
+            <Button onClick={() => setShowPay(true)}>
+              <IndianRupee className="h-4 w-4" /> Receive Payment
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -114,7 +146,13 @@ export default function CustomerDetailPage() {
           isLoading={isLoading}
           data={transactions}
           keyExtractor={(t) => t._id}
-          emptyStateText="No transactions yet."
+          totalItems={data?.total ?? transactions.length}
+          page={query.page}
+          limit={query.limit}
+          onPageChange={(p) => setQuery({ page: p })}
+          onLimitChange={(size) => setQuery({ limit: size, page: 1 })}
+          onRefetch={() => refetch()}
+          emptyStateText="No transactions yet in this date range."
           columns={[
             {
               key: "date",

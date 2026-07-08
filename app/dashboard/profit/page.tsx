@@ -21,6 +21,9 @@ import { stockService } from "@/services/stock.service";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/format";
 import { getErrorMessage } from "@/lib/error";
 import { toast } from "react-hot-toast";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
+import { parseDate } from "@internationalized/date";
 import {
   buildStockUnitOptions,
   getProductUnitLabel,
@@ -104,8 +107,8 @@ function getDefaultDateRange() {
   const start = new Date();
   start.setDate(start.getDate() - 29);
   return {
-    from: start.toISOString().split("T")[0],
-    to: end.toISOString().split("T")[0]
+    from: start.toISOString().split("T")[0] + "T00:00:00.000Z",
+    to: end.toISOString().split("T")[0] + "T23:59:59.999Z"
   };
 }
 
@@ -129,8 +132,13 @@ export default function ProfitPage() {
   const { token, outletId } = useAuth();
   const qc = useQueryClient();
   const defaults = React.useMemo(getDefaultDateRange, []);
-  const [from, setFrom] = React.useState(defaults.from);
-  const [to, setTo] = React.useState(defaults.to);
+  
+  const [query, setQuery] = useQueryStates({
+    from: parseAsString.withDefault(defaults.from),
+    to: parseAsString.withDefault(defaults.to),
+    ledgerSearch: parseAsString.withDefault("")
+  });
+
   const [showIssueModal, setShowIssueModal] = React.useState(false);
   const [prodSearch, setProdSearch] = React.useState("");
   const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
@@ -141,7 +149,6 @@ export default function ProfitPage() {
   const [issueNote, setIssueNote] = React.useState("");
 
   // Ledger state
-  const [ledgerSearch, setLedgerSearch] = React.useState("");
   const [editEntry, setEditEntry] = React.useState<LedgerMovement | null>(null);
   const [deleteEntry, setDeleteEntry] = React.useState<LedgerMovement | null>(null);
 
@@ -151,13 +158,13 @@ export default function ProfitPage() {
   const [editNote, setEditNote] = React.useState("");
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["profit-ledger", outletId, from, to, ledgerSearch],
+    queryKey: ["profit-ledger", outletId, query.from, query.to, query.ledgerSearch],
     queryFn: () =>
       reportService.getProfitLedger(token!, {
         outletId: outletId ?? undefined,
-        from,
-        to,
-        search: ledgerSearch || undefined,
+        from: query.from,
+        to: query.to,
+        search: query.ledgerSearch || undefined,
         limit: 100
       }),
     enabled: Boolean(token)
@@ -315,10 +322,20 @@ export default function ProfitPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground" />
-        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-36" />
-        <span className="text-xs text-muted-foreground">to</span>
-        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-36" />
+        <JollyDateRangePicker 
+          label="Date Filter"
+          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+          onChange={(val) => {
+            if (val) {
+              setQuery({ 
+                from: val.start.toString() + "T00:00:00.000Z", 
+                to: val.end.toString() + "T23:59:59.999Z" 
+              });
+            } else {
+              setQuery({ from: defaults.from, to: defaults.to });
+            }
+          }}
+        />
       </div>
 
       <div>
@@ -417,8 +434,8 @@ export default function ProfitPage() {
           data={movements}
           keyExtractor={(m) => m._id}
           onRefetch={() => refetch()}
-          searchQuery={ledgerSearch}
-          onSearchChange={setLedgerSearch}
+          searchQuery={query.ledgerSearch}
+          onSearchChange={(v) => setQuery({ ledgerSearch: v })}
           placeholderText="Search product, note, reason..."
           hidePagination
           emptyStateText="No stock money movements in this period."

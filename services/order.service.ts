@@ -11,4 +11,7 @@ export const orderService = {
   voidOrder: async (id: string, reason: string, token?: string | null) => {
     return apiFetch(`/orders/${id}/void`, { method: "POST", body: { reason }, token });
   },
+  getOrder: async (id: string, token?: string | null) => {
+    return getJson<{ order: Order }>(`/orders/${id}`, token);
+  }
 };
