@@ -216,6 +216,7 @@ export type Order = {
   notes?: string;
   status: "pending" | "completed" | "cancelled" | "refunded" | "voided";
   paymentStatus: "paid" | "partial" | "pending";
+  payments?: { method: string; amount: number }[];
   createdBy?: { name: string };
   voidedBy?: { name: string };
   voidedAt?: string;

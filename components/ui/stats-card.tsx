@@ -1,8 +1,8 @@
 "use client";
-
+import * as React from "react";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { Card, CardContent, CardDescription } from "./card";
+import { Card, CardContent } from "./card";
 
 type StatsCardProps = {
   label: string;
@@ -11,7 +11,7 @@ type StatsCardProps = {
   trend?: { value: number; label: string };
   icon?: React.ReactNode;
   className?: string;
-  color?: "default" | "primary" | "success" | "warning" | "danger";
+  color?: "default" | "primary" | "success" | "warning" | "danger" | "purple";
 };
 
 const colorMap = {
@@ -20,40 +20,71 @@ const colorMap = {
   success: "text-info",
   warning: "text-warning",
   danger: "text-destructive",
+  purple: "text-purple-600 dark:text-purple-400",
+};
+
+const bgTintMap = {
+  default: "bg-muted/10 border-border/80",
+  primary: "bg-primary/5 dark:bg-primary/10 border-primary/20",
+  success: "bg-info/5 dark:bg-info/10 border-info/20",
+  warning: "bg-warning/5 dark:bg-warning/10 border-warning/20",
+  danger: "bg-destructive/5 dark:bg-destructive/10 border-destructive/20",
+  purple: "bg-purple-500/5 dark:bg-purple-500/10 border-purple-500/20",
+};
+
+const iconColorMap = {
+  default: "bg-muted text-muted-foreground",
+  primary: "bg-primary/10 text-primary",
+  success: "bg-info/10 text-info",
+  warning: "bg-warning/10 text-warning",
+  danger: "bg-destructive/10 text-destructive",
+  purple: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
 };
 
 export function StatsCard({ label, value, hint, trend, icon, className, color = "default" }: StatsCardProps) {
   return (
-    <Card className={cn("animate-rise", className)}>
-      <CardContent className="pt-5">
-        <div className="flex items-start justify-between gap-2">
+    <Card className={cn("animate-rise border transition-all duration-300 hover:shadow-md hover:scale-[1.01]", bgTintMap[color], className)}>
+      <CardContent className="pt-4.5 pb-4 px-4.5">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <CardDescription className="truncate">{label}</CardDescription>
-            <p className={cn("mt-1 text-2xl font-bold tracking-tight", colorMap[color])}>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/90 block">
+              {label}
+            </span>
+            <p className={cn("mt-1.5 text-3xl font-extrabold tracking-tight leading-none", colorMap[color])}>
               {value}
             </p>
-            {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+            
             {trend && (
               <div
                 className={cn(
-                  "mt-2 flex items-center gap-1 text-xs font-medium",
-                  trend.value >= 0 ? "text-foreground" : "text-muted-foreground"
+                  "mt-2 flex items-center gap-1 text-xs font-semibold leading-none",
+                  trend.value >= 0 
+                    ? (color === "success" || color === "default" ? "text-emerald-500" : colorMap[color])
+                    : "text-rose-500"
                 )}
               >
-                {trend.value >= 0 ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
                 <span>
-                  {Math.abs(trend.value)}% {trend.label}
+                  {trend.value >= 0 ? "↑" : "↓"} {trend.value >= 0 ? "+" : ""}{trend.value}%
+                </span>
+                <span className="text-muted-foreground text-[10px] font-normal">
+                  {trend.label}
                 </span>
               </div>
             )}
+
+            {hint && (
+              <p className={cn("text-xs text-muted-foreground/80 font-medium", trend ? "mt-1.5" : "mt-2")}>
+                {hint}
+              </p>
+            )}
           </div>
+          
           {icon && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
-              {icon}
+            <div className={cn("flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl transition-all duration-300 shadow-xs", iconColorMap[color])}>
+              {React.isValidElement(icon) 
+                ? React.cloneElement(icon as React.ReactElement<any>, { className: "h-4.5 w-4.5" })
+                : icon
+              }
             </div>
           )}
         </div>
@@ -61,3 +92,4 @@ export function StatsCard({ label, value, hint, trend, icon, className, color = 
     </Card>
   );
 }
+

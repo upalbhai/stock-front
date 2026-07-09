@@ -3,7 +3,7 @@ import type { Order } from "@/lib/types";
 
 export const orderService = {
   getOrders: async (token?: string | null, params?: any) => {
-    return getJson<{ orders: Order[]; total: number }>("/orders", token, params);
+    return getJson<{ orders: Order[]; total: number; payments?: { payment_type: string; amount: number }[] }>("/orders", token, params);
   },
   createOrder: async (data: unknown, token?: string | null) => {
     return apiFetch("/orders", { method: "POST", body: data, token });

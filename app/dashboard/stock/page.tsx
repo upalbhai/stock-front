@@ -4,8 +4,9 @@ import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Package, ArrowLeftRight, History, Play, AlertTriangle,
-  Calendar, ArrowDownToLine, ArrowUpFromLine, List, Search, RefreshCw
+  Calendar, ArrowDownToLine, ArrowUpFromLine, List, Search, RefreshCw, Trash2
 } from "lucide-react";
+import { apiFetch } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -90,8 +91,8 @@ function getHistoryDatePreset(preset: "today" | "week" | "month") {
   };
 }
 
-function buildHistoryColumns(): Parameters<typeof DataTable<StockHistoryEntry>>[0]["columns"] {
-  return [
+function buildHistoryColumns(onDelete?: (e: StockHistoryEntry) => void): Parameters<typeof DataTable<StockHistoryEntry>>[0]["columns"] {
+  const cols: Parameters<typeof DataTable<StockHistoryEntry>>[0]["columns"] = [
     {
       key: "createdAt",
       header: "Time",
@@ -207,6 +208,25 @@ function buildHistoryColumns(): Parameters<typeof DataTable<StockHistoryEntry>>[
       )
     }
   ];
+
+  if (onDelete) {
+    cols.push({
+      key: "actions",
+      header: "",
+      render: (e: StockHistoryEntry) => {
+        if (!e.referenceType && ["purchase", "opening", "wastage", "adjustment", "return"].includes(e.type)) {
+          return (
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-danger hover:bg-danger/10" onClick={() => onDelete(e)}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          );
+        }
+        return null;
+      }
+    });
+  }
+
+  return cols;
 }
 
 const TRANSFER_STATUS_COLORS: Record<string, "soft" | "warning" | "default" | "danger"> = {
@@ -228,7 +248,7 @@ const HISTORY_TYPE_FILTERS = [
 const ENTRY_TYPE_OPTIONS = [
   { value: "purchase", label: "Receive stock", hint: "Add purchased stock (peti/crate or loose)" },
   { value: "wastage", label: "Remove / wastage", hint: "Reduce stock for damage or loss" },
-  { value: "adjustment", label: "Set exact count", hint: "Set total stock to an exact amount" }
+  // { value: "adjustment", label: "Set exact count", hint: "Set total stock to an exact amount" }
 ] as const;
 
 export default function StockPage() {
@@ -252,6 +272,8 @@ export default function StockPage() {
     transferPage: parseAsInteger.withDefault(1),
     transferLimit: parseAsInteger.withDefault(50),
   });
+
+  const [deleteEntryId, setDeleteEntryId] = React.useState<string | null>(null);
 
   const activeTab = query.tab;
 
@@ -376,13 +398,25 @@ export default function StockPage() {
     onError: (err: unknown) => toast.error(getErrorMessage(err, "Failed to save opening stock"))
   });
 
+  const deleteEntryMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/stock/entries/${id}`, { method: "DELETE", token }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stock-history"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["stock-summary"] });
+      toast.success("Stock entry reverted successfully");
+      setDeleteEntryId(null);
+    },
+    onError: (err: unknown) => toast.error(getErrorMessage(err, "Failed to revert entry"))
+  });
+
   const products: Product[] = prodData?.data ?? [];
   const summary = summaryData;
   const history = historyData?.entries ?? [];
   const historyTotal = historyData?.total ?? 0;
   const historySummary = historyData?.summary;
   const historyTotalPages = Math.ceil(historyTotal / query.historyLimit) || 1;
-  const historyColumns = React.useMemo(() => buildHistoryColumns(), []);
+  const historyColumns = React.useMemo(() => buildHistoryColumns((e) => setDeleteEntryId(e._id)), []);
   const historyInEntries = history.filter((e) => e.qty > 0);
   const historyOutEntries = history.filter((e) => e.qty < 0);
 
@@ -396,13 +430,13 @@ export default function StockPage() {
   const historyFilters = (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <JollyDateRangePicker 
+        <JollyDateRangePicker
           label="Date Filter"
           value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
           onChange={(val) => {
             if (val) {
-              setQuery({ 
-                from: val.start.toString() + "T00:00:00.000Z", 
+              setQuery({
+                from: val.start.toString() + "T00:00:00.000Z",
                 to: val.end.toString() + "T23:59:59.999Z",
                 historyPage: 1
               });
@@ -1284,6 +1318,25 @@ export default function StockPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* MODAL: Delete Stock Entry */}
+      <Modal open={!!deleteEntryId} onClose={() => setDeleteEntryId(null)} title="Revert Stock Entry" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-muted">
+            Are you sure you want to revert this stock entry? This will reverse the stock changes on this product and permanently delete this history record.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" type="button" onClick={() => setDeleteEntryId(null)}>Cancel</Button>
+            <Button variant="destructive" disabled={deleteEntryMutation.isPending} onClick={() => {
+              if (deleteEntryId) {
+                deleteEntryMutation.mutate(deleteEntryId);
+              }
+            }}>
+              {deleteEntryMutation.isPending ? "Reverting..." : "Yes, Revert Entry"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

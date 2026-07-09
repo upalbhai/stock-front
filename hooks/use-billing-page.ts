@@ -304,6 +304,7 @@ export function useBillingPage() {
                 taxRate: exactMatch.gstRate || exactMatch.taxRate,
                 unit: exactMatch.unit,
                 image: exactMatch.image,
+                onHandQty: exactMatch.onHandQty,
                 categoryId:
                   typeof exactMatch.categoryId === "object"
                     ? exactMatch.categoryId?._id
@@ -395,6 +396,7 @@ export function useBillingPage() {
           conversionFactor: option.conversionFactor,
           packagingUnitId: option.packagingUnitId,
           image: product.image,
+          onHandQty: product.onHandQty,
           categoryId:
             typeof product.categoryId === "object"
               ? product.categoryId?._id
@@ -412,6 +414,7 @@ export function useBillingPage() {
         taxRate,
         unit: product.unit,
         image: product.image,
+        onHandQty: product.onHandQty,
         categoryId:
           typeof product.categoryId === "object"
             ? product.categoryId?._id

@@ -18,6 +18,7 @@ export type LineItem = {
   image?: string;
   categoryId?: string;
   notes?: string;
+  onHandQty?: number;
 };
 
 type PaymentState = {

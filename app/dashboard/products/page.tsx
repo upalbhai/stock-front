@@ -509,7 +509,7 @@ export default function ProductsPage() {
                 </Button>
               </div>
             </div>
-            <div className="col-span-2 md:col-span-1"><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} {...register("gstRate")} /></div>
+            <div className="col-span-2 md:col-span-1"><label className="mb-1 block text-xs font-medium text-muted">GST Rate (%)</label><Input id="product-gst" type="number" min={0} max={100} step="any" {...register("gstRate")} /></div>
 
             {hasPackaging && (
               <div className="col-span-2 md:col-span-3 space-y-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:p-4">

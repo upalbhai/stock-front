@@ -187,6 +187,17 @@ export default function OrdersPage() {
         />
       </div>
 
+      {data?.payments && data.payments.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {data.payments.map((p: any, i: number) => (
+            <div key={i} className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm flex flex-col justify-center">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{p.payment_type}</span>
+              <span className="text-lg font-extrabold text-foreground mt-0.5">{formatCurrency(p.amount)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <DataTable
         isLoading={isLoading}
         data={orders}
@@ -259,6 +270,35 @@ export default function OrdersPage() {
                   <p className="max-w-[180px] truncate text-[10px] text-muted" title={o.voidReason}>
                     {o.voidReason}
                   </p>
+                )}
+              </div>
+            )
+          },
+          {
+            key: "payment",
+            header: "Payment",
+            render: (o) => (
+              <div className="flex gap-1 flex-wrap max-w-[120px]">
+                {o.payments && o.payments.length > 0 ? (
+                  o.payments.map((p: any, i: number) => {
+                    if (p.method === "split" && p.split) {
+                      return Object.entries(p.split).map(([k, v]: any) => {
+                        if (!v || Number(v) <= 0) return null;
+                        return (
+                          <Badge key={`${i}-${k}`} variant="secondary" className="capitalize text-[10px] px-1.5 py-0 border-primary/20 bg-primary/5">
+                            {k}: {formatCurrency(v)}
+                          </Badge>
+                        );
+                      });
+                    }
+                    return (
+                      <Badge key={i} variant="secondary" className="capitalize text-[10px] px-1.5 py-0 border-primary/20 bg-primary/5">
+                        {p.method}: {formatCurrency(p.amount)}
+                      </Badge>
+                    );
+                  })
+                ) : (
+                  <span className="text-xs text-muted">—</span>
                 )}
               </div>
             )

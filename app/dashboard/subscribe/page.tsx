@@ -21,10 +21,10 @@ export default function SubscribePage() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: plansData, isLoading: loadingPlans } = useQuery({
-    queryKey: ["plans"],
-    queryFn: () => getJson<{ plans: Plan[] }>("/plans")
-  });
+  // const { data: plansData, isLoading: loadingPlans } = useQuery({
+  //   queryKey: ["plans"],
+  //   queryFn: () => getJson<{ plans: Plan[] }>("/plans")
+  // });
 
   const { data: statusData } = useQuery({
     queryKey: ["subscription-status"],
@@ -39,97 +39,97 @@ export default function SubscribePage() {
     }
   }, [user, router]);
 
-  const handleSubscribe = async (plan: Plan) => {
-    if (!token) {
-      router.push(APP_ROUTES.LOGIN);
-      return;
-    }
+  // const handleSubscribe = async (plan: Plan) => {
+  //   if (!token) {
+  //     router.push(APP_ROUTES.LOGIN);
+  //     return;
+  //   }
 
-    setLoadingPlan(plan._id);
-    setError(null);
+  //   setLoadingPlan(plan._id);
+  //   setError(null);
 
-    try {
-      // 1. Create order
-      const orderData = await apiFetchData<{ orderId: string; keyId: string; amount: number; currency: string }>("/payments/create-order", {
-        method: "POST",
-        body: { planId: plan._id, billingCycle },
-        token
-      });
+  //   try {
+  //     // 1. Create order
+  //     const orderData = await apiFetchData<{ orderId: string; keyId: string; amount: number; currency: string }>("/payments/create-order", {
+  //       method: "POST",
+  //       body: { planId: plan._id, billingCycle },
+  //       token
+  //     });
 
-      if (!orderData.orderId) {
-        throw new Error("Failed to create order");
-      }
+  //     if (!orderData.orderId) {
+  //       throw new Error("Failed to create order");
+  //     }
 
-      // 2. Open Razorpay checkout
-      const options = {
-        key: orderData.keyId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: "Outlet Pulse",
-        description: `${plan.name} Plan (${billingCycle})`,
-        order_id: orderData.orderId,
-        handler: async function (response: any) {
-          // 3. Verify payment
-          try {
-            const verifyRes = await apiFetch<any>("/payments/verify", {
-              method: "POST",
-              body: {
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                planId: plan._id,
-                billingCycle
-              },
-              token
-            });
+  //     // 2. Open Razorpay checkout
+  //     const options = {
+  //       key: orderData.keyId,
+  //       amount: orderData.amount,
+  //       currency: orderData.currency,
+  //       name: "Outlet Pulse",
+  //       description: `${plan.name} Plan (${billingCycle})`,
+  //       order_id: orderData.orderId,
+  //       handler: async function (response: any) {
+  //         // 3. Verify payment
+  //         try {
+  //           const verifyRes = await apiFetch<any>("/payments/verify", {
+  //             method: "POST",
+  //             body: {
+  //               razorpay_payment_id: response.razorpay_payment_id,
+  //               razorpay_order_id: response.razorpay_order_id,
+  //               razorpay_signature: response.razorpay_signature,
+  //               planId: plan._id,
+  //               billingCycle
+  //             },
+  //             token
+  //           });
 
-            if (verifyRes.success) {
-              // Force reload to update token and app state
-              window.location.href = APP_ROUTES.SUBSCRIBE_SUCCESS;
-            } else {
-              setError("Payment verification failed");
-            }
-          } catch (err) {
-            setError(getErrorMessage(err, "Failed to verify payment"));
-          }
-        },
-        prefill: {
-          name: user?.name || "",
-          email: "",
-          contact: ""
-        },
-        theme: {
-          color: "#4f46e5"
-        }
-      };
+  //           if (verifyRes.success) {
+  //             // Force reload to update token and app state
+  //             window.location.href = APP_ROUTES.SUBSCRIBE_SUCCESS;
+  //           } else {
+  //             setError("Payment verification failed");
+  //           }
+  //         } catch (err) {
+  //           setError(getErrorMessage(err, "Failed to verify payment"));
+  //         }
+  //       },
+  //       prefill: {
+  //         name: user?.name || "",
+  //         email: "",
+  //         contact: ""
+  //       },
+  //       theme: {
+  //         color: "#4f46e5"
+  //       }
+  //     };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on("payment.failed", function (response: any) {
-        setError(`Payment failed: ${response.error.description}`);
-      });
-      rzp.open();
+  //     const rzp = new (window as any).Razorpay(options);
+  //     rzp.on("payment.failed", function (response: any) {
+  //       setError(`Payment failed: ${response.error.description}`);
+  //     });
+  //     rzp.open();
 
-    } catch (err) {
-      setError(getErrorMessage(err, "Payment initialization failed"));
-    } finally {
-      setLoadingPlan(null);
-    }
-  };
+  //   } catch (err) {
+  //     setError(getErrorMessage(err, "Payment initialization failed"));
+  //   } finally {
+  //     setLoadingPlan(null);
+  //   }
+  // };
 
-  const plans = plansData?.plans || [];
+  // const plans = plansData?.plans || [];
   const activePlanId = statusData?.plan?._id;
   const isTrialExpired = user?.trialExpired;
 
   return (
     <div className="min-h-screen py-12 px-4 bg-surface">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
-      
+
       <div className="max-w-6xl mx-auto space-y-12">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto space-y-4">
           <h1 className="text-4xl font-bold tracking-tight">Simple, transparent pricing</h1>
           <p className="text-lg text-muted">Choose the plan that fits your business needs. Upgrade, downgrade, or cancel anytime.</p>
-          
+
           {isTrialExpired && (
             <div className="bg-danger/10 text-danger p-4 rounded-2xl flex items-center justify-center gap-2 mt-4 animate-pulse">
               <AlertCircle className="h-5 w-5" />
@@ -146,7 +146,7 @@ export default function SubscribePage() {
         </div>
 
         {/* Billing Toggle */}
-        <div className="flex justify-center">
+        {/* <div className="flex justify-center">
           <div className="bg-border/40 p-1.5 rounded-2xl flex gap-1">
             <button
               onClick={() => setBillingCycle("monthly")}
@@ -162,10 +162,10 @@ export default function SubscribePage() {
               <span className="bg-success/20 text-success text-[10px] px-2 py-0.5 rounded-full">Save 20%</span>
             </button>
           </div>
-        </div>
+        </div> */}
 
         {/* Pricing Cards */}
-        {loadingPlans ? (
+        {/* {loadingPlans ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
@@ -237,14 +237,14 @@ export default function SubscribePage() {
               );
             })}
           </div>
-        )}
+        )} */}
 
         {/* Footer Actions */}
-        <div className="flex justify-center pt-8 border-t border-border/50">
+        {/* <div className="flex justify-center pt-8 border-t border-border/50">
           <Button variant="ghost" onClick={logout} className="text-muted hover:text-text">
             Sign Out
           </Button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

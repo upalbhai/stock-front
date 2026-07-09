@@ -7,7 +7,9 @@ import {
   ChevronLeft,
   RefreshCw,
   ScanLine,
+  Check,
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -130,10 +132,10 @@ export function BillingProductPanel({
             type="button"
             onClick={() => onSelectCategory(null, null)}
             className={cn(
-              "shrink-0 rounded-xl px-3 py-2 text-xs font-medium transition",
+              "shrink-0 rounded-xl px-4.5 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-95",
               !selectedCategoryId
-                ? "bg-primary text-white"
-                : "border border-border bg-card text-muted-foreground hover:text-foreground"
+                ? "bg-primary text-white shadow-md shadow-primary/20"
+                : "border border-border/80 bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/50"
             )}
           >
             All
@@ -151,10 +153,10 @@ export function BillingProductPanel({
                 }
               }}
               className={cn(
-                "flex shrink-0 items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition",
+                "flex shrink-0 items-center gap-1.5 rounded-xl px-4.5 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-95",
                 selectedCategoryId === cat._id
-                  ? "text-white shadow-sm"
-                  : "border border-border bg-card text-muted-foreground hover:text-foreground"
+                  ? "text-white shadow-md shadow-primary/20"
+                  : "border border-border/80 bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/50"
               )}
               style={selectedCategoryId === cat._id ? { backgroundColor: cat.color } : {}}
             >
@@ -242,16 +244,27 @@ export function BillingProductPanel({
               const unitLabel = getProductUnitLabel(product);
               const packHint = isWholesale ? getWholesalePriceHint(product) : null;
               const hasPackaging = getActivePackagingUnits(product).length > 0;
+              const isDisabled = product.onHandQty <= 0 || cartQty >= product.onHandQty;
 
               return (
                 <button
                   key={product._id}
                   type="button"
-                  onClick={() => onAddProduct(product)}
+                  disabled={isDisabled}
+                  onClick={() => {
+                    onAddProduct(product);
+                    toast.success(<span className="text-sm"><span className="font-bold">{product.name}</span> added</span>, {
+                      duration: 1200,
+                      position: 'bottom-center',
+                      style: { borderRadius: '12px', background: 'var(--color-card)', color: 'var(--color-foreground)', border: '1px solid var(--color-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }
+                    });
+                  }}
                   className={cn(
-                    "group relative flex min-h-[7rem] flex-col rounded-2xl border p-3 text-left transition active:scale-[0.98]",
-                    "bg-card hover:border-primary/50 hover:shadow-sm",
-                    cartQty > 0 ? "border-primary/40 bg-primary/5" : "border-border"
+                    "group relative flex min-h-[7rem] flex-col rounded-2xl border p-3 text-left transition-all duration-300",
+                    isDisabled ? "opacity-50 grayscale cursor-not-allowed" : "active:scale-[0.97]",
+                    cartQty > 0 
+                      ? "border-primary/60 bg-primary/10 shadow-[0_0_15px_rgba(0,136,255,0.15)] ring-1 ring-primary/20" 
+                      : isDisabled ? "border-border/80 bg-muted/30" : "border-border/80 bg-card hover:border-primary/50 hover:shadow-md hover:-translate-y-[3px]"
                   )}
                 >
                   {cartQty > 0 && (
@@ -267,7 +280,8 @@ export function BillingProductPanel({
                     />
                   )}
                   <div className="flex min-w-0 items-start justify-between gap-1.5">
-                    <p className="line-clamp-2 flex-1 text-sm font-semibold leading-tight">
+                    <p className="line-clamp-2 flex-1 text-[14px] font-semibold leading-snug text-foreground/90 group-hover:text-foreground">
+                      {cartQty > 0 && <Check className="inline-block h-3.5 w-3.5 text-primary mr-1 -mt-0.5" strokeWidth={3} />}
                       {product.name}
                     </p>
                     {isWholesale && hasPackaging && (

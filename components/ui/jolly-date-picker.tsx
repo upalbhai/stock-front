@@ -132,20 +132,20 @@ function JollyDateRangePicker<T extends AriaDateValue>({
       )}
       {...props}
     >
-      <Label>{label}</Label>
-      <FieldGroup>
-        <DateInput variant="ghost" slot={"start"} />
-        <span aria-hidden className="px-2 text-sm text-muted-foreground">
+      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/90 shrink-0">{label}</Label>
+      <FieldGroup className="bg-muted/20 border-border/80 hover:border-border/100 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/80">
+        <DateInput variant="ghost" slot={"start"} className="font-semibold text-sm" />
+        <span aria-hidden className="px-1 text-sm text-muted-foreground">
           -
         </span>
-        <DateInput className="flex-1" variant="ghost" slot={"end"} />
+        <DateInput className="flex-1 font-semibold text-sm" variant="ghost" slot={"end"} />
 
         <Button
           variant="ghost"
           size="icon"
-          className="mr-1 size-6 data-[focus-visible]:ring-offset-0"
+          className="mr-1 size-6 data-[focus-visible]:ring-offset-0 text-primary hover:bg-primary/10 rounded-md transition-colors"
         >
-          <CalendarIcon aria-hidden className="size-4" />
+          <CalendarIcon aria-hidden className="size-4 text-primary" />
         </Button>
       </FieldGroup>
       {description && (
