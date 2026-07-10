@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
+import { CardSwiper } from "@/components/ui/card-swiper";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
 import { customerService } from "@/services/customer.service";
@@ -112,14 +113,14 @@ export default function CustomersPage() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <CardSwiper>
         <StatsCard label="Total Customers" value={String(data?.total ?? customers.length)} icon={<Users className="h-5 w-5" />} />
         <StatsCard label="Total Outstanding" value={formatCurrency(totalOutstanding)} />
         <StatsCard
           label="With Balance Due"
           value={String(customers.filter((c) => c.outstandingBalance > 0).length)}
         />
-      </div>
+      </CardSwiper>
 
       <DataTable
         isLoading={isLoading}
@@ -135,21 +136,21 @@ export default function CustomersPage() {
         onRefetch={() => refetch()}
         placeholderText="Search name, phone, GSTIN..."
         emptyStateText="No customers yet in this date range."
+        headerActions={
+          <Button onClick={() => setShowModal(true)} size="sm" className="h-9">
+            <Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Add Customer</span>
+          </Button>
+        }
         filters={
-          <>
-            <Select
-              value={query.balanceFilter}
-              onValueChange={(v) => setQuery({ balanceFilter: v, page: 1 })}
-              className="w-44 h-9"
-              options={[
-                { value: "", label: "All customers" },
-                { value: "due", label: "With balance due" }
-              ]}
-            />
-            <Button onClick={() => setShowModal(true)}>
-              <Plus className="h-4 w-4 mr-1.5" /> Add Customer
-            </Button>
-          </>
+          <Select
+            value={query.balanceFilter}
+            onValueChange={(v) => setQuery({ balanceFilter: v, page: 1 })}
+            className="w-44 h-9"
+            options={[
+              { value: "", label: "All customers" },
+              { value: "due", label: "With balance due" }
+            ]}
+          />
         }
         columns={[
           {

@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
+import { CardSwiper } from "@/components/ui/card-swiper";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
 import { customerService } from "@/services/customer.service";
@@ -131,14 +132,14 @@ export default function CustomerDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <CardSwiper>
         <StatsCard label="Outstanding Balance" value={formatCurrency(customer.outstandingBalance)} />
         <StatsCard
           label="Credit Limit"
           value={customer.creditLimit ? formatCurrency(customer.creditLimit) : "No limit"}
         />
         <StatsCard label="Default GST" value={customer.defaultTaxMode === "inclusive" ? "Included" : "Extra"} />
-      </div>
+      </CardSwiper>
 
       <div>
         <h2 className="text-lg font-semibold mb-3">Khata Ledger</h2>

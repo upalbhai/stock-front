@@ -128,12 +128,12 @@ function JollyDateRangePicker<T extends AriaDateValue>({
   return (
     <DateRangePicker
       className={composeRenderProps(className, (className) =>
-        cn("group flex flex-row items-center gap-3", className)
+        cn("group flex flex-col sm:flex-row sm:items-center items-start gap-1.5 sm:gap-3", className)
       )}
       {...props}
     >
       <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/90 shrink-0">{label}</Label>
-      <FieldGroup className="bg-muted/20 border-border/80 hover:border-border/100 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/80">
+      <FieldGroup className="w-full sm:w-auto overflow-hidden flex items-center bg-muted/20 border-border/80 hover:border-border/100 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/80">
         <DateInput variant="ghost" slot={"start"} className="font-semibold text-sm" />
         <span aria-hidden className="px-1 text-sm text-muted-foreground">
           -

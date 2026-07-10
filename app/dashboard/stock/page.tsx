@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
+import { CardSwiper } from "@/components/ui/card-swiper";
 import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
@@ -417,8 +418,6 @@ export default function StockPage() {
   const historySummary = historyData?.summary;
   const historyTotalPages = Math.ceil(historyTotal / query.historyLimit) || 1;
   const historyColumns = React.useMemo(() => buildHistoryColumns((e) => setDeleteEntryId(e._id)), []);
-  const historyInEntries = history.filter((e) => e.qty > 0);
-  const historyOutEntries = history.filter((e) => e.qty < 0);
 
   const transfers = transfersData?.transfers ?? [];
   const transferTotal = transfersData?.total ?? 0;
@@ -482,18 +481,12 @@ export default function StockPage() {
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap gap-2">
-        {HISTORY_TYPE_FILTERS.map((f) => (
-          <button
-            key={f.value || "all"}
-            type="button"
-            onClick={() => setQuery({ historyType: f.value, historyPage: 1 })}
-            className={`rounded-full px-3 py-1 text-[10px] font-semibold transition ${query.historyType === f.value ? "bg-primary/10 text-primary border border-primary/30" : "bg-surface border border-border text-muted hover:text-text"}`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <Select
+        value={query.historyType}
+        onValueChange={(val) => setQuery({ historyType: val, historyPage: 1 })}
+        options={HISTORY_TYPE_FILTERS}
+        className="w-[180px] h-9"
+      />
     </>
   );
 
@@ -696,11 +689,11 @@ export default function StockPage() {
       {/* TAB CONTENT: Overview */}
       {activeTab === "overview" && (
         <div className="space-y-6 animate-rise">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <CardSwiper>
             <StatsCard label="Total SKUs" value={formatNumber(summary?.totalSkus || 0)} icon={<Package className="h-5 w-5" />} />
             <StatsCard label="On Hand Total" value={formatNumber(summary?.onHandTotal || 0)} />
             <StatsCard label="Low Stock Items" value={summary?.lowStock || 0} color={summary?.lowStock ? "danger" : "default"} icon={<AlertTriangle className="h-5 w-5" />} />
-          </div>
+          </CardSwiper>
 
           <DataTable
             isLoading={loadingProds}
@@ -829,7 +822,7 @@ export default function StockPage() {
           </div>
 
           {/* Summary cards for filtered period */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <CardSwiper slidesPerViewTablet={2.2} slidesPerViewDesktop={3.2}>
             <StatsCard
               label="Stock In"
               value={formatNumber(historySummary?.totalInQty ?? 0)}
@@ -868,91 +861,29 @@ export default function StockPage() {
               hint="If stock-in sells at entry price — NOT profit yet"
               color={(historySummary?.totalExpectedProfit ?? 0) >= 0 ? "success" : "danger"}
             />
-          </div>
+          </CardSwiper>
 
-          {/* Split view when All Ledger selected */}
-          {query.historyDirection === "all" ? (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-3 items-center justify-between flex-wrap rounded-xl border border-border bg-card p-4">
-                <div className="flex-1 flex items-center gap-2 min-w-0">
-                  <Search className="h-4 w-4 text-muted shrink-0" />
-                  <Input
-                    type="text"
-                    placeholder="Search product, SKU, or note..."
-                    value={query.historySearch}
-                    onChange={(e) => setQuery({ historySearch: e.target.value, historyPage: 1 })}
-                    className="flex-1 h-9"
-                  />
-                </div>
-                <Button variant="outline" size="sm" onClick={() => refetchHistory()} disabled={loadingHistory}>
-                  <RefreshCw className={`h-4 w-4 ${loadingHistory ? "animate-spin" : ""}`} />
-                  Refetch
-                </Button>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-                {historyFilters}
-              </div>
-              <div className="grid gap-6 xl:grid-cols-2">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <ArrowDownToLine className="h-4 w-4 text-green-600" />
-                    <h3 className="text-sm font-semibold">Stock In</h3>
-                    <Badge variant="soft" className="text-[10px]">{historyInEntries.length} on page</Badge>
-                  </div>
-                  <DataTable
-                    isLoading={loadingHistory}
-                    data={historyInEntries}
-                    keyExtractor={(e: StockHistoryEntry) => e._id}
-                    emptyStateText="No stock in entries for this filter."
-                    hidePagination
-                    columns={historyColumns}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <ArrowUpFromLine className="h-4 w-4 text-danger" />
-                    <h3 className="text-sm font-semibold">Stock Out</h3>
-                    <Badge variant="danger" className="text-[10px]">{historyOutEntries.length} on page</Badge>
-                  </div>
-                  <DataTable
-                    isLoading={loadingHistory}
-                    data={historyOutEntries}
-                    keyExtractor={(e: StockHistoryEntry) => e._id}
-                    emptyStateText="No stock out entries for this filter."
-                    hidePagination
-                    columns={historyColumns}
-                  />
-                </div>
-              </div>
-              {historyTotal > 0 && (
-                <Pagination
-                  page={query.historyPage}
-                  totalPages={historyTotalPages}
-                  pageSize={query.historyLimit}
-                  onPageChange={(p) => setQuery({ historyPage: p })}
-                  onPageSizeChange={(size) => setQuery({ historyLimit: size, historyPage: 1 })}
-                />
-              )}
-            </div>
-          ) : (
-            <DataTable
-              isLoading={loadingHistory}
-              data={history}
-              keyExtractor={(e: StockHistoryEntry) => e._id}
-              totalItems={historyTotal}
-              page={query.historyPage}
-              limit={query.historyLimit}
-              onPageChange={(p) => setQuery({ historyPage: p })}
-              onLimitChange={(size) => setQuery({ historyLimit: size, historyPage: 1 })}
-              searchQuery={query.historySearch}
-              onSearchChange={(s) => setQuery({ historySearch: s, historyPage: 1 })}
-              onRefetch={() => refetchHistory()}
-              placeholderText="Search product, SKU, or note..."
-              emptyStateText={query.historyDirection === "in" ? "No stock in entries for this filter." : "No stock out entries for this filter."}
-              filters={historyFilters}
-              columns={historyColumns}
-            />
-          )}
+          <DataTable
+            isLoading={loadingHistory}
+            data={history}
+            keyExtractor={(e: StockHistoryEntry) => e._id}
+            totalItems={historyTotal}
+            page={query.historyPage}
+            limit={query.historyLimit}
+            onPageChange={(p) => setQuery({ historyPage: p })}
+            onLimitChange={(size) => setQuery({ historyLimit: size, historyPage: 1 })}
+            searchQuery={query.historySearch}
+            onSearchChange={(s) => setQuery({ historySearch: s, historyPage: 1 })}
+            onRefetch={() => refetchHistory()}
+            placeholderText="Search product, SKU, or note..."
+            emptyStateText={
+              query.historyDirection === "in" ? "No stock in entries for this filter." 
+              : query.historyDirection === "out" ? "No stock out entries for this filter." 
+              : "No stock entries for this filter."
+            }
+            filters={historyFilters}
+            columns={historyColumns}
+          />
         </div>
       )}
 

@@ -82,7 +82,8 @@ export default function CategoriesPage() {
   });
 
   const allCategories = data?.data ?? [];
-  const topLevel = allCategories.filter((c) => !c.parentId || c.parentId === c._id);
+  const allCategoryIds = new Set(allCategories.map(c => c._id));
+  const topLevel = allCategories.filter((c) => !c.parentId || c.parentId === c._id || !allCategoryIds.has(c.parentId));
   const pagination = data?.meta?.pagination ?? { page: 1, limit: query.limit, total: allCategories.length, totalPages: 1 };
 
   const openCreate = (parentId = "") => {

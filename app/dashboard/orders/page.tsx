@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ban, Receipt, FileText, Info, Printer } from "lucide-react";
+import { Ban, Receipt, FileText, Info, Printer, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import { APP_ROUTES } from "@/lib/routes";
 import { useQueryStates, parseAsString, parseAsInteger, parseAsStringEnum } from "nuqs";
 import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
 import { parseDate } from "@internationalized/date";
+import { CardSwiper } from "@/components/ui/card-swiper";
 import { usePOSPrinter } from "@/hooks/use-pos-printer";
 
 type RecordFilter = "active" | "voided" | "all";
@@ -142,10 +143,10 @@ export default function OrdersPage() {
         customerPhone: order.customerPhone || undefined,
         items: order.items.map((i: any) => ({
           name: i.name,
-          qty: i.qty,
-          unit: i.unit,
+          qty: i.soldQty || i.qty,
+          unit: i.soldUnit || i.unit,
           price: i.price,
-          lineTotal: i.lineTotal ?? (i.price * i.qty)
+          lineTotal: i.lineTotal ?? (i.price * (i.soldQty || i.qty))
         })),
         subtotal: order.subtotal,
         discount: order.discount,
@@ -170,32 +171,45 @@ export default function OrdersPage() {
           <h1 className="text-2xl font-bold">Order History</h1>
           <p className="text-sm text-muted">View past bills — void wrong entries with audit trail</p>
         </div>
-        <JollyDateRangePicker 
-          label="Date Filter"
-          value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
-          onChange={(val) => {
-            if (val) {
-              setQuery({ 
-                from: val.start.toString() + "T00:00:00.000Z", 
-                to: val.end.toString() + "T23:59:59.999Z", 
-                page: 1 
-              });
-            } else {
-              setQuery({ from: "", to: "", page: 1 });
-            }
-          }}
-        />
+        <div className="flex items-end sm:items-center gap-2">
+          <JollyDateRangePicker 
+            label="Date Filter"
+            value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
+            onChange={(val) => {
+              if (val) {
+                setQuery({ 
+                  from: val.start.toString() + "T00:00:00.000Z", 
+                  to: val.end.toString() + "T23:59:59.999Z", 
+                  page: 1 
+                });
+              } else {
+                setQuery({ from: null, to: null, page: 1 });
+              }
+            }}
+          />
+          {(query.from || query.to) && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive border-border/80"
+              onClick={() => setQuery({ from: null, to: null, page: 1 })}
+              title="Clear date filter"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {data?.payments && data.payments.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <CardSwiper slidesPerViewMobile={2.2} slidesPerViewTablet={4.2} slidesPerViewDesktop={5}>
           {data.payments.map((p: any, i: number) => (
-            <div key={i} className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm flex flex-col justify-center">
+            <div key={i} className="h-full rounded-xl border border-border/50 bg-gradient-to-br from-card to-surface/50 p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-center cursor-grab active:cursor-grabbing">
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{p.payment_type}</span>
-              <span className="text-lg font-extrabold text-foreground mt-0.5">{formatCurrency(p.amount)}</span>
+              <span className="text-xl font-extrabold text-foreground mt-1">{formatCurrency(p.amount)}</span>
             </div>
           ))}
-        </div>
+        </CardSwiper>
       )}
 
       <DataTable
@@ -225,19 +239,24 @@ export default function OrdersPage() {
             key: "orderNumber",
             header: "Bill #",
             render: (o) => (
-              <span className={o.status === "voided" ? "text-muted line-through" : "font-medium"}>
-                {o.orderNumber}
-              </span>
+              <div className="flex flex-col">
+                <span className={o.status === "voided" ? "text-muted line-through" : "font-medium"}>
+                  {o.orderNumber}
+                </span>
+                <span className="text-[10px] text-muted sm:hidden mt-0.5">{formatDateTime(o.createdAt)}</span>
+              </div>
             )
           },
           {
             key: "createdAt",
             header: "Date",
+            className: "hidden sm:table-cell",
             render: (o) => <span className="text-sm text-muted">{formatDateTime(o.createdAt)}</span>
           },
           {
             key: "billingMode",
             header: "Mode",
+            className: "hidden md:table-cell",
             render: (o) => (
               <Badge variant="soft" className="capitalize">
                 {o.billingMode.replace("_", " ")}
@@ -247,6 +266,7 @@ export default function OrdersPage() {
           {
             key: "items",
             header: "Items",
+            className: "hidden sm:table-cell",
             render: (o) => <span className="text-sm">{o.items.length}</span>
           },
           {
@@ -277,6 +297,7 @@ export default function OrdersPage() {
           {
             key: "payment",
             header: "Payment",
+            className: "hidden lg:table-cell",
             render: (o) => (
               <div className="flex gap-1 flex-wrap max-w-[120px]">
                 {o.payments && o.payments.length > 0 ? (
@@ -306,6 +327,7 @@ export default function OrdersPage() {
           {
             key: "invoice",
             header: "Invoice",
+            className: "hidden xl:table-cell",
             render: (o) =>
               o.invoiceNumber ? (
                 <Link href={APP_ROUTES.invoiceDetail(o._id)} className="text-xs text-primary hover:underline">
@@ -330,12 +352,12 @@ export default function OrdersPage() {
             header: "",
             render: (o) => (
               <div className="flex gap-1 justify-end">
-                <Button variant="ghost" size="sm" onClick={() => setViewOrderId(o._id)}>
-                  <Info className="mr-1 h-3.5 w-3.5" /> Details
+                <Button variant="ghost" size="sm" className="px-2 sm:px-3" onClick={() => setViewOrderId(o._id)}>
+                  <Info className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Details</span>
                 </Button>
                 {canVoid && o.status === "completed" && (
-                  <Button variant="ghost" size="sm" className="text-danger" onClick={() => setVoidTarget(o)}>
-                    <Ban className="mr-1 h-3.5 w-3.5" /> Void
+                  <Button variant="ghost" size="sm" className="text-danger px-2 sm:px-3" onClick={() => setVoidTarget(o)}>
+                    <Ban className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Void</span>
                   </Button>
                 )}
               </div>
@@ -396,10 +418,10 @@ export default function OrdersPage() {
                   <div className="flex flex-col">
                     <span className="font-medium">{item.name}</span>
                     <span className="text-xs text-muted">
-                      {item.qty} {item.unit} x {formatCurrency(item.price)}
+                      {item.soldQty || item.qty} {item.soldUnit || item.unit} x {formatCurrency(item.price)}
                     </span>
                   </div>
-                  <span className="font-medium">{formatCurrency(item.lineTotal ?? (item.price * item.qty))}</span>
+                  <span className="font-medium">{formatCurrency(item.lineTotal ?? (item.price * (item.soldQty || item.qty)))}</span>
                 </div>
               ))}
             </div>
@@ -425,6 +447,16 @@ export default function OrdersPage() {
                 <span>Total</span>
                 <span>{formatCurrency(orderDetailsData.order.total)}</span>
               </div>
+              <div className="flex justify-between text-muted text-xs pt-2">
+                 <span className="capitalize">Paid ({orderDetailsData.order.payments?.[0]?.method || "cash"})</span>
+                 <span>{formatCurrency(orderDetailsData.order.amountPaid ?? orderDetailsData.order.total)}</span>
+              </div>
+              {(orderDetailsData.order.amountDue ?? 0) > 0 && (
+                <div className="flex justify-between text-danger font-bold text-sm">
+                   <span>Due</span>
+                   <span>{formatCurrency(orderDetailsData.order.amountDue ?? 0)}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t mt-4">

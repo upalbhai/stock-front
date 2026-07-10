@@ -43,8 +43,8 @@ const iconColorMap = {
 
 export function StatsCard({ label, value, hint, trend, icon, className, color = "default" }: StatsCardProps) {
   return (
-    <Card className={cn("animate-rise border transition-all duration-300 hover:shadow-md hover:scale-[1.01]", bgTintMap[color], className)}>
-      <CardContent className="pt-4.5 pb-4 px-4.5">
+    <Card className={cn("animate-rise border transition-all duration-300 hover:shadow-md hover:scale-[1.01] h-full flex flex-col", bgTintMap[color], className)}>
+      <CardContent className="pt-4.5 pb-4 px-4.5 flex-1 flex flex-col justify-center">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/90 block">

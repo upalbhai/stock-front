@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, RefreshCw, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Search, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Filter as FilterIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose, SheetFooter } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface ColumnDef<T> {
   header: React.ReactNode | string;
@@ -57,6 +59,8 @@ export interface DataTableProps<T> {
   expandable?: boolean;
   title?: string;
   description?: string;
+  hasActiveFilters?: boolean;
+  onClearFilters?: () => void;
 }
 
 export function DataTable<T>({
@@ -90,6 +94,8 @@ export function DataTable<T>({
   expandable = false,
   title,
   description,
+  hasActiveFilters = false,
+  onClearFilters,
 }: DataTableProps<T>) {
   // Normalize legacy props
   const finalIsLoading = newIsLoading ?? loading;
@@ -148,99 +154,128 @@ export function DataTable<T>({
     );
   }
 
-  // Determine if header with search/refetch should be shown
-  const showTopBar = title || description || onSearchChange || onRefetch || filters || headerActions;
-
   return (
     <div className={cn("w-full bg-card border border-border rounded-xl overflow-hidden shadow-sm", className)}>
       {/* Top Header Bar */}
-      {showTopBar && (
-        <div className="p-3 sm:p-4 border-b border-border bg-surface/30 space-y-3">
-          {/* Header Row: Title / Description and Refetch/Actions (if no search/filters) */}
-          {(title || description || (!onSearchChange && !filters && (onRefetch || headerActions))) && (
-            <div className="flex items-center justify-between gap-4">
+      {(title || description || onSearchChange || onRefetch || filters || headerActions) && (
+        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 p-4 md:p-5 border-b border-border bg-muted dark:bg-muted">
+          {(title || description) && (!onSearchChange && !filters) ? (
+            <div className="flex items-center justify-between gap-4 w-full">
               <div className="min-w-0">
                 {title && <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>}
                 {description && <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>}
               </div>
-              {/* Actions align to right when no search/filters exist */}
-              {!onSearchChange && !filters && (onRefetch || headerActions) && (
-                <div className="flex items-center gap-2 shrink-0">
-                  {headerActions}
-                  {onRefetch && (
+              <div className="flex items-center gap-2 shrink-0">
+                {headerActions}
+                {onRefetch && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleManualRefetch}
+                    disabled={finalIsLoading || countdown > 0}
+                    className="h-9 px-2 md:px-3 gap-2 font-semibold text-muted-foreground dark:text-muted-foreground border-border active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    title={countdown > 0 ? `Refetch (${countdown}s)` : "Refetch list"}
+                  >
+                    <RefreshCw className={`w-4 h-4 md:w-3.5 md:h-3.5 ${finalIsLoading ? "animate-spin" : ""}`} />
+                    <span className="hidden md:inline">{countdown > 0 ? `Refetch (${countdown}s)` : "Refetch"}</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-row items-center gap-2 md:gap-4 flex-1">
+              {/* Main Search Input */}
+              {onSearchChange && (
+                <div className="relative flex-1 min-w-[120px] sm:min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    className="pl-9 h-9 text-sm bg-background border-border focus-visible:ring-offset-0 w-full"
+                    placeholder={placeholderText}
+                    value={localSearch}
+                    onChange={handleSearchChange}
+                  />
+                </div>
+              )}
+
+              {/* Dynamic Extra Filters (Desktop Inline) */}
+              {filters && (
+                <div className="hidden lg:flex flex-wrap items-center gap-2">
+                  {filters}
+                  {onClearFilters && hasActiveFilters && (
                     <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleManualRefetch}
-                      disabled={finalIsLoading || countdown > 0}
-                      className="h-8 w-8 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={countdown > 0 ? `Refetch (${countdown}s)` : "Refetch list"}
+                      variant="ghost"
+                      size="sm"
+                      onClick={onClearFilters}
+                      className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground cursor-pointer font-medium"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 ${finalIsLoading ? "animate-spin" : ""}`} />
+                      Clear Filters
                     </Button>
                   )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Search & Actions Row (only if search/filters exist) */}
-          {(onSearchChange || filters) && (
-            <div className={cn("flex gap-2.5 sm:items-center justify-between", filters ? "flex-col sm:flex-row" : "flex-row")}>
-              {/* Row 1 on Mobile / Left Group on Desktop: Search & Mobile Refetch */}
-              <div className="flex items-center gap-2 flex-grow min-w-0">
-                {onSearchChange && (
-                  <div className="relative flex-grow min-w-0">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
-                    <Input
-                      className="pl-9 h-9 text-sm bg-background border-border focus-visible:ring-offset-0 w-full"
-                      placeholder={placeholderText}
-                      value={localSearch}
-                      onChange={handleSearchChange}
-                    />
+              {/* Action Buttons (Right Aligned) */}
+              <div className="flex items-center gap-2 justify-end shrink-0 ml-auto">
+                {headerActions}
+                
+                {/* Mobile Filter Trigger */}
+                {filters && (
+                  <div className="lg:hidden animate-in fade-in zoom-in-95 duration-150">
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-9 w-9 border-border relative">
+                          <FilterIcon className="w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
+                          {hasActiveFilters && (
+                            <span className="absolute top-1 right-1 flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                            </span>
+                          )}
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="bottom" className="p-0 rounded-t-xl">
+                        <SheetHeader className="px-4 py-3 border-b border-border bg-muted dark:bg-muted">
+                          <div className="flex items-center justify-between">
+                            <SheetTitle className="text-base font-bold">Filters</SheetTitle>
+                          </div>
+                        </SheetHeader>
+                        <div className="p-4 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+                          {filters}
+                        </div>
+                        <SheetFooter className="p-4 border-t border-border mt-auto flex flex-row items-center gap-2">
+                          {onClearFilters && hasActiveFilters && (
+                            <Button
+                              variant="outline"
+                              onClick={onClearFilters}
+                              className="flex-1 font-bold border-border text-muted-foreground hover:text-foreground"
+                            >
+                              Clear
+                            </Button>
+                          )}
+                          <SheetClose asChild>
+                            <Button className="flex-1 font-bold">
+                              Apply
+                            </Button>
+                          </SheetClose>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
                   </div>
                 )}
-                {/* Mobile-only refetch: inline next to search input when filters are present */}
-                {filters && (onRefetch || headerActions) && (
-                  <div className="flex items-center gap-2 shrink-0 sm:hidden">
-                    {headerActions}
-                    {onRefetch && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleManualRefetch}
-                        disabled={finalIsLoading || countdown > 0}
-                        className="h-9 w-9 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={countdown > 0 ? `Refetch (${countdown}s)` : "Refetch list"}
-                      >
-                        <RefreshCw className={`w-4 h-4 ${finalIsLoading ? "animate-spin" : ""}`} />
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
 
-              {/* Row 2 on Mobile: Filters & Desktop Refetch */}
-              <div className={cn("flex items-center justify-between sm:justify-start gap-2 sm:w-auto", filters ? "w-full" : "w-auto")}>
-                {filters && <div className="flex-1 sm:flex-initial">{filters}</div>}
-
-                {/* Desktop/Tablet refetch, or if no filters exist (always inline) */}
-                {(onRefetch || headerActions) && (
-                  <div className={cn("items-center gap-2 shrink-0", filters ? "hidden sm:flex" : "flex")}>
-                    {headerActions}
-                    {onRefetch && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleManualRefetch}
-                        disabled={finalIsLoading || countdown > 0}
-                        className="h-9 w-9 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={countdown > 0 ? `Refetch (${countdown}s)` : "Refetch list"}
-                      >
-                        <RefreshCw className={`w-4 h-4 ${finalIsLoading ? "animate-spin" : ""}`} />
-                      </Button>
-                    )}
-                  </div>
+                {/* Refetch Trigger */}
+                {onRefetch && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleManualRefetch}
+                    disabled={finalIsLoading || countdown > 0}
+                    className="h-9 px-2 md:px-3 gap-2 font-semibold text-muted-foreground dark:text-muted-foreground border-border active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    title={countdown > 0 ? `Refetch (${countdown}s)` : "Refetch list"}
+                  >
+                    <RefreshCw className={`w-4 h-4 md:w-3.5 md:h-3.5 ${finalIsLoading ? "animate-spin" : ""}`} />
+                    <span className="hidden md:inline">{countdown > 0 ? `Refetch (${countdown}s)` : "Refetch"}</span>
+                  </Button>
                 )}
               </div>
             </div>
@@ -249,33 +284,41 @@ export function DataTable<T>({
       )}
 
       {/* Table Content */}
-      <div className="overflow-x-auto w-full">
+      <div className="overflow-auto max-h-[calc(100vh-250px)] w-full relative">
         <Table>
-          <TableHeader className="bg-surface/60">
-            <TableRow className="border-border/60 hover:bg-transparent">
+          <TableHeader className="bg-[#F8FAFC] dark:bg-zinc-900 sticky top-0 z-10 shadow-sm">
+            <TableRow className="border-border hover:bg-transparent">
               {expandable && <TableHead className="w-10 px-2" />}
-              {columns.map((col, idx) => {
+              {(Array.isArray(columns) ? columns : []).map((col, idx) => {
                 const cellKey = col.key || col.id || col.accessorKey?.toString() || idx.toString();
                 return (
-                  <TableHead key={cellKey} className={cn("font-semibold text-muted", col.className)}>
+                  <TableHead key={cellKey} className={cn("font-semibold text-zinc-700 dark:text-zinc-300", col.className)}>
                     {col.header}
                   </TableHead>
                 );
               })}
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-border/40">
+          <TableBody>
             {finalIsLoading ? (
-              <TableRow className="border-border/60">
-                <TableCell colSpan={expandable ? columns.length + 1 : columns.length} className="text-center py-16 text-muted-foreground">
-                  <div className="flex flex-col items-center gap-3">
-                    <RefreshCw className="w-8 h-8 animate-spin text-muted" />
-                    <span className="text-sm font-medium">Loading data...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow className="border-border/60">
+              <>
+                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                  <TableRow key={`skeleton-row-${rowIndex}`} className="border-border">
+                    {expandable && (
+                      <TableCell className="py-4">
+                        <Skeleton className="h-5 w-5 rounded-md" />
+                      </TableCell>
+                    )}
+                    {(Array.isArray(columns) ? columns : []).map((col, colIndex) => (
+                      <TableCell key={`skeleton-col-${col?.id || colIndex}`} className={cn("py-4", col.className)}>
+                        <Skeleton className="h-5 w-full max-w-[80%] rounded-md" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </>
+            ) : (Array.isArray(data) ? data : []).length === 0 ? (
+              <TableRow className="border-border">
                 <TableCell colSpan={expandable ? columns.length + 1 : columns.length} className="text-center py-16 text-muted-foreground">
                   <div className="flex flex-col items-center justify-center gap-3">
                     {typeof emptyStateIcon === "string" ? (
@@ -288,22 +331,25 @@ export function DataTable<T>({
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((row, rowIdx) => {
+              (Array.isArray(data) ? data : []).map((row, rowIdx) => {
                 const rowKey = keyExtractor ? keyExtractor(row) : rowIdx;
                 const isExpanded = expandedRows.has(rowKey);
                 return (
                   <React.Fragment key={rowKey}>
                     <TableRow
-                      className={cn("border-border/60 hover:bg-surface/80 transition-colors", onRowClick && "cursor-pointer")}
+                      className={cn(
+                        "border-border hover:bg-muted dark:hover:bg-muted transition-colors",
+                        onRowClick && "cursor-pointer"
+                      )}
                       onClick={() => onRowClick?.(row)}
                     >
                       {expandable && (
-                        <TableCell className="w-10 px-2 py-3 text-center">
+                        <TableCell className="w-10 px-2 py-3.5 text-center">
                           {renderSubComponent && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className={cn("h-6 w-6 text-muted hover:text-foreground transition-transform", isExpanded && "rotate-180")}
+                              className={cn("h-6 w-6 text-muted-foreground hover:text-foreground transition-transform", isExpanded && "rotate-180")}
                               onClick={(e) => toggleRow(e, rowKey)}
                             >
                               <ChevronDown className="h-4 w-4" />
@@ -311,10 +357,10 @@ export function DataTable<T>({
                           )}
                         </TableCell>
                       )}
-                      {columns.map((col, colIdx) => {
+                      {(Array.isArray(columns) ? columns : []).map((col, colIdx) => {
                         const cellKey = col.key || col.id || col.accessorKey?.toString() || colIdx.toString();
                         return (
-                          <TableCell key={cellKey} className={cn("py-3", col.className)}>
+                          <TableCell key={cellKey} className={cn("text-muted-foreground dark:text-muted-foreground py-3.5", col.className)}>
                             {col.render
                               ? col.render(row)
                               : col.accessorKey
@@ -327,8 +373,8 @@ export function DataTable<T>({
                       })}
                     </TableRow>
                     {renderSubComponent && isExpanded && (
-                      <TableRow className="border-none bg-surface/30 hover:bg-surface/30">
-                        <TableCell colSpan={expandable ? columns.length + 1 : columns.length} className="p-0 border-b border-border/60">
+                      <TableRow className="border-none bg-muted/50 hover:bg-muted/50">
+                        <TableCell colSpan={expandable ? columns.length + 1 : columns.length} className="p-0 border-b border-border">
                           {renderSubComponent(row)}
                         </TableCell>
                       </TableRow>
@@ -343,56 +389,70 @@ export function DataTable<T>({
 
       {/* Pagination Footer */}
       {!finalHidePagination && (
-        <div className="flex items-center justify-between p-3 sm:p-4 border-t border-border bg-surface/30 gap-3 text-xs">
-          {/* Left: Entry count + page size (page size hidden on mobile) */}
-          <div className="text-muted-foreground flex items-center gap-3 min-w-0">
-            <span className="whitespace-nowrap">
-              <span className="font-semibold text-foreground">{data.length}</span>
-              <span className="hidden sm:inline"> of <span className="font-semibold text-foreground">{totalItems}</span></span>
-              {" "}entries
-            </span>
+        <div className="flex flex-col md:flex-row items-center justify-between p-4 border-t border-border bg-muted dark:bg-muted gap-4 text-xs">
+          <div className="text-muted-foreground dark:text-muted-foreground flex flex-wrap items-center gap-4">
+            <div>
+              Showing <span className="font-semibold text-muted-foreground dark:text-white">{(Array.isArray(data) ? data : []).length}</span> of{" "}
+              <span className="font-semibold text-muted-foreground dark:text-white">{totalItems}</span> entries
+            </div>
             {onLimitChange && (
-              <div className="hidden sm:flex items-center gap-1.5">
-                <span>·</span>
-                <select
+              <div className="flex items-center gap-1.5">
+                <span>Page size:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
                   value={limit}
                   onChange={(e) => {
-                    onLimitChange(Number(e.target.value));
+                    const val = Math.min(100, Math.max(1, parseInt(e.target.value) || 1));
+                    onLimitChange(val);
                     onPageChange?.(1);
                   }}
-                  className="px-1.5 py-0.5 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:border-ring transition cursor-pointer"
-                >
-                  {[10, 25, 50, 100].map((v) => (
-                    <option key={v} value={v}>{v}/page</option>
-                  ))}
-                </select>
+                  className="w-14 px-2 py-1 text-center rounded-md border border-border bg-background text-foreground outline-none focus:border-ring transition"
+                />
               </div>
             )}
           </div>
 
-          {/* Right: Prev/Next + page indicator */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange?.(page - 1)}
-              disabled={page <= 1 || finalIsLoading}
-              className="border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer h-7 w-7 p-0"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <div className="px-2 py-1 font-medium text-muted-foreground select-none whitespace-nowrap">
-              <span className="text-foreground">{page}</span>/<span className="text-foreground">{totalPages}</span>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-1.5 text-muted-foreground dark:text-muted-foreground">
+              <span>Go to page:</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={page}
+                onChange={(e) => {
+                  const val = Math.min(totalPages, Math.max(1, parseInt(e.target.value) || 1));
+                  onPageChange?.(val);
+                }}
+                className="w-14 px-2 py-1 text-center rounded-md border border-border bg-background text-foreground outline-none focus:border-ring transition"
+              />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange?.(page + 1)}
-              disabled={page >= totalPages || finalIsLoading}
-              className="border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer h-7 w-7 p-0"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange?.(page - 1)}
+                disabled={page <= 1 || finalIsLoading}
+                className="border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <div className="px-3 py-1 font-medium text-muted-foreground dark:text-muted-foreground select-none">
+                Page <span className="text-muted-foreground dark:text-white">{page}</span> of <span className="text-muted-foreground dark:text-white">{totalPages}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange?.(page + 1)}
+                disabled={page >= totalPages || finalIsLoading}
+                className="border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}

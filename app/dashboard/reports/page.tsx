@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { StatsCard } from "@/components/ui/stats-card";
+import { CardSwiper } from "@/components/ui/card-swiper";
 import { DataTable } from "@/components/ui/data-table";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
@@ -112,7 +113,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <CardSwiper slidesPerViewTablet={2.2} slidesPerViewDesktop={3.2}>
         <StatsCard
           className="min-w-0"
           label="Total Net Revenue"
@@ -138,30 +139,30 @@ export default function ReportsPage() {
           value={formatCurrency((report?.paymentSummary?.online || 0) + (report?.paymentSummary?.card || 0))}
           color="success"
         />
-      </div>
+      </CardSwiper>
 
       {(hasGstInvoices || hasCreditKhata || hasWholesale) && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <CardSwiper slidesPerViewTablet={2.2} slidesPerViewDesktop={3.2}>
           {hasGstInvoices && (
-            <>
-              <StatsCard
-                className="min-w-0"
-                label="GST Collected"
-                value={formatCurrency(report?.gstCollected || 0)}
-                hint={
-                  (report?.igstCollected ?? 0) > 0
-                    ? `IGST ${formatCurrency(report?.igstCollected ?? 0)}`
-                    : `CGST ${formatCurrency(report?.cgstCollected ?? 0)} · SGST ${formatCurrency(report?.sgstCollected ?? 0)}`
-                }
-                icon={<FileText className="h-5 w-5" />}
-              />
-              <StatsCard
-                className="min-w-0"
-                label="GST Invoices"
-                value={formatNumber(report?.invoicesGenerated || 0)}
-                icon={<FileText className="h-5 w-5" />}
-              />
-            </>
+            <StatsCard
+              className="min-w-0"
+              label="GST Collected"
+              value={formatCurrency(report?.gstCollected || 0)}
+              hint={
+                (report?.igstCollected ?? 0) > 0
+                  ? `IGST ${formatCurrency(report?.igstCollected ?? 0)}`
+                  : `CGST ${formatCurrency(report?.cgstCollected ?? 0)} · SGST ${formatCurrency(report?.sgstCollected ?? 0)}`
+              }
+              icon={<FileText className="h-5 w-5" />}
+            />
+          )}
+          {hasGstInvoices && (
+            <StatsCard
+              className="min-w-0"
+              label="GST Invoices"
+              value={formatNumber(report?.invoicesGenerated || 0)}
+              icon={<FileText className="h-5 w-5" />}
+            />
           )}
           {hasWholesale && (
             <StatsCard
@@ -181,7 +182,7 @@ export default function ReportsPage() {
               color="warning"
             />
           )}
-        </div>
+        </CardSwiper>
       )}
 
       {/* Payment Split & Drawer Analysis */}

@@ -16,8 +16,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronRight } from "lucide-react";
+
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { useVisibleSidebarGroups } from "@/components/layout/use-visible-sidebar";
 import { cn } from "@/lib/utils";
@@ -57,51 +56,40 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="overflow-x-hidden overflow-y-auto py-2">
-        {visibleSidebarGroups.map((group, index) => (
-          <Collapsible
-            key={group.label}
-            defaultOpen={index === 0 || group.label === "Operations"}
-            className="group/collapsible"
-          >
-            <SidebarGroup>
-              <SidebarGroupLabel asChild className="group-data-[collapsible=icon]:hidden hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer transition-colors px-3 py-1.5 rounded-md">
-                <CollapsibleTrigger className="flex w-full items-center justify-between text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/50">
-                  {group.label}
-                  <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                </CollapsibleTrigger>
-              </SidebarGroupLabel>
-              <CollapsibleContent>
-                <SidebarGroupContent className="mt-0.5">
-                  <SidebarMenu>
-                    {group.items.map((item) => {
-                      const isActive =
-                        pathname === item.path ||
-                        (item.path !== APP_ROUTES.DASHBOARD && pathname.startsWith(item.path + "/"));
-                      const Icon = item.icon;
-                      return (
-                        <SidebarMenuItem key={item.path}>
-                          <SidebarMenuButton
-                            isActive={isActive}
-                            tooltip={item.title}
-                            className={cn(
-                              "relative gap-3 px-3 py-2 text-sm font-semibold transition-all duration-150",
-                              isActive
-                                ? "bg-sidebar-accent text-sidebar-primary shadow-sm before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-sidebar-primary"
-                                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                            )}
-                            onClick={() => navigate(item.path)}
-                          >
-                            <Icon className="h-4 w-4 shrink-0" />
-                            <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
+        {visibleSidebarGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden px-3 py-2 text-xs font-bold uppercase tracking-widest text-sidebar-foreground/50">
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent className="mt-1">
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const isActive =
+                    pathname === item.path ||
+                    (item.path !== APP_ROUTES.DASHBOARD && pathname.startsWith(item.path + "/"));
+                  const Icon = item.icon;
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.title}
+                        className={cn(
+                          "relative gap-3 px-3 py-2.5 text-[15px] font-semibold transition-all duration-150",
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-primary shadow-sm before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-sidebar-primary"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        )}
+                        onClick={() => navigate(item.path)}
+                      >
+                        <Icon className="h-[18px] w-[18px] shrink-0" />
+                        <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         ))}
       </SidebarContent>
 
