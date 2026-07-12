@@ -133,8 +133,11 @@ export default function ProductsPage() {
     limit: parseAsInteger.withDefault(10)
   });
 
-  const [catFilter, setCatFilter] = React.useState("");
+  const [catFilter, setCatFilter] = React.useState<{ id: string, name: string, label: string } | null>(null);
+  const [formCategoryOption, setFormCategoryOption] = React.useState<{ id: string, name: string, label: string } | null>(null);
   const [showModal, setShowModal] = React.useState(false);
+  const [showImportModal, setShowImportModal] = React.useState(false);
+  const [importSearch, setImportSearch] = React.useState("");
   const [showScanner, setShowScanner] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
@@ -158,27 +161,21 @@ export default function ProductsPage() {
   const formCategoryId = watch("categoryId");
   const formBarcode = watch("barcode");
 
-  const { data: unitsData } = useQuery({ queryKey: ["units", outletId], queryFn: () => unitService.getUnitsWithMeta(token, { outletId: outletId ?? undefined, limit: 100 }), enabled: Boolean(token) });
-  const { data: catData } = useQuery({ queryKey: ["categories"], queryFn: () => categoryService.getCategories(token), enabled: Boolean(token) });
 
   const { data: productsData, isLoading, refetch: refetchProducts } = useQuery({
-    queryKey: ["products", outletId, query.search, catFilter, query.page, query.limit],
+    queryKey: ["products", outletId, query.search, catFilter?.id, query.page, query.limit],
     queryFn: () =>
       getJsonWithMeta<Product[]>("/products", token, {
         outletId: outletId ?? undefined,
         search: query.search || undefined,
-        categoryId: catFilter || undefined,
+        categoryId: catFilter?.id || undefined,
         page: query.page,
         limit: query.limit
       }),
     enabled: Boolean(token)
   });
 
-  const { data: outletsData } = useQuery({
-    queryKey: ["outlets"],
-    queryFn: () => outletService.getOutlets(token),
-    enabled: Boolean(token),
-  });
+
 
   const save = useMutation({
     mutationFn: (body: unknown) => {
@@ -196,13 +193,35 @@ export default function ProductsPage() {
     onError: (err) => { toast.error(getErrorMessage(err, "Failed to delete product")); }
   });
 
+  const [importPage, setImportPage] = React.useState(1);
+
+  const globalProductsQuery = useQuery({
+    queryKey: ["globalProducts", outletId, importSearch, importPage],
+    queryFn: () => getJsonWithMeta<any[]>(`/products/global?outletId=${outletId}&search=${importSearch}&page=${importPage}&limit=10`, token),
+    enabled: !!token && showImportModal
+  });
+
+  const importProduct = useMutation({
+    mutationFn: (productId: string) =>
+      apiFetch(`/products/${productId}/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ outletId })
+      }),
+    onSuccess: () => {
+      toast.success("Product imported successfully");
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["globalProducts"] });
+    },
+    onError: (err: any) => {
+      toast.error(getErrorMessage(err));
+    }
+  });
+
   const products: Product[] = productsData?.data ?? [];
   const meta = productsData?.meta?.pagination;
   const totalItems = meta?.total ?? products.length;
   const totalPages = meta?.totalPages ?? 1;
-  const categories = Array.isArray(catData)
-    ? catData
-    : ((catData as { categories?: Category[] } | undefined)?.categories ?? []);
 
   const loadCategoryFilterOptions = React.useCallback(
     async (params: { page: number; limit: number; q?: string }) => {
@@ -218,12 +237,7 @@ export default function ProductsPage() {
     [token]
   );
 
-  const selectedCatFilter = React.useMemo(() => {
-    if (!catFilter) return { id: "", name: "All Categories", label: "All Categories" };
-    const cat = categories.find((c) => c._id === catFilter);
-    const label = cat ? `${cat.icon ? `${cat.icon} ` : ""}${cat.name}` : "Category";
-    return { id: catFilter, name: label, label };
-  }, [catFilter, categories]);
+
 
   const loadCategoryFormOptions = React.useCallback(
     (params: { page: number; limit: number; search?: string }) => loadCategories(token, params),
@@ -285,31 +299,20 @@ export default function ProductsPage() {
     setValue("unitId", o.id ?? o._id ?? "");
   };
 
-  const selectedFormCategory = React.useMemo(() => {
-    if (!formCategoryId) return null;
-    const cat = categories.find((c) => c._id === formCategoryId);
-    if (cat) {
-      const label = `${cat.icon ? `${cat.icon} ` : ""}${cat.name}`;
-      return { id: cat._id, name: label, label };
-    }
-    if (editId) {
-      const product = products.find((p) => p._id === editId);
-      const pc = product?.categoryId;
-      if (typeof pc === "object" && pc && pc._id === formCategoryId) {
-        const label = `${pc.icon ? `${pc.icon} ` : ""}${pc.name}`;
-        return { id: pc._id, name: label, label };
-      }
-    }
-    return { id: formCategoryId, name: "Category", label: "Category" };
-  }, [formCategoryId, categories, editId, products]);
-
   const openCreate = () => {
     setEditId(null);
+    setFormCategoryOption(null);
     reset({ name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0", packagingUnits: [] });
     setShowModal(true);
   };
   const openEdit = (p: Product) => {
     setEditId(p._id);
+    let catOpt = null;
+    if (typeof p.categoryId === "object" && p.categoryId) {
+      const label = `${p.categoryId.icon ? `${p.categoryId.icon} ` : ""}${p.categoryId.name}`;
+      catOpt = { id: p.categoryId._id, name: label, label };
+    }
+    setFormCategoryOption(catOpt);
     reset({
       name: p.name,
       description: p.description ?? "",
@@ -368,6 +371,7 @@ export default function ProductsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Products</h1><p className="text-sm text-muted">{totalItems} products</p></div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowImportModal(true)}><Package className="h-4 w-4 mr-2" /> Import from Catalog</Button>
           <Button id="create-product-btn" onClick={openCreate}><Plus className="h-4 w-4" /> Add Product</Button>
         </div>
       </div>
@@ -387,31 +391,23 @@ export default function ProductsPage() {
         onRefetch={() => refetchProducts()}
         filters={
           <div className="flex items-center gap-4">
-            <div className="flex-1 flex items-center gap-2 min-w-[200px] bg-background px-3 rounded-lg border focus-within:ring-2 focus-within:ring-primary/20">
-              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-              <input
-                type="text"
-                placeholder="Search products, SKU, or barcode..."
-                className="flex-1 bg-transparent border-0 h-10 text-sm focus:outline-none focus:ring-0 placeholder:text-muted-foreground"
-                value={query.search}
-                onChange={(e) => {
-                  setQuery({ search: e.target.value, page: 1 });
+            <div className="w-48 shrink-0">
+              <AsyncSelect
+                value={catFilter}
+                onChange={(opt: any) => {
+                  if (!opt || (Array.isArray(opt) && opt.length === 0)) {
+                    setCatFilter(null);
+                  } else {
+                    const selected = Array.isArray(opt) ? opt[0] : opt;
+                    setCatFilter(selected.id === "" ? null : selected);
+                  }
+                  setQuery({ page: 1 });
                 }}
+                loadOptions={loadCategoryFilterOptions}
+                placeholder="All Categories"
+                className="h-10"
               />
             </div>
-            <select
-              className="h-10 px-3 py-2 text-sm bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-              value={catFilter}
-              onChange={(e) => {
-                setCatFilter(e.target.value);
-                setQuery({ page: 1 });
-              }}
-            >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>{c.icon} {c.name}</option>
-              ))}
-            </select>
           </div>
         }
         columns={[
@@ -452,12 +448,10 @@ export default function ProductsPage() {
             <div className="col-span-2 md:col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Category *</label>
               <AsyncSelect
-                value={selectedFormCategory}
-                onChange={(opt) => {
-                  clearErrors("categoryId");
-                  if (!opt) return setValue("categoryId", "");
-                  const o = Array.isArray(opt) ? opt[0] : opt;
-                  setValue("categoryId", o.id ?? o._id ?? "");
+                value={formCategoryOption}
+                onChange={(opt: any) => {
+                  setFormCategoryOption(opt);
+                  setValue("categoryId", opt?.id || opt?._id || "", { shouldValidate: true });
                 }}
                 loadOptions={loadCategoryFormOptions}
                 placeholder="Select category"
@@ -602,6 +596,50 @@ export default function ProductsPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && remove.mutate(deleteId)} title="Delete Product?" message="This product will be hidden from billing." confirmLabel="Delete" loading={remove.isPending} />
+
+      <Modal open={showImportModal} onClose={() => setShowImportModal(false)} title="Import from Master Catalog">
+        <div className="space-y-4">
+          <Input
+            placeholder="Search catalog..."
+            value={importSearch}
+            onChange={(e) => { setImportSearch(e.target.value); setImportPage(1); }}
+          />
+          {globalProductsQuery.isLoading ? (
+            <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+              {(globalProductsQuery.data?.data || []).map((p: any) => (
+                <div key={p._id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50">
+                  <div>
+                    <p className="font-medium">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">SKU: {p.sku || "N/A"} • Price: {formatCurrency(p.price)}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => importProduct.mutate(p._id)}
+                    disabled={importProduct.isPending}
+                  >
+                    Import
+                  </Button>
+                </div>
+              ))}
+              {globalProductsQuery.data?.data?.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">No products found in master catalog.</p>
+              )}
+              {globalProductsQuery.data?.meta?.pagination && globalProductsQuery.data.meta.pagination.totalPages > 1 && (
+                <div className="pt-4 border-t mt-4">
+                  <Pagination
+                    page={importPage}
+                    pageSize={10}
+                    totalPages={globalProductsQuery.data.meta.pagination.totalPages}
+                    onPageChange={setImportPage}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

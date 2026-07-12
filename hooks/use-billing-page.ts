@@ -122,7 +122,7 @@ export function useBillingPage() {
     queryFn: () => outletService.getOutlets(token),
     enabled: Boolean(token),
   });
-  const currentOutlet = outletsData?.outlets?.find((o) => o._id === outletId);
+  const currentOutlet = outletsData?.data?.outlets?.find((o) => o._id === outletId);
 
   const { data: catData } = useQuery({
     queryKey: ["categories", "flat", outletId],

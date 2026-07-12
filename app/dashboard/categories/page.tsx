@@ -103,6 +103,9 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Categories</h1><p className="text-sm text-muted">Organize products into categories and subcategories</p></div>
+        <div className="flex gap-2">
+          <Button id="create-category-btn" onClick={() => openCreate("")}><Plus className="h-4 w-4 mr-1.5" /> Add Category</Button>
+        </div>
       </div>
 
       <DataTable
@@ -117,7 +120,6 @@ export default function CategoriesPage() {
         searchQuery={query.search}
         onSearchChange={(s) => setQuery({ search: s, page: 1 })}
         onRefetch={() => refetch()}
-        filters={<Button id="create-category-btn" onClick={() => openCreate("")}><Plus className="h-4 w-4 mr-1.5" /> Add Category</Button>}
         emptyStateIcon={<FolderOpen className="h-12 w-12 text-muted/30" />}
         emptyStateText="No categories yet. Create your first category like 'Lassi', 'Tea'."
         expandable

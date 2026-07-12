@@ -239,7 +239,7 @@ export function DataTable<T>({
                             <SheetTitle className="text-base font-bold">Filters</SheetTitle>
                           </div>
                         </SheetHeader>
-                        <div className="p-4 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+                        <div className="p-4 flex flex-col gap-4 min-h-[50vh] max-h-[70vh] overflow-y-auto">
                           {filters}
                         </div>
                         <SheetFooter className="p-4 border-t border-border mt-auto flex flex-row items-center gap-2">

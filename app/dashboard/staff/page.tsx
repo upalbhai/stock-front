@@ -123,7 +123,7 @@ export default function StaffPage() {
 
   const users = staffData?.users ?? [];
   const roles = rolesData?.roles ?? [];
-  const outlets = outletsData?.outlets ?? [];
+  const outlets = outletsData?.data?.outlets ?? [];
 
   const openCreate = () => {
     setEditId(null);
