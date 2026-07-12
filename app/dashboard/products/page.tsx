@@ -84,14 +84,14 @@ function unitLabel(u: Pick<Unit, "name" | "abbreviation">) {
 async function loadUnits(
   token: string | null,
   outletId: string | null | undefined,
-  { page, limit, q }: { page: number; limit: number; q?: string }
+  { page, limit, search }: { page: number; limit: number; search?: string }
 ) {
   const res = await unitService.getUnitsWithMeta(token, {
     flat: "true",
     page,
     limit,
     outletId: outletId ?? undefined,
-    q: q || undefined
+    search: search || undefined
   });
 
   const items = (res.data ?? []).map((u) => ({
@@ -106,9 +106,9 @@ async function loadUnits(
 
 async function loadCategories(
   token: string | null,
-  { page, limit, q }: { page: number; limit: number; q?: string }
+  { page, limit, search }: { page: number; limit: number; search?: string }
 ) {
-  const res = await categoryService.getCategoriesWithMeta(token, { flat: "true", page, limit });
+  const res = await categoryService.getCategoriesWithMeta(token, { flat: "true", page, limit, search: search || undefined });
 
   let items = (res.data ?? []).map((c) => ({
     ...c,
@@ -117,10 +117,7 @@ async function loadCategories(
     label: `${c.icon ? `${c.icon} ` : ""}${c.name}`
   }));
 
-  if (q) {
-    const lower = q.toLowerCase();
-    items = items.filter((c) => c.name.toLowerCase().includes(lower));
-  }
+
 
   return { data: items, meta: res.meta ?? undefined };
 }
@@ -129,7 +126,7 @@ export default function ProductsPage() {
   const { token, outletId } = useAuth();
   const qc = useQueryClient();
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  
+
   const [query, setQuery] = useQueryStates({
     search: parseAsString.withDefault(""),
     page: parseAsInteger.withDefault(1),
@@ -229,12 +226,12 @@ export default function ProductsPage() {
   }, [catFilter, categories]);
 
   const loadCategoryFormOptions = React.useCallback(
-    (params: { page: number; limit: number; q?: string }) => loadCategories(token, params),
+    (params: { page: number; limit: number; search?: string }) => loadCategories(token, params),
     [token]
   );
 
   const loadUnitOptions = React.useCallback(
-    (params: { page: number; limit: number; q?: string }) => loadUnits(token, outletId, params),
+    (params: { page: number; limit: number; search?: string }) => loadUnits(token, outletId, params),
     [token, outletId]
   );
 
@@ -497,7 +494,7 @@ export default function ProductsPage() {
               <Input id="product-cost" type="number" min={0} step="0.001" {...register("costPrice", { onChange: () => clearErrors("costPrice") })} placeholder="0.00" className={errors.costPrice ? "border-danger" : ""} />
               {errors.costPrice && <p className="text-danger text-[10px] mt-1">{errors.costPrice.message}</p>}
             </div>
-            <div className="col-span-1"><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} {...register("onHandQty")} /></div>
+            {/* <div className="col-span-1"><label className="mb-1 block text-xs font-medium text-muted">Opening Stock</label><Input id="product-qty" type="number" min={0} {...register("onHandQty")} /></div> */}
             <div className="col-span-1"><label className="mb-1 block text-xs font-medium text-muted">Low Stock Alert</label><Input id="product-threshold" type="number" min={0} {...register("lowStockThreshold")} /></div>
             <div className="col-span-2 md:col-span-1"><label className="mb-1 block text-xs font-medium text-muted">SKU</label><Input id="product-sku" {...register("sku")} placeholder="Optional" /></div>
             <div className="col-span-2 md:col-span-1">

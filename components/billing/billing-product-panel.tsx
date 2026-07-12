@@ -219,7 +219,7 @@ export function BillingProductPanel({
         )}
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-y-auto px-2 sm:px-0">
+      <div className="relative min-h-0 flex-1 overflow-y-auto p-2">
         {productsFetching && products.length === 0 ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -262,8 +262,8 @@ export function BillingProductPanel({
                   className={cn(
                     "group relative flex min-h-[7rem] flex-col rounded-2xl border p-3 text-left transition-all duration-300",
                     isDisabled ? "opacity-50 grayscale cursor-not-allowed" : "active:scale-[0.97]",
-                    cartQty > 0 
-                      ? "border-primary/60 bg-primary/10 shadow-[0_0_15px_rgba(0,136,255,0.15)] ring-1 ring-primary/20" 
+                    cartQty > 0
+                      ? "border-primary/60 bg-primary/10 shadow-[0_0_15px_rgba(0,136,255,0.15)] ring-1 ring-primary/20"
                       : isDisabled ? "border-border/80 bg-muted/30" : "border-border/80 bg-card hover:border-primary/50 hover:shadow-md hover:-translate-y-[3px]"
                   )}
                 >

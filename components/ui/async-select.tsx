@@ -9,7 +9,7 @@ type LoadOptionsResult = { data: Option[]; meta?: { pagination?: { page: number;
 type Props = {
   value?: Option | Option[] | null;
   onChange?: (val: Option | Option[] | null) => void;
-  loadOptions: (params: { page: number; limit: number; q?: string }) => Promise<LoadOptionsResult>;
+  loadOptions: (params: { page: number; limit: number; search?: string }) => Promise<LoadOptionsResult>;
   multi?: boolean;
   searchable?: boolean;
   pageSize?: number;
@@ -26,19 +26,29 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const listEndRef = useRef<HTMLDivElement | null>(null);
   const cacheRef = useRef<Record<string, { items: Option[], hasMore: boolean, page: number }>>({});
 
   useEffect(() => {
-    if (!open && q !== "") {
-      setQ("");
+    if (!open && search !== "") {
+      setSearch("");
+      setDebouncedSearch("");
     }
-  }, [open, q]);
+  }, [open, search]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     if (!open) return;
-    const cached = cacheRef.current[q];
+    const cached = cacheRef.current[debouncedSearch];
     if (cached) {
       setItems(cached.items);
       setPage(cached.page);
@@ -48,18 +58,18 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
       setPage(1);
       setHasMore(true);
     }
-  }, [q, open]);
+  }, [debouncedSearch, open]);
 
   useEffect(() => {
     let mounted = true;
     async function fetchPage() {
-      const cached = cacheRef.current[q];
+      const cached = cacheRef.current[debouncedSearch];
       if (cached && cached.page >= page && cached.items.length > 0) return;
-      if (!hasMore || loading) return;
+      if (!hasMore) return;
       
       setLoading(true);
       try {
-        const res = await loadOptions({ page, limit: pageSize, q });
+        const res = await loadOptions({ page, limit: pageSize, search: debouncedSearch });
         if (!mounted) return;
         const newItems = res.data.map((d: any) => ({ ...d, id: d[idKey] ?? d.id, label: d[labelKey] ?? d.name ?? d.label }));
         
@@ -68,7 +78,7 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
         
         setItems((s) => {
           const finalItems = page === 1 ? newItems : [...s, ...newItems];
-          cacheRef.current[q] = { items: finalItems, page, hasMore: more };
+          cacheRef.current[debouncedSearch] = { items: finalItems, page, hasMore: more };
           return finalItems;
         });
         
@@ -81,21 +91,21 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
     }
     if (open) fetchPage();
     return () => { mounted = false; };
-  }, [page, q, open]);
+  }, [page, debouncedSearch, open]);
 
   useEffect(() => {
     const el = listEndRef.current;
     if (!el) return;
     const obs = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting && hasMore && !loading) {
+        if (entry.isIntersecting && hasMore && !loading && items.length > 0) {
           setPage((p) => p + 1);
         }
       });
     });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [listEndRef.current, hasMore, loading]);
+  }, [listEndRef.current, hasMore, loading, items.length]);
 
   const toggle = () => setOpen((o) => !o);
 
@@ -161,8 +171,8 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
             <div className="p-1">
               <input 
                 autoFocus 
-                value={q} 
-                onChange={(e) => { setQ(e.target.value); setPage(1); }} 
+                value={search} 
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }} 
                 placeholder="Search..." 
                 className="w-full bg-surface border border-border rounded-xl px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary outline-none transition" 
               />
@@ -182,13 +192,13 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
             ))}
           </ul>
 
-          {creatable && q && !items.some(i => (i[labelKey] ?? i.label).toLowerCase() === q.toLowerCase()) && (
+          {creatable && search && !items.some(i => (i[labelKey] ?? i.label).toLowerCase() === search.toLowerCase()) && (
             <div className="border-t border-border mt-1.5 p-1">
               <button 
-                onClick={() => handleCreateLabel(q)} 
+                onClick={() => handleCreateLabel(search)} 
                 className="w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 text-sm font-semibold transition"
               >
-                Create "{q}"
+                Create "{search}"
               </button>
             </div>
           )}
