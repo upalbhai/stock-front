@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
 import { Plus, Pencil, Trash2, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,8 @@ import { outletService } from "@/services/outlet.service";
 import type { Outlet } from "@/lib/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
+import { useAppDispatch } from "@/store/hooks";
+import { setOutlets } from "@/store/authSlice";
 
 const emptyForm = {
   name: "", address: "", phone: "", email: "",
@@ -30,11 +33,28 @@ export default function OutletsPage() {
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [showModal, setShowModal] = React.useState(false);
 
+  const [query, setQuery] = useQueryStates({
+    search: parseAsString.withDefault(""),
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(10)
+  });
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["outlets"],
-    queryFn: () => outletService.getOutlets(token),
+    queryKey: ["outlets", query.search, query.page, query.limit],
+    queryFn: () => outletService.getOutlets(token, {
+      search: query.search || undefined,
+      page: query.page,
+      limit: query.limit
+    }),
     enabled: Boolean(token)
   });
+
+  const dispatch = useAppDispatch();
+  React.useEffect(() => {
+    if (data?.data?.outlets) {
+      dispatch(setOutlets(data.data.outlets.filter((o: any) => o.isActive && o.status === "active")));
+    }
+  }, [data?.data?.outlets, dispatch]);
 
   const saveMutation = useMutation({
     mutationFn: (body: unknown) => {
@@ -61,7 +81,7 @@ export default function OutletsPage() {
     onError: (err: any) => toast.error(getErrorMessage(err, "Failed to delete outlet"))
   });
 
-  const outlets = data?.outlets ?? [];
+  const outlets = data?.data?.outlets ?? [];
 
   const openEdit = (outlet: Outlet) => {
     setEditId(outlet._id);
@@ -76,14 +96,26 @@ export default function OutletsPage() {
           <h1 className="text-2xl font-bold">Outlets</h1>
           <p className="text-sm text-muted">Manage all your business locations</p>
         </div>
-        <Button id="create-outlet-btn" onClick={() => { setEditId(null); setForm({ ...emptyForm }); setShowModal(true); }}>
-          <Plus className="h-4 w-4 mr-1.5" /> Add Outlet
-        </Button>
+        <div className="flex flex-1 items-center justify-end gap-3 max-sm:w-full max-sm:justify-between">
+          <Input 
+            placeholder="Search outlets..." 
+            value={query.search} 
+            onChange={(e) => setQuery({ search: e.target.value, page: 1 })}
+            className="max-w-xs" 
+          />
+          <Button id="create-outlet-btn" onClick={() => { setEditId(null); setForm({ ...emptyForm }); setShowModal(true); }}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add Outlet
+          </Button>
+        </div>
       </div>
 
       <DataTable
         isLoading={isLoading}
         data={outlets}
+        page={data?.meta?.pagination?.page}
+        limit={data?.meta?.pagination?.limit}
+        totalItems={data?.meta?.pagination?.total}
+        onPageChange={(page) => setQuery({ page })}
         keyExtractor={(o) => o._id}
         onRefetch={() => refetch()}
         emptyStateIcon={<Store className="h-12 w-12 text-muted/30" />}

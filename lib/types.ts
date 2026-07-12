@@ -38,6 +38,7 @@ export type AuthUser = {
   customPermissions?: { module: string; actions: string[] }[];
   permissions?: { module: string; actions: string[] }[];
   preferredLoginMethod?: "password" | "otp";
+  outlets?: Outlet[];
 };
 
 export type Plan = {

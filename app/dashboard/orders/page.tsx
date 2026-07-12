@@ -17,7 +17,7 @@ import { invoiceService } from "@/services/invoice.service";
 import { businessService } from "@/services/business.service";
 import { outletService } from "@/services/outlet.service";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import type { Order } from "@/lib/types";
+import type { Order, Outlet } from "@/lib/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
 import { APP_ROUTES } from "@/lib/routes";
@@ -128,7 +128,7 @@ export default function OrdersPage() {
   const handleReprint = async () => {
     if (!orderDetailsData?.order) return;
     const order = orderDetailsData.order;
-    const currentOutlet = outletsData?.outlets?.find(o => o._id === order.outletId);
+    const currentOutlet = outletsData?.data?.outlets?.find((o: Outlet) => o._id === order.outletId);
     
     try {
       await printer.print({

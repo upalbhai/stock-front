@@ -1,9 +1,9 @@
-import { getJson, apiFetch } from "@/lib/api-client";
+import { getJson, getJsonWithMeta, apiFetch } from "@/lib/api-client";
 import { Outlet } from "@/lib/types";
 
 export const outletService = {
-  getOutlets: async (token?: string | null) => {
-    return getJson<{ outlets: Outlet[] }>("/outlets", token);
+  getOutlets: async (token?: string | null, params?: { page?: number; limit?: number; search?: string }) => {
+    return getJsonWithMeta<{ outlets: Outlet[] }>("/outlets", token, params);
   },
   getOutlet: async (id: string, token?: string | null) => {
     return getJson<{ outlet: Outlet }>(`/outlets/${id}`, token);

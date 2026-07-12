@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useAppSelector } from "@/store/hooks";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Package, ArrowLeftRight, History, Play, AlertTriangle,
@@ -339,11 +340,8 @@ export default function StockPage() {
     enabled: Boolean(token) && activeTab === "transfers"
   });
 
-  const { data: outletsData } = useQuery({
-    queryKey: ["outlets"],
-    queryFn: () => getJson<{ outlets: Outlet[] }>("/outlets", token),
-    enabled: Boolean(token) && activeTab === "transfers"
-  });
+  const authOutlets = useAppSelector((state) => state.auth.outlets);
+  const outletsData = { outlets: authOutlets };
 
   const adjustStockMutation = useMutation({
     mutationFn: (body: unknown) => stockService.adjustStock(body, token),

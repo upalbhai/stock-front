@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getJson } from "@/lib/api-client";
+import { useAppSelector } from "@/store/hooks";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -14,15 +13,8 @@ type Outlet = {
 };
 
 export function OutletSwitcher({ className }: { className?: string }) {
-  const { token, outletId, setOutletId } = useAuth();
-
-  const { data } = useQuery({
-    queryKey: ["outlets"],
-    queryFn: () => getJson<{ outlets: Outlet[] }>("/outlets", token),
-    enabled: Boolean(token)
-  });
-
-  const outlets = data?.outlets ?? [];
+  const { outletId, setOutletId } = useAuth();
+  const outlets = useAppSelector((state) => state.auth.outlets);
 
   React.useEffect(() => {
     if (!outletId && outlets.length) {
