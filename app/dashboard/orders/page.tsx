@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ban, Receipt, FileText, Info, Printer, X } from "lucide-react";
+import { Ban, Receipt, FileText, Info, Printer, X, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import { orderService } from "@/services/order.service";
 import { invoiceService } from "@/services/invoice.service";
 import { businessService } from "@/services/business.service";
 import { outletService } from "@/services/outlet.service";
+import { userService } from "@/services/user.service";
+import { Select } from "@/components/ui/select";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import type { Order, Outlet } from "@/lib/types";
 import toast from "react-hot-toast";
@@ -52,7 +54,8 @@ export default function OrdersPage() {
     search: parseAsString.withDefault(""),
     status: parseAsStringEnum<RecordFilter>(["active", "voided", "all"]).withDefault("active"),
     from: parseAsString.withDefault(""),
-    to: parseAsString.withDefault("")
+    to: parseAsString.withDefault(""),
+    staffId: parseAsString.withDefault("")
   });
 
   const [voidTarget, setVoidTarget] = React.useState<Order | null>(null);
@@ -72,6 +75,23 @@ export default function OrdersPage() {
     enabled: Boolean(token),
   });
 
+  const { data: usersData } = useQuery({
+    queryKey: ["users", bizData?.business?._id],
+    queryFn: () => userService.getUsers(token, { businessId: bizData?.business?._id }),
+    enabled: Boolean(token && bizData?.business?._id && (user?.role === "owner" || user?.role === "superadmin" || user?.role === "manager")),
+  });
+
+  const staffOptions = React.useMemo(() => {
+    if (!usersData?.users) return [];
+    return [
+      { value: "", label: "All Staff" },
+      ...usersData.users.map((u: any) => ({
+        value: u._id,
+        label: u.name,
+      }))
+    ];
+  }, [usersData?.users]);
+
   const { data: orderDetailsData, isLoading: isLoadingOrder } = useQuery({
     queryKey: ["order", viewOrderId],
     queryFn: () => orderService.getOrder(viewOrderId!, token),
@@ -79,7 +99,7 @@ export default function OrdersPage() {
   });
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["orders", outletId, query.status, query.page, query.limit, query.search, query.from, query.to],
+    queryKey: ["orders", outletId, query.status, query.page, query.limit, query.search, query.from, query.to, query.staffId],
     queryFn: () =>
       orderService.getOrders(token, {
         outletId: outletId ?? undefined,
@@ -88,7 +108,8 @@ export default function OrdersPage() {
         limit: query.limit,
         search: query.search || undefined,
         from: query.from || undefined,
-        to: query.to || undefined
+        to: query.to || undefined,
+        staffId: query.staffId || undefined
       }),
     enabled: Boolean(token) && hasHistory
   });
@@ -172,7 +193,16 @@ export default function OrdersPage() {
           <h1 className="text-2xl font-bold">Order History</h1>
           <p className="text-sm text-muted">View past bills — void wrong entries with audit trail</p>
         </div>
-        <div className="flex items-end sm:items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {(user?.role === "owner" || user?.role === "superadmin" || user?.role === "manager") && (
+            <Select
+              value={query.staffId}
+              onValueChange={(v) => setQuery({ staffId: v, page: 1 })}
+              options={staffOptions}
+              placeholder="All Staff"
+              className="w-[140px]"
+            />
+          )}
           <JollyDateRangePicker 
             label="Date Filter"
             value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
