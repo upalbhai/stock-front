@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/auth-provider";
 
 type BillingKhataSectionProps = {
   total: number;
@@ -22,6 +23,9 @@ export function BillingKhataSection({
   hasCustomer,
   onAmountChange,
 }: BillingKhataSectionProps) {
+  const { user } = useAuth();
+  const currency = user?.currency || "INR";
+
   return (
     <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
       <div>
@@ -61,13 +65,13 @@ export function BillingKhataSection({
             className="h-9 text-xs"
             onClick={() => onAmountChange(Math.min(amt, total))}
           >
-            ₹{amt}
+            {formatCurrency(amt, currency)}
           </Button>
         ))}
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground">Amount receiving now (₹)</label>
+        <label className="text-xs font-medium text-muted-foreground">Amount receiving now ({currency})</label>
         <Input
           type="number"
           min={0}
@@ -75,7 +79,7 @@ export function BillingKhataSection({
           value={amountReceived || ""}
           onChange={(e) => onAmountChange(Number(e.target.value))}
           className="mt-1.5 h-11 text-sm"
-          placeholder={`Leave 0 for full khata (${formatCurrency(total)})`}
+          placeholder={`Leave 0 for full khata (${formatCurrency(total, currency)})`}
         />
       </div>
 
@@ -85,9 +89,9 @@ export function BillingKhataSection({
           amountDuePreview > 0 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"
         )}
       >
-        Paying now: <span className="font-semibold">{formatCurrency(amountReceived || 0)}</span>
+        Paying now: <span className="font-semibold">{formatCurrency(amountReceived || 0, currency)}</span>
         {" · "}
-        On khata: <span className="font-semibold">{formatCurrency(amountDuePreview)}</span>
+        On khata: <span className="font-semibold">{formatCurrency(amountDuePreview, currency)}</span>
       </div>
     </div>
   );

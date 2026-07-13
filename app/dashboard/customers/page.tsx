@@ -25,7 +25,8 @@ import { JollyDateRangePicker } from "@/components/ui/jolly-date-picker";
 import { parseDate } from "@internationalized/date";
 
 export default function CustomersPage() {
-  const { token, outletId } = useAuth();
+  const { user, token, outletId } = useAuth();
+  const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const hasCustomers = useFeature("customers");
   
@@ -115,7 +116,7 @@ export default function CustomersPage() {
 
       <CardSwiper>
         <StatsCard label="Total Customers" value={String(data?.total ?? customers.length)} icon={<Users className="h-5 w-5" />} />
-        <StatsCard label="Total Outstanding" value={formatCurrency(totalOutstanding)} />
+        <StatsCard label="Total Outstanding" value={formatCurrency(totalOutstanding, currency)} />
         <StatsCard
           label="With Balance Due"
           value={String(customers.filter((c) => c.outstandingBalance > 0).length)}
@@ -169,7 +170,7 @@ export default function CustomersPage() {
             header: "Balance Due",
             render: (c) =>
               c.outstandingBalance > 0 ? (
-                <Badge variant="warning">{formatCurrency(c.outstandingBalance)}</Badge>
+                <Badge variant="warning">{formatCurrency(c.outstandingBalance, currency)}</Badge>
               ) : (
                 <Badge variant="soft">Clear</Badge>
               )

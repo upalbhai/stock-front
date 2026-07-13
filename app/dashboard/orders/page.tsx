@@ -39,6 +39,7 @@ const statusVariant: Record<string, "soft" | "danger" | "warning" | "secondary">
 
 export default function OrdersPage() {
   const { token, outletId, user } = useAuth();
+  const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const hasHistory = useFeature("order_history");
   const hasGstInvoices = useFeature("gst_invoices");
@@ -206,7 +207,7 @@ export default function OrdersPage() {
           {data.payments.map((p: any, i: number) => (
             <div key={i} className="h-full rounded-xl border border-border/50 bg-gradient-to-br from-card to-surface/50 p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-center cursor-grab active:cursor-grabbing">
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{p.payment_type}</span>
-              <span className="text-xl font-extrabold text-foreground mt-1">{formatCurrency(p.amount)}</span>
+              <span className="text-xl font-extrabold text-foreground mt-1">{formatCurrency(p.amount, currency)}</span>
             </div>
           ))}
         </CardSwiper>
@@ -274,7 +275,7 @@ export default function OrdersPage() {
             header: "Total",
             render: (o) => (
               <span className={`font-bold ${o.status === "voided" ? "text-muted line-through" : ""}`}>
-                {formatCurrency(o.total)}
+                {formatCurrency(o.total, currency)}
               </span>
             )
           },
@@ -307,14 +308,14 @@ export default function OrdersPage() {
                         if (!v || Number(v) <= 0) return null;
                         return (
                           <Badge key={`${i}-${k}`} variant="secondary" className="capitalize text-[10px] px-1.5 py-0 border-primary/20 bg-primary/5">
-                            {k}: {formatCurrency(v)}
+                            {k}: {formatCurrency(v, currency)}
                           </Badge>
                         );
                       });
                     }
                     return (
                       <Badge key={i} variant="secondary" className="capitalize text-[10px] px-1.5 py-0 border-primary/20 bg-primary/5">
-                        {p.method}: {formatCurrency(p.amount)}
+                        {p.method}: {formatCurrency(p.amount, currency)}
                       </Badge>
                     );
                   })
@@ -418,10 +419,10 @@ export default function OrdersPage() {
                   <div className="flex flex-col">
                     <span className="font-medium">{item.name}</span>
                     <span className="text-xs text-muted">
-                      {item.soldQty || item.qty} {item.soldUnit || item.unit} x {formatCurrency(item.price)}
+                      {item.soldQty || item.qty} {item.soldUnit || item.unit} x {formatCurrency(item.price, currency)}
                     </span>
                   </div>
-                  <span className="font-medium">{formatCurrency(item.lineTotal ?? (item.price * (item.soldQty || item.qty)))}</span>
+                  <span className="font-medium">{formatCurrency(item.lineTotal ?? (item.price * (item.soldQty || item.qty)), currency)}</span>
                 </div>
               ))}
             </div>
@@ -429,32 +430,32 @@ export default function OrdersPage() {
             <div className="space-y-1 text-sm border-t pt-4">
               <div className="flex justify-between">
                 <span className="text-muted">Subtotal</span>
-                <span>{formatCurrency(orderDetailsData.order.subtotal)}</span>
+                <span>{formatCurrency(orderDetailsData.order.subtotal, currency)}</span>
               </div>
               {orderDetailsData.order.discount > 0 && (
                 <div className="flex justify-between text-success">
                   <span>Discount</span>
-                  <span>-{formatCurrency(orderDetailsData.order.discount)}</span>
+                  <span>-{formatCurrency(orderDetailsData.order.discount, currency)}</span>
                 </div>
               )}
               {orderDetailsData.order.tax > 0 && (
                 <div className="flex justify-between text-muted">
                   <span>Tax</span>
-                  <span>{formatCurrency(orderDetailsData.order.tax)}</span>
+                  <span>{formatCurrency(orderDetailsData.order.tax, currency)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-base pt-2">
                 <span>Total</span>
-                <span>{formatCurrency(orderDetailsData.order.total)}</span>
+                <span>{formatCurrency(orderDetailsData.order.total, currency)}</span>
               </div>
               <div className="flex justify-between text-muted text-xs pt-2">
                  <span className="capitalize">Paid ({orderDetailsData.order.payments?.[0]?.method || "cash"})</span>
-                 <span>{formatCurrency(orderDetailsData.order.amountPaid ?? orderDetailsData.order.total)}</span>
+                 <span>{formatCurrency(orderDetailsData.order.amountPaid ?? orderDetailsData.order.total, currency)}</span>
               </div>
               {(orderDetailsData.order.amountDue ?? 0) > 0 && (
                 <div className="flex justify-between text-danger font-bold text-sm">
                    <span>Due</span>
-                   <span>{formatCurrency(orderDetailsData.order.amountDue ?? 0)}</span>
+                   <span>{formatCurrency(orderDetailsData.order.amountDue ?? 0, currency)}</span>
                 </div>
               )}
             </div>

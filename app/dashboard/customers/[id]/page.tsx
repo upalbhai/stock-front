@@ -37,6 +37,7 @@ export default function CustomerDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { token, outletId, user } = useAuth();
+  const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const hasCreditKhata = useFeature("credit_khata");
   const canCollect =
@@ -133,10 +134,10 @@ export default function CustomerDetailPage() {
       </div>
 
       <CardSwiper>
-        <StatsCard label="Outstanding Balance" value={formatCurrency(customer.outstandingBalance)} />
+        <StatsCard label="Outstanding Balance" value={formatCurrency(customer.outstandingBalance, currency)} />
         <StatsCard
           label="Credit Limit"
-          value={customer.creditLimit ? formatCurrency(customer.creditLimit) : "No limit"}
+          value={customer.creditLimit ? formatCurrency(customer.creditLimit, currency) : "No limit"}
         />
         <StatsCard label="Default GST" value={customer.defaultTaxMode === "inclusive" ? "Included" : "Extra"} />
       </CardSwiper>
@@ -186,7 +187,7 @@ export default function CustomerDetailPage() {
               header: "Debit",
               render: (t) => (
                 <span className={t.debit > 0 ? "text-sm font-medium text-warning" : "text-sm text-muted"}>
-                  {t.debit > 0 ? formatCurrency(t.debit) : "—"}
+                  {t.debit > 0 ? formatCurrency(t.debit, currency) : "—"}
                 </span>
               )
             },
@@ -195,14 +196,14 @@ export default function CustomerDetailPage() {
               header: "Credit",
               render: (t) => (
                 <span className={t.credit > 0 ? "text-sm font-medium text-green-600" : "text-sm text-muted"}>
-                  {t.credit > 0 ? formatCurrency(t.credit) : "—"}
+                  {t.credit > 0 ? formatCurrency(t.credit, currency) : "—"}
                 </span>
               )
             },
             {
               key: "balance",
               header: "Balance",
-              render: (t) => <span className="text-sm font-semibold">{formatCurrency(t.balanceAfter)}</span>
+              render: (t) => <span className="text-sm font-semibold">{formatCurrency(t.balanceAfter, currency)}</span>
             },
             {
               key: "note",
@@ -215,7 +216,7 @@ export default function CustomerDetailPage() {
 
       <Modal open={showPay} onClose={() => setShowPay(false)} title="Receive Payment" size="sm">
         <p className="mb-4 text-sm text-muted">
-          Outstanding: <strong>{formatCurrency(customer.outstandingBalance)}</strong>
+          Outstanding: <strong>{formatCurrency(customer.outstandingBalance, currency)}</strong>
         </p>
         <form
           className="space-y-4"

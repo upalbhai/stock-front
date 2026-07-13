@@ -10,6 +10,7 @@ import { BILLING_MODES } from "@/components/billing/billing-constants";
 import { formatCurrency } from "@/lib/format";
 import { getErrorMessage } from "@/lib/error";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/auth-provider";
 import type { LineItem } from "@/store/billingSlice";
 import type { Customer } from "@/lib/types";
 import type { PAYMENT_METHODS } from "@/components/billing/billing-constants";
@@ -126,6 +127,9 @@ export function BillingCartPanel({
   onOpenPrinterSettings,
   printerConnected,
 }: BillingCartPanelProps) {
+  const { user } = useAuth();
+  const userCurrency = user?.currency || "INR";
+  
   const isSheet = variant === "sheet";
   const [step, setStep] = useState<"cart" | "payment">("cart");
 
@@ -299,10 +303,10 @@ export function BillingCartPanel({
                     <div key={item.cartLineId} className="flex justify-between items-start gap-2 text-sm">
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-foreground/90">{lineQty}x {item.name}</p>
-                        <p className="text-[11px] text-muted-foreground/70">{formatCurrency(item.price)} / {item.soldUnit ?? item.unit}</p>
+                        <p className="text-[11px] text-muted-foreground/70">{formatCurrency(item.price, userCurrency)} / {item.soldUnit ?? item.unit}</p>
                       </div>
                       <span className="shrink-0 font-semibold text-foreground/90">
-                        {formatCurrency(item.price * lineQty)}
+                        {formatCurrency(item.price * lineQty, userCurrency)}
                       </span>
                     </div>
                   );
@@ -318,13 +322,13 @@ export function BillingCartPanel({
           <div className="flex justify-between text-muted-foreground">
             <span>Subtotal</span>
             <span className="font-medium text-foreground">
-              {formatCurrency(subtotal)}
+              {formatCurrency(subtotal, userCurrency)}
             </span>
           </div>
           <div className="flex items-center justify-between gap-2 text-muted-foreground">
             <span className="font-medium">Discount</span>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">₹</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">{userCurrency}</span>
               <Input
                 type="number"
                 min={0}
@@ -388,28 +392,28 @@ export function BillingCartPanel({
                   <div className="space-y-1 border-t border-border/40 pt-2 text-xs text-muted-foreground">
                     <div className="flex justify-between">
                       <span>Taxable</span>
-                      <span>{formatCurrency(cartTotals.taxableAmount)}</span>
+                      <span>{formatCurrency(cartTotals.taxableAmount, userCurrency)}</span>
                     </div>
                     {isInterState ? (
                       <div className="flex justify-between">
                         <span>IGST</span>
-                        <span>{formatCurrency(igst)}</span>
+                        <span>{formatCurrency(igst, userCurrency)}</span>
                       </div>
                     ) : (
                       <>
                         <div className="flex justify-between">
                           <span>CGST</span>
-                          <span>{formatCurrency(cgst)}</span>
+                          <span>{formatCurrency(cgst, userCurrency)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>SGST</span>
-                          <span>{formatCurrency(sgst)}</span>
+                          <span>{formatCurrency(sgst, userCurrency)}</span>
                         </div>
                       </>
                     )}
                     <div className="flex justify-between font-medium text-foreground">
                       <span>Tax</span>
-                      <span>{formatCurrency(taxAmount)}</span>
+                      <span>{formatCurrency(taxAmount, userCurrency)}</span>
                     </div>
                   </div>
                 )}
@@ -419,7 +423,7 @@ export function BillingCartPanel({
           <div className="flex justify-between items-end border-t border-border pt-3 mt-1 text-base font-bold">
             <span className="mb-0.5">Total</span>
             <span key={total} className="text-[22px] tracking-tight text-primary animate-rise">
-              {formatCurrency(total)}
+              {formatCurrency(total, userCurrency)}
             </span>
           </div>
         </div>
@@ -488,7 +492,7 @@ export function BillingCartPanel({
                 ) : (
                   <>
                     <Printer className="h-4.5 w-4.5" />
-                    Place Bill — {formatCurrency(total)}
+                    Place Bill — {formatCurrency(total, userCurrency)}
                   </>
                 )}
               </Button>

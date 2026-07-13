@@ -27,7 +27,8 @@ type InvoicePayload = {
 };
 
 export default function InvoicesPage() {
-  const { token, outletId } = useAuth();
+  const { user, token, outletId } = useAuth();
+  const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const hasGstInvoices = useFeature("gst_invoices");
   
@@ -147,12 +148,12 @@ export default function InvoicesPage() {
           {
             key: "tax",
             header: "Tax",
-            render: (inv) => <span className="text-sm">{formatCurrency(inv.tax)}</span>
+            render: (inv) => <span className="text-sm">{formatCurrency(inv.tax, currency)}</span>
           },
           {
             key: "total",
             header: "Total",
-            render: (inv) => <span className="font-bold">{formatCurrency(inv.total)}</span>
+            render: (inv) => <span className="font-bold">{formatCurrency(inv.total, currency)}</span>
           },
           {
             key: "status",

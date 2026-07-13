@@ -93,7 +93,7 @@ function getHistoryDatePreset(preset: "today" | "week" | "month") {
   };
 }
 
-function buildHistoryColumns(onDelete?: (e: StockHistoryEntry) => void): Parameters<typeof DataTable<StockHistoryEntry>>[0]["columns"] {
+function buildHistoryColumns(currency: string, onDelete?: (e: StockHistoryEntry) => void): Parameters<typeof DataTable<StockHistoryEntry>>[0]["columns"] {
   const cols: Parameters<typeof DataTable<StockHistoryEntry>>[0]["columns"] = [
     {
       key: "createdAt",
@@ -154,7 +154,7 @@ function buildHistoryColumns(onDelete?: (e: StockHistoryEntry) => void): Paramet
       header: "Potential margin",
       render: (e: StockHistoryEntry) =>
         e.qty > 0 && e.expectedProfit != null ? (
-          <span className="text-xs text-muted">{formatCurrency(e.expectedProfit)}</span>
+          <span className="text-xs text-muted">{formatCurrency(e.expectedProfit, currency)}</span>
         ) : (
           <span className="text-xs text-muted">—</span>
         )
@@ -164,7 +164,7 @@ function buildHistoryColumns(onDelete?: (e: StockHistoryEntry) => void): Paramet
       header: "Loss",
       render: (e: StockHistoryEntry) =>
         e.qty > 0 && e.costLoss != null && e.costLoss > 0 ? (
-          <span className="text-xs font-semibold text-danger">{formatCurrency(e.costLoss)}</span>
+          <span className="text-xs font-semibold text-danger">{formatCurrency(e.costLoss, currency)}</span>
         ) : (
           <span className="text-xs text-muted">—</span>
         )
@@ -175,7 +175,7 @@ function buildHistoryColumns(onDelete?: (e: StockHistoryEntry) => void): Paramet
       render: (e: StockHistoryEntry) =>
         e.type === "sale" && e.realizedProfit != null ? (
           <span className={`text-xs font-semibold ${e.realizedProfit >= 0 ? "text-green-600" : "text-danger"}`}>
-            {formatCurrency(e.realizedProfit)}
+            {formatCurrency(e.realizedProfit, currency)}
           </span>
         ) : (
           <span className="text-xs text-muted">—</span>
@@ -187,7 +187,7 @@ function buildHistoryColumns(onDelete?: (e: StockHistoryEntry) => void): Paramet
       render: (e: StockHistoryEntry) =>
         e.qty > 0 && (e.costValue != null || e.sellValue != null) ? (
           <span className="text-[10px] text-muted whitespace-nowrap">
-            {formatCurrency(e.costValue ?? 0)} → {formatCurrency(e.sellValue ?? 0)}
+            {formatCurrency(e.costValue ?? 0, currency)} → {formatCurrency(e.sellValue ?? 0, currency)}
           </span>
         ) : (
           <span className="text-xs text-muted">—</span>
@@ -254,7 +254,8 @@ const ENTRY_TYPE_OPTIONS = [
 ] as const;
 
 export default function StockPage() {
-  const { token, outletId } = useAuth();
+  const { user, token, outletId } = useAuth();
+  const currency = user?.currency || "INR";
   const hasPackaging = useFeature("packaging_units");
   const qc = useQueryClient();
 
@@ -415,7 +416,7 @@ export default function StockPage() {
   const historyTotal = historyData?.total ?? 0;
   const historySummary = historyData?.summary;
   const historyTotalPages = Math.ceil(historyTotal / query.historyLimit) || 1;
-  const historyColumns = React.useMemo(() => buildHistoryColumns((e) => setDeleteEntryId(e._id)), []);
+  const historyColumns = React.useMemo(() => buildHistoryColumns(currency, (e) => setDeleteEntryId(e._id)), []);
 
   const transfers = transfersData?.transfers ?? [];
   const transferTotal = transfersData?.total ?? 0;
@@ -843,19 +844,19 @@ export default function StockPage() {
             />
             <StatsCard
               label="Stock Cost"
-              value={formatCurrency(historySummary?.totalCostValue ?? 0)}
+              value={formatCurrency(historySummary?.totalCostValue ?? 0, currency)}
               hint="Money spent on stock in"
               color="warning"
             />
             <StatsCard
               label="Expected Revenue"
-              value={formatCurrency(historySummary?.totalSellValue ?? 0)}
+              value={formatCurrency(historySummary?.totalSellValue ?? 0, currency)}
               hint="If all stock in sells at entry price"
               color="primary"
             />
             <StatsCard
               label="Potential margin"
-              value={formatCurrency(historySummary?.totalExpectedProfit ?? 0)}
+              value={formatCurrency(historySummary?.totalExpectedProfit ?? 0, currency)}
               hint="If stock-in sells at entry price — NOT profit yet"
               color={(historySummary?.totalExpectedProfit ?? 0) >= 0 ? "success" : "danger"}
             />
@@ -1097,16 +1098,16 @@ export default function StockPage() {
                 <div className="rounded-lg border border-border/50 bg-surface/60 p-2.5 text-xs space-y-1">
                   <div className="flex justify-between text-muted">
                     <span>Total cost ({adjustEntryCount} {adjustPriceUnit})</span>
-                    <span>{formatCurrency(adjustProfitPreview.costValue)}</span>
+                    <span>{formatCurrency(adjustProfitPreview.costValue, currency)}</span>
                   </div>
                   <div className="flex justify-between text-muted">
                     <span>Expected revenue</span>
-                    <span>{formatCurrency(adjustProfitPreview.sellValue)}</span>
+                    <span>{formatCurrency(adjustProfitPreview.sellValue, currency)}</span>
                   </div>
                   <div className="flex justify-between font-semibold pt-1 border-t border-border/40">
                     <span>Potential margin</span>
                     <span className={adjustProfitPreview.expectedProfit >= 0 ? "text-muted" : "text-danger"}>
-                      {formatCurrency(adjustProfitPreview.expectedProfit)}
+                      {formatCurrency(adjustProfitPreview.expectedProfit, currency)}
                     </span>
                   </div>
                   <p className="text-[10px] text-muted">Not real profit until items are sold</p>
@@ -1163,7 +1164,7 @@ export default function StockPage() {
               </div>
               {adjustEntryCount > 0 && adjustCostNum > 0 && (
                 <p className="text-sm font-semibold text-danger">
-                  Loss: {formatCurrency(adjustEntryCount * adjustCostNum)}
+                  Loss: {formatCurrency(adjustEntryCount * adjustCostNum, currency)}
                 </p>
               )}
             </div>

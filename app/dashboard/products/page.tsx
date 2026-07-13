@@ -123,7 +123,8 @@ async function loadCategories(
 }
 
 export default function ProductsPage() {
-  const { token, outletId } = useAuth();
+  const { user, token, outletId } = useAuth();
+  const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -413,7 +414,7 @@ export default function ProductsPage() {
         columns={[
           { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image && <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
           { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm font-medium">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },
-          { key: "price", header: "Price", render: (p) => <span className="font-bold text-lg">{formatCurrency(p.price)}</span> },
+          { key: "price", header: "Price", render: (p) => <span className="font-bold text-lg">{formatCurrency(p.price, currency)}</span> },
           { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {(p as any).unitId?.abbreviation ?? p.unit}</p>{p.packagingUnits && p.packagingUnits.length > 0 && <div className="mt-0.5">{p.packagingUnits.map((pkg: any, idx: number) => <p key={idx} className="text-[11px] text-muted-foreground font-semibold">{pkg.onHandBulkQty ?? Math.floor(p.onHandQty / (pkg.qtyPerUnit || 1))} {typeof pkg.unitId === 'object' ? (pkg.unitId?.abbreviation || pkg.unitId?.name) : ''}</p>)}</div>}{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
           { key: "isActive", header: "Status", render: (p) => <Badge variant={p.isActive ? "soft" : "danger"}>{p.isActive ? "Active" : "Inactive"}</Badge> },
           { key: "actions", header: "", render: (p) => (<div className="flex gap-2"><Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(p._id)}><Trash2 className="h-4 w-4" /></Button></div>) }
@@ -612,7 +613,7 @@ export default function ProductsPage() {
                 <div key={p._id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50">
                   <div>
                     <p className="font-medium">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">SKU: {p.sku || "N/A"} • Price: {formatCurrency(p.price)}</p>
+                    <p className="text-xs text-muted-foreground">SKU: {p.sku || "N/A"} • Price: {formatCurrency(p.price, currency)}</p>
                   </div>
                   <Button
                     size="sm"

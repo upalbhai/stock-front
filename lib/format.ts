@@ -3,12 +3,22 @@ export function formatCurrency(
   currency = "INR",
   locale = "en-IN"
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0
-  }).format(value);
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 0
+    }).format(value);
+  } catch (error) {
+    // Fallback for custom symbols (e.g. '₹', 'Tk', 'AED')
+    const formattedNumber = new Intl.NumberFormat(locale, {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 0
+    }).format(value);
+    
+    return `${currency} ${formattedNumber}`;
+  }
 }
 
 export function formatNumber(value: number, locale = "en-IN"): string {

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import AsyncSelect from "@/components/ui/async-select";
 import { useAuth } from "@/components/auth/auth-provider";
 import { businessService } from "@/services/business.service";
 import { outletService } from "@/services/outlet.service";
@@ -27,6 +28,26 @@ export default function SettingsPage() {
 
   const [bizForm, setBizForm] = React.useState({ name: "", code: "", gstNumber: "", currency: "INR" });
   const [outletForm, setOutletForm] = React.useState({ name: "", phone: "", address: "", defaultTaxRate: 5 });
+
+  const loadCurrencyOptions = async ({ search }: { search?: string }) => {
+    const defaultCurrencies = [
+      { id: "INR", name: "INR (₹)" },
+      { id: "USD", name: "USD ($)" },
+      { id: "EUR", name: "EUR (€)" },
+      { id: "GBP", name: "GBP (£)" },
+      { id: "AUD", name: "AUD (A$)" },
+      { id: "CAD", name: "CAD (C$)" },
+      { id: "AED", name: "AED (د.إ)" },
+    ];
+    let filtered = defaultCurrencies;
+    if (search) {
+      filtered = defaultCurrencies.filter((c) =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.id.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    return { data: filtered };
+  };
 
   // Get active business detail
   const { data: businessData } = useQuery({
@@ -122,7 +143,13 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-muted">System Currency</label>
-                      <Input value={bizForm.currency} onChange={(e) => setBizForm(f => ({ ...f, currency: e.target.value }))} />
+                      <AsyncSelect
+                        value={bizForm.currency ? { id: bizForm.currency, name: bizForm.currency } : null}
+                        onChange={(val: any) => setBizForm(f => ({ ...f, currency: val ? (val.id ?? val.name) : "" }))}
+                        loadOptions={loadCurrencyOptions}
+                        placeholder="Search or type custom..."
+                        creatable={true}
+                      />
                     </div>
                   </div>
                   <Button type="submit" disabled={saveBusinessMutation.isPending} id="save-biz-btn">

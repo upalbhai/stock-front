@@ -44,7 +44,8 @@ type ReportData = {
 };
 
 export default function ReportsPage() {
-  const { token, outletId } = useAuth();
+  const { user, token, outletId } = useAuth();
+  const currency = user?.currency || "INR";
   const hasCreditKhata = useFeature("credit_khata");
   const hasGstInvoices = useFeature("gst_invoices");
   const hasWholesale = useFeature("wholesale_billing");
@@ -117,7 +118,7 @@ export default function ReportsPage() {
         <StatsCard
           className="min-w-0"
           label="Total Net Revenue"
-          value={formatCurrency(report?.totalSales || 0)}
+          value={formatCurrency(report?.totalSales || 0, currency)}
           hint={query.from && query.to ? "For selected period" : "For today"}
           icon={<DollarSign className="h-5 w-5" />}
           color="primary"
@@ -131,12 +132,12 @@ export default function ReportsPage() {
         <StatsCard
           className="min-w-0"
           label="Cash Collected"
-          value={formatCurrency(report?.paymentSummary?.cash || 0)}
+          value={formatCurrency(report?.paymentSummary?.cash || 0, currency)}
         />
         <StatsCard
           className="min-w-0"
           label="Digital Payments (UPI/Card)"
-          value={formatCurrency((report?.paymentSummary?.online || 0) + (report?.paymentSummary?.card || 0))}
+          value={formatCurrency((report?.paymentSummary?.online || 0) + (report?.paymentSummary?.card || 0), currency)}
           color="success"
         />
       </CardSwiper>
@@ -147,11 +148,11 @@ export default function ReportsPage() {
             <StatsCard
               className="min-w-0"
               label="GST Collected"
-              value={formatCurrency(report?.gstCollected || 0)}
+              value={formatCurrency(report?.gstCollected || 0, currency)}
               hint={
                 (report?.igstCollected ?? 0) > 0
-                  ? `IGST ${formatCurrency(report?.igstCollected ?? 0)}`
-                  : `CGST ${formatCurrency(report?.cgstCollected ?? 0)} · SGST ${formatCurrency(report?.sgstCollected ?? 0)}`
+                  ? `IGST ${formatCurrency(report?.igstCollected ?? 0, currency)}`
+                  : `CGST ${formatCurrency(report?.cgstCollected ?? 0, currency)} · SGST ${formatCurrency(report?.sgstCollected ?? 0, currency)}`
               }
               icon={<FileText className="h-5 w-5" />}
             />
@@ -168,7 +169,7 @@ export default function ReportsPage() {
             <StatsCard
               className="min-w-0"
               label="Wholesale Sales"
-              value={formatCurrency(report?.wholesaleSales || 0)}
+              value={formatCurrency(report?.wholesaleSales || 0, currency)}
               icon={<TrendingUp className="h-5 w-5" />}
               color="primary"
             />
@@ -177,7 +178,7 @@ export default function ReportsPage() {
             <StatsCard
               className="min-w-0"
               label="Credit Issued"
-              value={formatCurrency(report?.creditIssued || 0)}
+              value={formatCurrency(report?.creditIssued || 0, currency)}
               icon={<Wallet className="h-5 w-5" />}
               color="warning"
             />
@@ -209,7 +210,7 @@ export default function ReportsPage() {
               },
               { key: "name", header: "Item Name", render: (p) => <span className="font-medium">{p.name}</span> },
               { key: "qty", header: "Qty Sold", className: "text-right", render: (p) => <span className="font-bold">{p.qty}</span> },
-              { key: "total", header: "Revenue Contribution", className: "text-right", render: (p) => <span className="font-bold text-primary">{formatCurrency(p.total ?? 0)}</span> }
+              { key: "total", header: "Revenue Contribution", className: "text-right", render: (p) => <span className="font-bold text-primary">{formatCurrency(p.total ?? 0, currency)}</span> }
             ]}
           />
         </div>
@@ -276,7 +277,7 @@ export default function ReportsPage() {
               },
               { key: "name", header: "Staff", render: (staff) => <span className="font-semibold">{staff.name}</span> },
               { key: "orders", header: "Orders", render: (staff) => <span className="text-sm text-muted-foreground">{staff.orders} orders</span> },
-              { key: "revenue", header: "Revenue", className: "text-right", render: (staff) => <span className="font-bold text-primary">{formatCurrency(staff.revenue)}</span> }
+              { key: "revenue", header: "Revenue", className: "text-right", render: (staff) => <span className="font-bold text-primary">{formatCurrency(staff.revenue, currency)}</span> }
             ]}
           />
         </div>

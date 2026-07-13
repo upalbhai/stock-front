@@ -187,7 +187,7 @@ export default function SubscribePage() {
                     <CardTitle className="text-2xl">{plan.name}</CardTitle>
                     <CardDescription className="min-h-[40px]">{plan.description}</CardDescription>
                     <div className="mt-4 flex items-baseline text-5xl font-extrabold">
-                      {formatCurrency(price)}
+                      {formatCurrency(price, currency)}
                       <span className="ml-1 text-xl font-medium text-muted">
                         /{billingCycle === "yearly" ? "yr" : "mo"}
                       </span>

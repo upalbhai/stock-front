@@ -235,8 +235,7 @@ function stockSeverity(stockPercent: number) {
   return { bg: "bg-yellow-500/10", text: "text-yellow-600 dark:text-yellow-400", label: "Warning" };
 }
 
-// ─── Custom Recharts Tooltip ───
-function CustomTooltip({ active, payload, label, valuePrefix = "₹", valueSuffix = "" }: any) {
+function CustomTooltip({ active, payload, label, currency = "" }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-border/70 bg-card/95 backdrop-blur-md px-3.5 py-2.5 shadow-lg text-xs">
@@ -244,7 +243,7 @@ function CustomTooltip({ active, payload, label, valuePrefix = "₹", valueSuffi
       {payload.map((p: any, i: number) => (
         <p key={i} className="text-muted-foreground">
           <span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ backgroundColor: p.color }} />
-          {p.name}: <span className="font-bold text-foreground">{valuePrefix}{formatNumber(p.value)}{valueSuffix}</span>
+          {p.name}: <span className="font-bold text-foreground">{currency ? formatCurrency(p.value, currency) : formatNumber(p.value)}</span>
         </p>
       ))}
     </div>
@@ -290,6 +289,8 @@ function AnalyticsSection({
   barColor?: string;
   gradientId: string;
 }) {
+  const { user } = useAuth();
+  const currency = user?.currency || "INR";
   const totalPages = Math.ceil(total / limit) || 1;
   const color = barColor || "#6366f1";
 
@@ -360,9 +361,9 @@ function AnalyticsSection({
                     fontSize={9}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(v) => chartDataKey === "totalRevenue" ? `₹${formatNumber(v)}` : formatNumber(v)}
+                    tickFormatter={(v) => chartDataKey === "totalRevenue" ? formatCurrency(v, currency) : formatNumber(v)}
                   />
-                  <Tooltip content={<CustomTooltip valuePrefix={chartDataKey === "totalRevenue" ? "₹" : ""} />} />
+                  <Tooltip content={<CustomTooltip currency={chartDataKey === "totalRevenue" ? currency : ""} />} />
                   <Bar dataKey={chartDataKey} name={chartLabel} radius={[4, 4, 0, 0]} maxBarSize={40}>
                     {items.map((_: any, i: number) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.85} />
@@ -393,6 +394,8 @@ function AnalyticsSection({
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════
 function DashboardHome({ token, outletId }: { token: string; outletId: string | null }) {
+  const { user } = useAuth();
+  const currency = user?.currency || "INR";
   const hasCreditKhata = useFeature("credit_khata");
   const hasGstInvoices = useFeature("gst_invoices");
   const hasWholesale = useFeature("wholesale_billing");
@@ -561,7 +564,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           label={query.from || query.to ? "Sales in Period" : "Sales Today"}
-          value={isLoading ? "…" : formatCurrency(summary?.totalSalesToday ?? 0)}
+          value={isLoading ? "…" : formatCurrency(summary?.totalSalesToday ?? 0, currency)}
           hint={`${formatNumber(summary?.totalOrdersToday ?? 0)} orders`}
           icon={<TrendingUp />}
           color="primary"
@@ -569,11 +572,11 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         {hasGstInvoices && (
           <StatsCard
             label={query.from || query.to ? "GST Collected" : "GST Collected Today"}
-            value={isLoading ? "…" : formatCurrency(summary?.gstCollectedToday ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.gstCollectedToday ?? 0, currency)}
             hint={
               (summary?.igstToday ?? 0) > 0
-                ? `IGST ${formatCurrency(summary?.igstToday ?? 0)}`
-                : `CGST+SGST ${formatCurrency(summary?.cgstSgstToday ?? 0)}`
+                ? `IGST ${formatCurrency(summary?.igstToday ?? 0, currency)}`
+                : `CGST+SGST ${formatCurrency(summary?.cgstSgstToday ?? 0, currency)}`
             }
             icon={<Receipt />}
             color="success"
@@ -582,7 +585,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         {hasCreditKhata && (
           <StatsCard
             label="Credit Outstanding"
-            value={isLoading ? "…" : formatCurrency(summary?.totalCreditOutstanding ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.totalCreditOutstanding ?? 0, currency)}
             hint={`${summary?.customersWithDue ?? 0} customers with due`}
             icon={<Wallet />}
             color="warning"
@@ -591,8 +594,8 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         {hasWholesale && (
           <StatsCard
             label={query.from || query.to ? "Wholesale Sales" : "Wholesale Sales Today"}
-            value={isLoading ? "…" : formatCurrency(summary?.wholesaleSalesToday ?? 0)}
-            hint={`Credit issued ${formatCurrency(summary?.creditIssuedToday ?? 0)}`}
+            value={isLoading ? "…" : formatCurrency(summary?.wholesaleSalesToday ?? 0, currency)}
+            hint={`Credit issued ${formatCurrency(summary?.creditIssuedToday ?? 0, currency)}`}
             icon={<Store />}
             color="purple"
           />
@@ -663,9 +666,9 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                     fontSize={10}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(v) => `₹${formatNumber(v)}`}
+                    tickFormatter={(v) => formatCurrency(v, currency)}
                   />
-                  <Tooltip content={<CustomTooltip valuePrefix="₹" />} />
+                  <Tooltip content={<CustomTooltip currency={currency} />} />
                   <Area
                     type="monotone"
                     dataKey="revenue"
@@ -748,7 +751,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                 <span className="text-base leading-none">{item.icon}</span>
                 <span className="flex-1 text-xs font-semibold truncate">{item.name}</span>
                 <span className="text-[11px] font-bold tabular-nums text-primary">{formatNumber(item.totalQty)} qty</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(item.totalRevenue)}</span>
+                <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(item.totalRevenue, currency)}</span>
               </div>
             )}
           />
@@ -775,7 +778,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                 </span>
                 <span className="flex-1 text-xs font-semibold truncate">{item.name}</span>
                 <span className="text-[11px] font-bold tabular-nums text-violet-600 dark:text-violet-400">{formatNumber(item.totalQty)} qty</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(item.totalRevenue)}</span>
+                <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(item.totalRevenue, currency)}</span>
               </div>
             )}
           />
@@ -810,7 +813,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
               <div key={item.categoryId || i} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
                 <span className="text-base leading-none">{item.icon}</span>
                 <span className="flex-1 text-xs font-semibold truncate">{item.name}</span>
-                <span className="text-[11px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(item.totalRevenue)}</span>
+                <span className="text-[11px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(item.totalRevenue, currency)}</span>
                 <span className="text-[10px] text-muted-foreground tabular-nums">{formatNumber(item.totalQty)} qty</span>
               </div>
             )}
@@ -837,7 +840,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                   {i + 1}
                 </span>
                 <span className="flex-1 text-xs font-semibold truncate">{item.name}</span>
-                <span className="text-[11px] font-bold tabular-nums text-teal-600 dark:text-teal-400">{formatCurrency(item.totalRevenue)}</span>
+                <span className="text-[11px] font-bold tabular-nums text-teal-600 dark:text-teal-400">{formatCurrency(item.totalRevenue, currency)}</span>
                 <span className="text-[10px] text-muted-foreground tabular-nums">{formatNumber(item.orderCount)} orders</span>
               </div>
             )}
@@ -1012,12 +1015,12 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                   </div>
                   <div className="flex justify-between border-b border-border/40 pb-1.5">
                     <span className="text-muted-foreground font-medium">GST collected</span>
-                    <span className="font-bold text-foreground">{formatCurrency(summary?.gstCollectedToday ?? 0)}</span>
+                    <span className="font-bold text-foreground">{formatCurrency(summary?.gstCollectedToday ?? 0, currency)}</span>
                   </div>
                   {(summary?.igstToday ?? 0) > 0 && (
                     <div className="flex justify-between text-amber-700 dark:text-amber-500 font-medium">
                       <span>IGST (inter-state)</span>
-                      <span className="font-bold">{formatCurrency(summary?.igstToday ?? 0)}</span>
+                      <span className="font-bold">{formatCurrency(summary?.igstToday ?? 0, currency)}</span>
                     </div>
                   )}
                 </div>
@@ -1046,7 +1049,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                 <div className="space-y-2.5">
                   <div className="flex justify-between border-b border-border/40 pb-1.5">
                     <span className="text-muted-foreground font-medium">Total outstanding</span>
-                    <span className="font-bold text-warning">{formatCurrency(summary?.totalCreditOutstanding ?? 0)}</span>
+                    <span className="font-bold text-warning">{formatCurrency(summary?.totalCreditOutstanding ?? 0, currency)}</span>
                   </div>
                   <div className="flex justify-between border-b border-border/40 pb-1.5">
                     <span className="text-muted-foreground font-medium">Customers with due</span>
@@ -1054,7 +1057,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground font-medium">Credit issued today</span>
-                    <span className="font-bold text-foreground">{formatCurrency(summary?.creditIssuedToday ?? 0)}</span>
+                    <span className="font-bold text-foreground">{formatCurrency(summary?.creditIssuedToday ?? 0, currency)}</span>
                   </div>
                 </div>
               )}

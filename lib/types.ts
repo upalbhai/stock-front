@@ -38,6 +38,7 @@ export type AuthUser = {
   customPermissions?: { module: string; actions: string[] }[];
   permissions?: { module: string; actions: string[] }[];
   preferredLoginMethod?: "password" | "otp";
+  currency?: string;
   outlets?: Outlet[];
 };
 

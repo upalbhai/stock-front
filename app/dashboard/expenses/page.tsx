@@ -37,6 +37,7 @@ type RecordFilter = "active" | "voided" | "all";
 
 export default function ExpensesPage() {
   const { token, outletId, user } = useAuth();
+  const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const canVoid = user?.role === "owner" || user?.role === "manager" || user?.role === "superadmin";
 
@@ -142,11 +143,11 @@ export default function ExpensesPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard label="Total Expenses" value={formatCurrency(totalAmount)} icon={<DollarSign className="h-5 w-5" />} />
+        <StatsCard label="Total Expenses" value={formatCurrency(totalAmount, currency)} icon={<DollarSign className="h-5 w-5" />} />
         {Object.entries(categoryTotals)
           .slice(0, 3)
           .map(([cat, amt]) => (
-            <StatsCard key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)} value={formatCurrency(amt)} />
+            <StatsCard key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)} value={formatCurrency(amt, currency)} />
           ))}
       </div>
 
@@ -240,7 +241,7 @@ export default function ExpensesPage() {
             header: "Amount",
             render: (e) => (
               <span className={`font-bold ${e.status === "voided" ? "text-muted line-through" : ""}`}>
-                {formatCurrency(e.amount)}
+                {formatCurrency(e.amount, currency)}
               </span>
             )
           },

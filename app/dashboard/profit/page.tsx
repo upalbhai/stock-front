@@ -129,7 +129,8 @@ function moneyImpact(row: LedgerMovement): { label: string; value: number; tone:
 }
 
 export default function ProfitPage() {
-  const { token, outletId } = useAuth();
+  const { user, token, outletId } = useAuth();
+  const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const defaults = React.useMemo(getDefaultDateRange, []);
   
@@ -343,27 +344,27 @@ export default function ProfitPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             label="Sales revenue"
-            value={isLoading ? "…" : formatCurrency(summary?.realizedRevenue ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.realizedRevenue ?? 0, currency)}
             hint={`${summary?.ordersCount ?? 0} completed bills`}
             icon={<TrendingUp className="h-5 w-5" />}
             color="primary"
           />
           <StatsCard
             label="Cost of goods sold"
-            value={isLoading ? "…" : formatCurrency(summary?.realizedCost ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.realizedCost ?? 0, currency)}
             hint="Product cost on sold items"
             color="warning"
           />
           <StatsCard
             label="Gross profit (real)"
-            value={isLoading ? "…" : formatCurrency(summary?.realizedGrossProfit ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.realizedGrossProfit ?? 0, currency)}
             hint="Revenue − COGS — only from sales"
             icon={<TrendingUp className="h-5 w-5" />}
             color="success"
           />
           <StatsCard
             label="Net after losses"
-            value={isLoading ? "…" : formatCurrency(summary?.netProfit ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.netProfit ?? 0, currency)}
             hint="Gross profit − spoilage/returns/replacements"
             color={(summary?.netProfit ?? 0) >= 0 ? "success" : "danger"}
           />
@@ -375,21 +376,21 @@ export default function ProfitPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <StatsCard
             label="Spoilage / damage"
-            value={isLoading ? "…" : formatCurrency(summary?.spoilageLoss ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.spoilageLoss ?? 0, currency)}
             hint="Expired or damaged before sale"
             icon={<Trash2 className="h-5 w-5" />}
             color="danger"
           />
           <StatsCard
             label="Spoiled returns"
-            value={isLoading ? "…" : formatCurrency(summary?.returnLoss ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.returnLoss ?? 0, currency)}
             hint="Customer returned spoiled goods"
             icon={<RotateCcw className="h-5 w-5" />}
             color="danger"
           />
           <StatsCard
             label="Owner replacements"
-            value={isLoading ? "…" : formatCurrency(summary?.replacementCost ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.replacementCost ?? 0, currency)}
             hint="Free replacements you gave"
             icon={<Gift className="h-5 w-5" />}
             color="warning"
@@ -402,25 +403,25 @@ export default function ProfitPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             label="Stock invested (period)"
-            value={isLoading ? "…" : formatCurrency(summary?.stockInvested ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.stockInvested ?? 0, currency)}
             hint="Cost of stock received in date range"
             icon={<Package className="h-5 w-5" />}
           />
           <StatsCard
             label="Potential margin (period)"
-            value={isLoading ? "…" : formatCurrency(summary?.potentialMargin ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.potentialMargin ?? 0, currency)}
             hint="If all received stock sells at entry price — NOT profit"
             icon={<AlertTriangle className="h-5 w-5" />}
             color="warning"
           />
           <StatsCard
             label="On-hand stock value (cost)"
-            value={isLoading ? "…" : formatCurrency(summary?.onHandCostValue ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.onHandCostValue ?? 0, currency)}
             hint="Current inventory at cost price"
           />
           <StatsCard
             label="On-hand potential margin"
-            value={isLoading ? "…" : formatCurrency(summary?.onHandPotentialMargin ?? 0)}
+            value={isLoading ? "…" : formatCurrency(summary?.onHandPotentialMargin ?? 0, currency)}
             hint="If current stock all sells — still not realized"
             color="default"
           />
@@ -483,11 +484,11 @@ export default function ProfitPage() {
               render: (m) =>
                 m.costValue > 0 || m.sellValue > 0 ? (
                   <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                    {formatCurrency(m.costValue)} → {formatCurrency(m.sellValue)}
+                    {formatCurrency(m.costValue, currency)} → {formatCurrency(m.sellValue, currency)}
                   </span>
                 ) : m.realizedRevenue > 0 ? (
                   <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                    COGS {formatCurrency(m.realizedCost)} / Rev {formatCurrency(m.realizedRevenue)}
+                    COGS {formatCurrency(m.realizedCost, currency)} / Rev {formatCurrency(m.realizedRevenue, currency)}
                   </span>
                 ) : (
                   <span className="text-xs text-muted-foreground">—</span>
@@ -509,7 +510,7 @@ export default function ProfitPage() {
                             : "text-muted-foreground"
                       }`}
                     >
-                      {impact.value === 0 ? "—" : formatCurrency(Math.abs(impact.value))}
+                      {impact.value === 0 ? "—" : formatCurrency(Math.abs(impact.value), currency)}
                       {impact.tone === "loss" && impact.value !== 0 ? " −" : ""}
                     </span>
                     <p className="text-[10px] text-muted-foreground">{impact.label}</p>
@@ -648,7 +649,7 @@ export default function ProfitPage() {
           {!isGoodReturn && lossPreview > 0 && (
             <div className="rounded-xl border border-danger/30 bg-danger/5 p-3 text-sm">
               <p className="text-danger font-semibold flex items-center gap-1">
-                <TrendingDown className="h-4 w-4" /> Loss: {formatCurrency(lossPreview)}
+                <TrendingDown className="h-4 w-4" /> Loss: {formatCurrency(lossPreview, currency)}
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">This reduces your net profit — not potential margin.</p>
             </div>
