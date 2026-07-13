@@ -226,7 +226,11 @@ export default function ProductsPage() {
 
   const loadCategoryFilterOptions = React.useCallback(
     async (params: { page: number; limit: number; q?: string }) => {
-      const res = await loadCategories(token, params);
+      const res = await qc.fetchQuery({
+        queryKey: ["categories", "options", params.page, params.limit, params.q],
+        queryFn: () => loadCategories(token, { ...params, search: params.q }),
+        staleTime: 1000 * 60 * 5,
+      });
       if (params.page === 1 && !params.q) {
         return {
           ...res,
@@ -235,19 +239,27 @@ export default function ProductsPage() {
       }
       return res;
     },
-    [token]
+    [token, qc]
   );
 
-
-
   const loadCategoryFormOptions = React.useCallback(
-    (params: { page: number; limit: number; search?: string }) => loadCategories(token, params),
-    [token]
+    (params: { page: number; limit: number; search?: string }) => 
+      qc.fetchQuery({
+        queryKey: ["categories", "options", params.page, params.limit, params.search],
+        queryFn: () => loadCategories(token, params),
+        staleTime: 1000 * 60 * 5,
+      }),
+    [token, qc]
   );
 
   const loadUnitOptions = React.useCallback(
-    (params: { page: number; limit: number; search?: string }) => loadUnits(token, outletId, params),
-    [token, outletId]
+    (params: { page: number; limit: number; search?: string }) => 
+      qc.fetchQuery({
+        queryKey: ["units", "options", outletId, params.page, params.limit, params.search],
+        queryFn: () => loadUnits(token, outletId, params),
+        staleTime: 1000 * 60 * 5,
+      }),
+    [token, outletId, qc]
   );
 
   const resolveUnitSelection = React.useCallback(
