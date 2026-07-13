@@ -157,8 +157,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Store current admin credentials in local storage to preserve state
     localStorage.setItem("original_admin_token", token || "");
     
-    // Clear all cached queries so the impersonated user gets fresh data
-    queryClient.clear();
+    // Remove all cached queries safely without destroying active observers
+    queryClient.removeQueries();
     
     // Update Redux state with target user token
     dispatch(setAuth({ user: response.data.user, token: response.data.token }));

@@ -24,7 +24,12 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: ["persist/PERSIST", "persist/REHYDRATE", "persist/PAUSE", "persist/PERSIST", "persist/PURGE", "persist/REGISTER"],
       },
+      immutableCheck: false,
     }),
+  devTools: process.env.NODE_ENV !== "production" ? {
+    maxAge: 50,
+    trace: false
+  } : false,
 });
 
 export const persistor = persistStore(store);
