@@ -53,7 +53,8 @@ export default function SettingsPage() {
   const { data: businessData } = useQuery({
     queryKey: ["business-mine"],
     queryFn: () => businessService.getMyBusiness(token!),
-    enabled: Boolean(token)
+    enabled: Boolean(token),
+    staleTime: Infinity
   });
 
   // Get active outlet detail

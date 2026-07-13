@@ -156,9 +156,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     // Store current admin credentials in local storage to preserve state
     localStorage.setItem("original_admin_token", token || "");
+    
+    // Clear all cached queries so the impersonated user gets fresh data
+    queryClient.clear();
+    
     // Update Redux state with target user token
     dispatch(setAuth({ user: response.data.user, token: response.data.token }));
-  }, [token, dispatch]);
+  }, [token, dispatch, queryClient]);
 
   const isTrialExpired = React.useMemo(() => {
     return user?.trialExpired || false;

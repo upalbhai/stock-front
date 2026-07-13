@@ -48,7 +48,7 @@ import { usePOSPrinter } from "@/hooks/use-pos-printer";
 import type { ReceiptData } from "@/lib/pos-receipt";
 
 export function useBillingPage() {
-  const { token, outletId } = useAuth();
+  const { user, token, outletId } = useAuth();
   const businessProfile = useBusinessProfile();
   const hasWholesale = useFeature("wholesale_billing");
   const hasRetail = useFeature("retail_billing");
@@ -117,12 +117,7 @@ export function useBillingPage() {
     setProdPage(1);
   }, [debouncedSearch]);
 
-  const { data: outletsData } = useQuery({
-    queryKey: ["outlets"],
-    queryFn: () => outletService.getOutlets(token),
-    enabled: Boolean(token),
-  });
-  const currentOutlet = outletsData?.data?.outlets?.find((o) => o._id === outletId);
+  const currentOutlet = user?.outlets?.find((o) => o._id === outletId);
 
   const { data: catData } = useQuery({
     queryKey: ["categories", "flat", outletId],
@@ -159,6 +154,7 @@ export function useBillingPage() {
     queryKey: ["business-mine"],
     queryFn: () => businessService.getMyBusiness(token),
     enabled: Boolean(token),
+    staleTime: Infinity,
   });
 
   const { data: selectedCustomerData } = useQuery({

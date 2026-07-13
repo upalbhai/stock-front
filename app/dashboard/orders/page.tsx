@@ -17,6 +17,7 @@ import { invoiceService } from "@/services/invoice.service";
 import { businessService } from "@/services/business.service";
 import { outletService } from "@/services/outlet.service";
 import { userService } from "@/services/user.service";
+import AsyncSelect from "@/components/ui/async-select";
 import { Select } from "@/components/ui/select";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import type { Order, Outlet } from "@/lib/types";
@@ -40,7 +41,7 @@ const statusVariant: Record<string, "soft" | "danger" | "warning" | "secondary">
 };
 
 export default function OrdersPage() {
-  const { token, outletId, user } = useAuth();
+  const { token, outletId, businessId, user } = useAuth();
   const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const hasHistory = useFeature("order_history");
@@ -63,34 +64,28 @@ export default function OrdersPage() {
   
   const [viewOrderId, setViewOrderId] = React.useState<string | null>(null);
 
-  const { data: bizData } = useQuery({
-    queryKey: ["business-mine"],
-    queryFn: () => businessService.getMyBusiness(token),
-    enabled: Boolean(token),
-  });
-
-  const { data: outletsData } = useQuery({
-    queryKey: ["outlets"],
-    queryFn: () => outletService.getOutlets(token),
-    enabled: Boolean(token),
-  });
-
-  const { data: usersData } = useQuery({
-    queryKey: ["users", bizData?.business?._id],
-    queryFn: () => userService.getUsers(token, { businessId: bizData?.business?._id }),
-    enabled: Boolean(token && bizData?.business?._id && (user?.role === "owner" || user?.role === "superadmin" || user?.role === "manager")),
-  });
-
-  const staffOptions = React.useMemo(() => {
-    if (!usersData?.users) return [];
-    return [
-      { value: "", label: "All Staff" },
-      ...usersData.users.map((u: any) => ({
-        value: u._id,
+  const loadStaffOptions = async ({ search = "", page }: { search?: string; page: number }) => {
+    if (!businessId || !token) return { data: [] };
+    try {
+      const res = await userService.getUsers(token, { businessId, search, page, limit: 25, flat: true });
+      const options = res.users.map((u: any) => ({
+        id: u._id,
+        name: u.name,
         label: u.name,
-      }))
-    ];
-  }, [usersData?.users]);
+      }));
+      // Inject "All Staff" option on first page if no search
+      if (page === 1 && !search) {
+        options.unshift({ id: "", name: "All Staff", label: "All Staff" });
+      }
+      return {
+        data: options,
+        meta: res.meta
+      };
+    } catch (error) {
+      console.error("Failed to load staff", error);
+      return { data: [] };
+    }
+  };
 
   const { data: orderDetailsData, isLoading: isLoadingOrder } = useQuery({
     queryKey: ["order", viewOrderId],
@@ -150,15 +145,26 @@ export default function OrdersPage() {
   const handleReprint = async () => {
     if (!orderDetailsData?.order) return;
     const order = orderDetailsData.order;
-    const currentOutlet = outletsData?.data?.outlets?.find((o: Outlet) => o._id === order.outletId);
+    const currentOutlet = user?.outlets?.find((o: Outlet) => o._id === order.outletId);
+    
+    let bizDetails: any = null;
+    try {
+      bizDetails = await qc.fetchQuery({
+        queryKey: ["business-mine"],
+        queryFn: () => businessService.getMyBusiness(token),
+        staleTime: Infinity,
+      });
+    } catch (e) {
+      console.error("Failed to fetch business details for printing", e);
+    }
     
     try {
       await printer.print({
-        businessName: bizData?.business?.name ?? "Shop",
+        businessName: bizDetails?.business?.name ?? "Shop",
         outletName: currentOutlet?.name ?? undefined,
-        businessPhone: bizData?.business?.phone ?? undefined,
-        businessAddress: bizData?.business?.address ?? undefined,
-        businessGst: bizData?.business?.gstNumber ?? undefined,
+        businessPhone: bizDetails?.business?.phone ?? undefined,
+        businessAddress: bizDetails?.business?.address ?? undefined,
+        businessGst: bizDetails?.business?.gstNumber ?? undefined,
         orderNumber: order.orderNumber,
         createdAt: order.createdAt,
         customerName: order.customerName || undefined,
@@ -195,13 +201,16 @@ export default function OrdersPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {(user?.role === "owner" || user?.role === "superadmin" || user?.role === "manager") && (
-            <Select
-              value={query.staffId}
-              onValueChange={(v) => setQuery({ staffId: v, page: 1 })}
-              options={staffOptions}
-              placeholder="All Staff"
-              className="w-[140px]"
-            />
+            <div className="w-[180px]">
+              <AsyncSelect
+                value={query.staffId ? { id: query.staffId, label: "Staff Selected", name: "Staff Selected" } : { id: "", label: "All Staff", name: "All Staff" }}
+                onChange={(opt: any) => setQuery({ staffId: opt?.id || "", page: 1 })}
+                loadOptions={loadStaffOptions}
+                placeholder="All Staff"
+                searchable
+                pageSize={25}
+              />
+            </div>
           )}
           <JollyDateRangePicker 
             label="Date Filter"
