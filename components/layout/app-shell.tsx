@@ -19,6 +19,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/auth/auth-provider";
 import { OutletSwitcher } from "@/components/layout/outlet-switcher";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useOnlineStatus } from "@/hooks/use-online";
 import { useVisibleSidebarGroups } from "@/components/layout/use-visible-sidebar";
 import { allSidebarItems } from "@/components/layout/navigation-config";
@@ -88,16 +89,7 @@ function LastUpdated() {
   );
 }
 
-function NotificationBell() {
-  return (
-    <button
-      className="relative rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      aria-label="Notifications"
-    >
-      <Bell className="h-4 w-4" />
-    </button>
-  );
-}
+
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

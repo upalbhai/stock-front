@@ -20,11 +20,14 @@ import { RoleGate } from "@/components/auth/role-gate";
 import { SecuritySettings } from "@/components/settings/security-settings";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
+import { useAppDispatch } from "@/store/hooks";
+import { updateUser } from "@/store/authSlice";
 
 export default function SettingsPage() {
-  const { token, outletId, businessId } = useAuth();
+  const { token, outletId, businessId, user } = useAuth();
   const { settings, updateSettings } = useSettings();
   const qc = useQueryClient();
+  const dispatch = useAppDispatch();
 
   const [bizForm, setBizForm] = React.useState({ name: "", code: "", gstNumber: "", currency: "INR" });
   const [outletForm, setOutletForm] = React.useState({ name: "", phone: "", address: "", defaultTaxRate: 5 });
@@ -67,8 +70,11 @@ export default function SettingsPage() {
   // Mutations
   const saveBusinessMutation = useMutation({
     mutationFn: (body: unknown) => businessService.updateBusiness(businessId!, body, token!),
-    onSuccess: () => {
+    onSuccess: (_, variables: any) => {
       qc.invalidateQueries({ queryKey: ["business-mine"] });
+      if (user && variables.currency) {
+        dispatch(updateUser({ ...user, currency: variables.currency }));
+      }
       toast.success("Business settings saved");
     },
     onError: (err) => toast.error(getErrorMessage(err, "Failed to save business settings"))
