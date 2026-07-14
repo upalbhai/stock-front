@@ -277,7 +277,7 @@ export default function ExpensesPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Amount (₹) *</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Amount ({currency}) *</label>
               <Input
                 id="exp-amount"
                 type="number"

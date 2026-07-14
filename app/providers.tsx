@@ -9,6 +9,7 @@ import { Toaster } from "react-hot-toast";
 import { store, persistor } from "@/store/store";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { SettingsProvider } from "@/components/settings/settings-provider";
+import { GlobalSocketListener } from "@/components/global-socket-listener";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <PersistGate loading={null} persistor={persistor}>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
+              <GlobalSocketListener />
               <SettingsProvider>
                 {children}
                 <Toaster

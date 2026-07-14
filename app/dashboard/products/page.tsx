@@ -492,12 +492,12 @@ export default function ProductsPage() {
               )}
             </div>
             <div className="col-span-1">
-              <label className="mb-1 block text-xs font-medium text-muted">Selling Price (₹) *</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Selling Price ({currency}) *</label>
               <Input id="product-price" type="number" min={0} step="0.001" {...register("price", { onChange: () => clearErrors("price") })} placeholder="0.00" className={errors.price ? "border-danger" : ""} />
               {errors.price && <p className="text-danger text-[10px] mt-1">{errors.price.message}</p>}
             </div>
             <div className="col-span-1">
-              <label className="mb-1 block text-xs font-medium text-muted">Cost Price (₹) *</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Cost Price ({currency}) *</label>
               <Input id="product-cost" type="number" min={0} step="0.001" {...register("costPrice", { onChange: () => clearErrors("costPrice") })} placeholder="0.00" className={errors.costPrice ? "border-danger" : ""} />
               {errors.costPrice && <p className="text-danger text-[10px] mt-1">{errors.costPrice.message}</p>}
             </div>
@@ -535,8 +535,8 @@ export default function ProductsPage() {
                   <div className="hidden sm:grid sm:grid-cols-[1.4fr_0.8fr_1fr_1fr_2.5rem] gap-2 px-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">
                     <span>Unit</span>
                     <span>Qty / unit</span>
-                    <span>Sell price (₹)</span>
-                    <span>Cost price (₹)</span>
+                    <span>Sell price ({currency})</span>
+                    <span>Cost price ({currency})</span>
                     <span />
                   </div>
                 )}
@@ -586,12 +586,12 @@ export default function ProductsPage() {
                       {errors.packagingUnits?.[idx]?.qtyPerUnit && <p className="text-danger text-[10px] mt-1">{errors.packagingUnits[idx]?.qtyPerUnit?.message}</p>}
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold text-muted uppercase tracking-wider sm:hidden">Sell price (₹)</label>
-                      <Input type="number" min={0} step="0.01" placeholder="Sell ₹" {...register(`packagingUnits.${idx}.price`)} />
+                      <label className="mb-1 block text-[10px] font-bold text-muted uppercase tracking-wider sm:hidden">Sell price ({currency})</label>
+                      <Input type="number" min={0} step="0.01" placeholder={`Sell ${currency}`} {...register(`packagingUnits.${idx}.price`)} />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-bold text-muted uppercase tracking-wider sm:hidden">Cost price (₹)</label>
-                      <Input type="number" min={0} step="0.01" placeholder="Cost ₹" {...register(`packagingUnits.${idx}.costPrice`)} />
+                      <label className="mb-1 block text-[10px] font-bold text-muted uppercase tracking-wider sm:hidden">Cost price ({currency})</label>
+                      <Input type="number" min={0} step="0.01" placeholder={`Cost ${currency}`} {...register(`packagingUnits.${idx}.costPrice`)} />
                     </div>
                     <div className="flex justify-end">
                       <Button type="button" variant="ghost" size="icon" className="text-danger shrink-0 h-9 w-9 sm:h-8 sm:w-8" onClick={() => removePkg(idx)}><Trash2 className="h-4 w-4" /></Button>

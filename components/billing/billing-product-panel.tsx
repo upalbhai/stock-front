@@ -19,6 +19,7 @@ import { getProductUnitLabel, getWholesalePriceHint, getActivePackagingUnits } f
 import { cn } from "@/lib/utils";
 import type { Product, Category } from "@/lib/types";
 import type { LineItem } from "@/store/billingSlice";
+import { useAuth } from "@/components/auth/auth-provider";
 
 type BillingProductPanelProps = {
   search: string;
@@ -81,6 +82,9 @@ export function BillingProductPanel({
   onAddProduct,
   mobileBottomPadding = true,
 }: BillingProductPanelProps) {
+  const { user } = useAuth();
+  const currency = user?.currency || "INR";
+
   return (
     <div
       className={cn(
@@ -245,7 +249,7 @@ export function BillingProductPanel({
               const packHint = isWholesale ? getWholesalePriceHint(product) : null;
               const hasPackaging = getActivePackagingUnits(product).length > 0;
               const isDisabled = product.onHandQty <= 0 || cartQty >= product.onHandQty;
-
+              console.log('ppp', product)
               return (
                 <button
                   key={product._id}
@@ -294,7 +298,7 @@ export function BillingProductPanel({
                     {unitLabel} · {product.onHandQty} in stock
                   </p>
                   <p className="mt-1.5 text-base font-bold leading-none text-primary">
-                    {formatCurrency(product.price)}
+                    {formatCurrency(product.price, currency)}
                     <span className="text-xs font-normal text-muted-foreground">/{unitLabel}</span>
                   </p>
                   {packHint && (

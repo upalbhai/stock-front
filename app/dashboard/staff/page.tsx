@@ -24,8 +24,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQueryState, parseAsString } from "nuqs";
 
-const ALL_MODULES = ["billing","inventory","products","reports","expenses","users","outlets","roles","dashboard","settings","transactions","analytics","stock_transfers","audit_logs","categories","units","customers","invoices"];
-const ALL_ACTIONS = ["create","read","update","delete","refund","print","export","approve","void","collect"];
+const ALL_MODULES = ["billing", "inventory", "products", "reports", "expenses", "users", "outlets", "roles", "dashboard", "settings", "transactions", "analytics", "stock_transfers", "audit_logs", "categories", "units", "customers", "invoices"];
+const ALL_ACTIONS = ["create", "read", "update", "delete", "refund", "print", "export", "approve", "void", "collect"];
 const MODULE_ICONS: Record<string, string> = {
   billing: "🧾", inventory: "📦", products: "🏷️", reports: "📊", expenses: "💸",
   users: "👥", outlets: "🏪", roles: "🛡️", dashboard: "🏠", settings: "⚙️",
@@ -95,7 +95,7 @@ export default function StaffPage() {
     mutationFn: (body: StaffFormValues) => {
       const cleanBody: any = { ...body };
       cleanBody.roleId = cleanBody.roleId || null;
-      
+
       const permissionsArray = Object.entries(cleanBody.customPermissions || {})
         .filter(([, actions]: any) => actions.length > 0)
         .map(([module, actions]) => ({ module, actions }));
@@ -124,6 +124,8 @@ export default function StaffPage() {
   const users = staffData?.users ?? [];
   const roles = rolesData?.roles ?? [];
   const outlets = outletsData?.data?.outlets ?? [];
+
+  const selectedRoleObj = roles.find((r: any) => r._id === watchedRoleId);
 
   const openCreate = () => {
     setEditId(null);
@@ -236,34 +238,29 @@ export default function StaffPage() {
                 {errors.email && <p className="text-[10px] text-danger mt-1">{errors.email.message}</p>}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted">Role</label>
+                <label className="mb-0.5 block text-xs font-medium text-muted">Role</label>
+                <p className="mb-2 text-[10px] text-muted-foreground leading-snug">Select a role or custom permission template.</p>
                 <Select
-                  id="staff-role"
-                  value={watchedRole}
-                  onValueChange={(v) => setValue("role", v, { shouldValidate: true })}
+                  id="staff-combined-role"
+                  value={watchedRole === "owner" ? "owner" : watchedRoleId}
+                  onValueChange={(v) => {
+                    if (v === "owner") {
+                      setValue("role", "owner", { shouldValidate: true });
+                      setValue("roleId", "", { shouldValidate: true });
+                    } else {
+                      const selected = roles.find((r: any) => r._id === v);
+                      const isManager = selected?.name.toLowerCase().includes("manager");
+                      setValue("role", isManager ? "manager" : "staff", { shouldValidate: true });
+                      setValue("roleId", v, { shouldValidate: true });
+                    }
+                  }}
                   options={[
                     ...(watchedRole === "owner" ? [{ value: "owner", label: "Owner" }] : []),
-                    { value: "manager", label: "Manager" },
-                    { value: "staff", label: "Staff" }
+                    ...roles.map((r: any) => ({ value: r._id, label: r.name }))
                   ]}
                   disabled={watchedRole === "owner"}
                 />
                 {errors.role && <p className="text-[10px] text-danger mt-1">{errors.role.message}</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted">Assigned Role</label>
-                <Select
-                  id="staff-role-id"
-                  value={watchedRoleId}
-                  onValueChange={(v) => setValue("roleId", v, { shouldValidate: true })}
-                  options={[
-                    { value: "", label: "Default" },
-                    ...roles.map((r) => ({ value: r._id, label: r.name }))
-                  ]}
-                />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted">Outlets</label>
@@ -280,11 +277,10 @@ export default function StaffPage() {
                             : [...watchedOutletIds, o._id];
                           setValue("outletIds", nextOutlets, { shouldValidate: true });
                         }}
-                        className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-                          isSelected
-                            ? "bg-primary text-white border-primary"
-                            : "border-border text-muted"
-                        }`}
+                        className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${isSelected
+                          ? "bg-primary text-white border-primary"
+                          : "border-border text-muted"
+                          }`}
                       >
                         {o.name}
                       </button>
@@ -299,25 +295,43 @@ export default function StaffPage() {
                 <p className="text-sm font-semibold">Custom User Permissions</p>
                 <p className="text-xs text-muted">Permissions selected here will be combined with the Assigned Role.</p>
               </div>
-              <div className="overflow-x-auto rounded-2xl border border-border">
+              <div className="overflow-x-auto rounded-xl border border-border shadow-sm max-h-[400px]">
                 <table className="w-full text-xs">
-                  <thead><tr className="border-b border-border bg-surface/60">
-                    <th className="px-3 py-2 text-left font-semibold text-muted">Module</th>
-                    {ALL_ACTIONS.map((a) => <th key={a} className="px-2 py-2 text-center font-semibold text-muted capitalize">{a}</th>)}
-                  </tr></thead>
+                  <thead className="sticky top-0 z-20 bg-surface/95 backdrop-blur shadow-sm">
+                    <tr>
+                      <th className="px-3 py-3 text-left font-semibold text-muted sticky left-0 bg-surface/95 z-20 backdrop-blur">Module</th>
+                      {ALL_ACTIONS.map((a) => <th key={a} className="px-2 py-3 text-center font-semibold text-muted capitalize min-w-[60px]">{a}</th>)}
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-border/40">
                     {ALL_MODULES.map((mod) => (
-                      <tr key={mod} className="hover:bg-surface/60">
-                        <td className="px-3 py-2 font-medium">{MODULE_ICONS[mod]} {mod}</td>
+                      <tr key={mod} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-3 py-2.5 font-medium sticky left-0 bg-surface z-10 border-r border-border/40 whitespace-nowrap">
+                          {MODULE_ICONS[mod]} {mod}
+                        </td>
                         {ALL_ACTIONS.map((action) => {
-                          const checked = (watchedCustomPermissions[mod] ?? []).includes(action);
+                          const isCustomChecked = (watchedCustomPermissions[mod] ?? []).includes(action);
+                          const isRoleChecked = selectedRoleObj?.permissions?.find((p: any) => p.module === mod)?.actions.includes(action) ?? false;
+                          const checked = isCustomChecked || isRoleChecked;
+
                           return (
-                            <td key={action} className="px-2 py-2 text-center">
-                              <button type="button" onClick={() => toggleAction(mod, action)}
-                                className={cn("h-5 w-5 rounded-md border transition mx-auto flex items-center justify-center",
-                                  checked ? "bg-primary border-primary text-white" : "border-border hover:border-primary/50"
+                            <td key={action} className="px-2 py-2.5 text-center border-b border-border/20">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!isRoleChecked) toggleAction(mod, action);
+                                }}
+                                disabled={isRoleChecked}
+                                title={isRoleChecked ? "Inherited from Assigned Role" : "Click to toggle custom permission"}
+                                className={cn(
+                                  "h-5 w-5 rounded border transition-all mx-auto flex items-center justify-center",
+                                  isRoleChecked
+                                    ? "bg-primary/40 border-primary/40 text-white cursor-not-allowed opacity-70"
+                                    : isCustomChecked
+                                      ? "bg-primary border-primary text-white shadow-sm"
+                                      : "border-border/80 hover:border-primary/50 bg-card hover:bg-muted/50"
                                 )}>
-                                {checked && <span className="text-[10px]">✓</span>}
+                                {checked && <span className="text-[11px] font-bold">✓</span>}
                               </button>
                             </td>
                           );
@@ -331,11 +345,11 @@ export default function StaffPage() {
           </div>
 
           {/* Sticky Footer */}
-          <div className="p-6 border-t border-border/60 bg-surface flex gap-3">
-            <Button variant="outline" type="button" className="flex-1" onClick={() => setShowModal(false)}>
+          <div className="p-3 border-t border-border/60 bg-surface flex justify-end gap-3">
+            <Button variant="outline" type="button" className="" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>
+            <Button type="submit" className="" disabled={saveMutation.isPending}>
               {saveMutation.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Staff")}
             </Button>
           </div>

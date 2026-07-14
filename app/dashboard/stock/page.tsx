@@ -1068,7 +1068,7 @@ export default function StockPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">
-                    Cost price per {adjustPriceUnit} (₹)
+                    Cost price per {adjustPriceUnit} ({currency})
                   </label>
                   <Input
                     type="number"
@@ -1081,7 +1081,7 @@ export default function StockPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted">
-                    Sell price per {adjustPriceUnit} (₹)
+                    Sell price per {adjustPriceUnit} ({currency})
                   </label>
                   <Input
                     type="number"
@@ -1152,7 +1152,7 @@ export default function StockPage() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted">
-                  Cost per {adjustPriceUnit} (₹) — for loss calculation
+                  Cost per {adjustPriceUnit} ({currency}) — for loss calculation
                 </label>
                 <Input
                   type="number"

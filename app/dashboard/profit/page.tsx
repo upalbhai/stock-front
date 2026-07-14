@@ -640,7 +640,7 @@ export default function ProfitPage() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Cost per unit (₹) {isGoodReturn ? "" : "— for loss calc"}
+                Cost per unit ({currency}) {isGoodReturn ? "" : "— for loss calc"}
               </label>
               <Input type="number" min={0} step="0.01" value={issueCost} onChange={(e) => setIssueCost(e.target.value)} />
             </div>

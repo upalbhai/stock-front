@@ -24,7 +24,8 @@ export function useSocket() {
 
     // Reuse existing singleton connection if available
     if (!socketInstance) {
-      const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const url = apiUrl.replace(/\/api\/?$/, "");
       socketInstance = io(url, {
         auth: { token },
         transports: ["websocket", "polling"],

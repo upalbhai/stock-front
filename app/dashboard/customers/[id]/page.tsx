@@ -231,7 +231,7 @@ export default function CustomerDetailPage() {
           }}
         >
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Amount (₹) *</label>
+            <label className="mb-1 block text-xs font-medium text-muted">Amount ({currency}) *</label>
             <Input
               type="number"
               min={1}

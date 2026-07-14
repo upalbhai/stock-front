@@ -224,11 +224,11 @@ export default function CustomersPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Credit limit (₹)</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Credit limit ({currency})</label>
               <Input type="number" min={0} value={form.creditLimit} onChange={(e) => setForm((f) => ({ ...f, creditLimit: e.target.value }))} placeholder="0 = no limit" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Opening balance (₹)</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Opening balance ({currency})</label>
               <Input type="number" min={0} value={form.openingBalance} onChange={(e) => setForm((f) => ({ ...f, openingBalance: e.target.value }))} placeholder="Existing khata" />
             </div>
           </div>

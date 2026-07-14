@@ -14,7 +14,7 @@ import { FeatureMultiSelect, type FeatureRegistryItem } from "@/components/ui/fe
 import { useAuth } from "@/components/auth/auth-provider";
 import { planService } from "@/services/plan.service";
 import { getErrorMessage } from "@/lib/error";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, formatCurrency } from "@/lib/format";
 import type { Plan } from "@/lib/types";
 import { useQueryState, parseAsString } from "nuqs";
 
@@ -32,7 +32,7 @@ const EMPTY_FORM = {
 };
 
 export default function AdminPlansPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const qc = useQueryClient();
 
   const [showPlanCrudModal, setShowPlanCrudModal] = React.useState(false);
@@ -178,10 +178,10 @@ export default function AdminPlansPage() {
             render: (p) => (
               <div>
                 <p className="text-sm font-bold">
-                  ₹{formatNumber(p.monthlyPrice)}
+                  {formatCurrency(p.monthlyPrice, user?.currency || "INR")}
                   <span className="text-[10px] font-normal text-muted-foreground">/mo</span>
                 </p>
-                <p className="text-xs text-muted-foreground">₹{formatNumber(p.yearlyPrice)}/yr</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(p.yearlyPrice, user?.currency || "INR")}/yr</p>
               </div>
             ),
           },
