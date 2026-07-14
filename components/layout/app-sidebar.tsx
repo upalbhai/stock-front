@@ -46,7 +46,7 @@ export function AppSidebar() {
           </div>
           <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="truncate text-[11px] font-extrabold uppercase leading-tight tracking-wider text-sidebar-foreground">
-              Outlet Pulse
+              Mini Hisab
             </span>
             <span className="truncate text-[9px] font-semibold uppercase leading-tight tracking-wider text-sidebar-foreground/60">
               Operations Hub

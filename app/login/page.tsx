@@ -204,7 +204,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground shadow-sm">
             OP
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Outlet Pulse</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">Mini Hisab</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             {mode === "login" ? "Sign in to your account" : mode === "register" ? "Start your 7-day free trial" : mode === "forgot" ? "Reset your password" : "Create new password"}
           </CardDescription>

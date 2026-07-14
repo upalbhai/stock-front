@@ -18,7 +18,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Outlet Pulse",
+  title: "Mini Hisab",
   description: "Retail billing, inventory, outlets, staff, and reports in one operations platform.",
 };
 

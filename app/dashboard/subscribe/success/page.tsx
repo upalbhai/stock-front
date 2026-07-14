@@ -48,7 +48,7 @@ export default function SubscribeSuccessPage() {
           </div>
           <CardTitle className="text-3xl font-bold tracking-tight">Payment Successful!</CardTitle>
           <CardDescription className="text-base mt-2">
-            Thank you for subscribing to Outlet Pulse.
+            Thank you for subscribing to Mini Hisab.
           </CardDescription>
         </CardHeader>
 

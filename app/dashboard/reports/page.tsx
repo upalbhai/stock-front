@@ -107,7 +107,7 @@ export default function ReportsPage() {
 
       {/* Printable Heading */}
       <div className="hidden print:block border-b pb-4 mb-6">
-        <h2 className="text-2xl font-bold">Outlet Pulse — Period Report</h2>
+        <h2 className="text-2xl font-bold">Mini Hisab — Period Report</h2>
         <p className="text-sm text-muted">
           Period: {query.from && query.to ? `${formatDate(query.from.split('T')[0])} to ${formatDate(query.to.split('T')[0])}` : "Today"} | Outlet Session Summary
         </p>

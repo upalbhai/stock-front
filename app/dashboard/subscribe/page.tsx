@@ -65,7 +65,7 @@ export default function SubscribePage() {
   //       key: orderData.keyId,
   //       amount: orderData.amount,
   //       currency: orderData.currency,
-  //       name: "Outlet Pulse",
+  //       name: "Mini Hisab",
   //       description: `${plan.name} Plan (${billingCycle})`,
   //       order_id: orderData.orderId,
   //       handler: async function (response: any) {
@@ -133,7 +133,7 @@ export default function SubscribePage() {
           {isTrialExpired && (
             <div className="bg-danger/10 text-danger p-4 rounded-2xl flex items-center justify-center gap-2 mt-4 animate-pulse">
               <AlertCircle className="h-5 w-5" />
-              <span className="font-medium">Your free trial has expired. Please select a plan to continue using Outlet Pulse.</span>
+              <span className="font-medium">Your free trial has expired. Please select a plan to continue using Mini Hisab.</span>
             </div>
           )}
 

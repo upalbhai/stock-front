@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
 
 const contactCards = [
-  { title: "Email", text: "hello@outletpulse.in", icon: Mail },
+  { title: "Email", text: "hello@minihisab.in", icon: Mail },
   { title: "Phone", text: "+91 90000 00000", icon: Phone },
   { title: "Location", text: "Built for retail teams in India", icon: MapPin },
 ];
