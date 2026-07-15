@@ -26,7 +26,7 @@ export function getActivePackagingUnits(product: Product) {
   return (product.packagingUnits ?? []).filter((p) => p.isActive !== false);
 }
 
-export function getWholesalePriceHint(product: Product): string | null {
+export function getWholesalePriceHint(product: Product, currency?: string): string | null {
   const pkgs = getActivePackagingUnits(product);
   if (!pkgs.length) return null;
   const base = getProductUnitLabel(product);
@@ -34,7 +34,7 @@ export function getWholesalePriceHint(product: Product): string | null {
     const unit = typeof pkg.unitId === "object" ? (pkg.unitId as Unit) : null;
     const { label: abbr } = getUnitDisplayLabel(unit, "unit");
     const price = pkg.price ?? product.price * pkg.qtyPerUnit;
-    return `${formatCurrency(price)}/${abbr} (${pkg.qtyPerUnit} ${base})`;
+    return `${formatCurrency(price, currency)}/${abbr} (${pkg.qtyPerUnit} ${base})`;
   });
   return parts.join(" · ");
 }

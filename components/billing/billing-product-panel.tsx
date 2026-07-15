@@ -246,10 +246,9 @@ export function BillingProductPanel({
                 .filter((i) => i.id === product._id)
                 .reduce((s, i) => s + (i.soldQty ?? i.qty), 0);
               const unitLabel = getProductUnitLabel(product);
-              const packHint = isWholesale ? getWholesalePriceHint(product) : null;
+              const packHint = isWholesale ? getWholesalePriceHint(product, currency) : null;
               const hasPackaging = getActivePackagingUnits(product).length > 0;
               const isDisabled = product.onHandQty <= 0 || cartQty >= product.onHandQty;
-              console.log('ppp', product)
               return (
                 <button
                   key={product._id}
