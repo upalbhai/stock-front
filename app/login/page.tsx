@@ -58,7 +58,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       const res = await checkEmail(form.email);
       setLoginStep(res.method);
@@ -77,7 +77,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       let loggedInUser = null;
       if (loginStep === "password") {
@@ -110,7 +110,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       const res = await register({
         name: form.name,
@@ -119,7 +119,7 @@ export default function LoginPage() {
         businessName: form.businessName,
         outletName: form.outletName || `${form.businessName} Main`
       });
-      
+
       if ((res as any)?.message) {
         setSuccess("Account created successfully! We've sent a verification code to your email.");
         setMode("login");
@@ -158,13 +158,13 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match");
       setLoading(false);
       return;
     }
-    
+
     try {
       const res = await resetPassword({ email: form.email, code: form.code, newPassword: form.password });
       setSuccess(res.message);
@@ -202,7 +202,7 @@ export default function LoginPage() {
       <Card className="relative w-full max-w-md border border-border/70 shadow-sm backdrop-blur-md bg-card/80 rounded-xl animate-rise">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground shadow-sm">
-            OP
+            MH
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Mini Hisab</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
@@ -210,7 +210,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-2">
-          
+
           {(mode === "login" || mode === "register") && (
             <div className="flex bg-border/40 p-1.5 rounded-2xl gap-1 mb-6">
               <button
@@ -245,7 +245,7 @@ export default function LoginPage() {
               <p className="text-xs text-success font-medium">{success}</p>
             </div>
           )}
-          
+
           {error && (
             <div className="mb-4 rounded-xl bg-danger/10 border border-danger/20 p-3 text-center">
               <p className="text-xs text-danger font-medium">{error}</p>
@@ -253,13 +253,13 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={
-            mode === "register" ? handleRegisterSubmit : 
-            mode === "forgot" ? handleForgotSubmit : 
-            mode === "reset" ? handleResetSubmit : 
-            mode === "login" && loginStep === "email" ? handleEmailCheckSubmit : 
-            handleLoginSubmit
+            mode === "register" ? handleRegisterSubmit :
+              mode === "forgot" ? handleForgotSubmit :
+                mode === "reset" ? handleResetSubmit :
+                  mode === "login" && loginStep === "email" ? handleEmailCheckSubmit :
+                    handleLoginSubmit
           } className="space-y-4">
-            
+
             {/* REGISTER FORM */}
             {mode === "register" && (
               <div className="space-y-3 animate-fade">
@@ -397,13 +397,13 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" className="w-full py-6 text-sm font-semibold rounded-2xl shadow-sm mt-4" disabled={loading}>
-              {loading ? "Processing..." : 
-               mode === "login" && loginStep === "email" ? "Continue with Email" :
-               mode === "login" ? "Sign In" : 
-               mode === "register" ? "Start Free Trial" : 
-               mode === "forgot" ? "Send Reset Code" : "Reset Password"}
+              {loading ? "Processing..." :
+                mode === "login" && loginStep === "email" ? "Continue with Email" :
+                  mode === "login" ? "Sign In" :
+                    mode === "register" ? "Start Free Trial" :
+                      mode === "forgot" ? "Send Reset Code" : "Reset Password"}
             </Button>
-            
+
             {(mode === "forgot" || mode === "reset") && (
               <button type="button" onClick={() => { setMode("login"); setLoginStep("email"); setError(null); setSuccess(null); }} className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-2 block transition">
                 Back to Sign In

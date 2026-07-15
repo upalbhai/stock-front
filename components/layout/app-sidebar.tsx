@@ -42,7 +42,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-3">
         <div className="flex items-center gap-2.5 px-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-[11px] font-bold text-sidebar-primary-foreground shadow-sm">
-            OP
+            MH
           </div>
           <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="truncate text-[11px] font-extrabold uppercase leading-tight tracking-wider text-sidebar-foreground">

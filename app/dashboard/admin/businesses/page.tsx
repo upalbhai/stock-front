@@ -39,7 +39,7 @@ export default function AdminBusinessesPage() {
 
   const [planForm, setPlanForm] = React.useState({ plan: "free", maxOutlets: 1, subscriptionStatus: "trial", planExpiresAt: "" });
   const [manualSubForm, setManualSubForm] = React.useState({
-    planId: "", billingCycle: "monthly", amount: "", paymentReference: "", endDate: "", notes: ""
+    planId: "", billingCycle: "monthly", amount: "", currency: "INR", paymentReference: "", endDate: "", notes: ""
   });
 
   const { data: bizData, isLoading: loadingBiz, refetch } = useQuery({
@@ -123,7 +123,7 @@ export default function AdminBusinessesPage() {
 
   const openManualSub = (biz: Business) => {
     setSelectedBusiness(biz);
-    setManualSubForm({ planId: (biz.planId as any)?._id || biz.planId || "", billingCycle: "monthly", amount: "", paymentReference: "", endDate: "", notes: "" });
+    setManualSubForm({ planId: (biz.planId as any)?._id || biz.planId || "", billingCycle: "monthly", amount: "", currency: biz.currency || "INR", paymentReference: "", endDate: "", notes: "" });
     setShowManualSubModal(true);
   };
 
@@ -251,20 +251,39 @@ export default function AdminBusinessesPage() {
           <div className="flex gap-3 pt-2"><Button variant="outline" type="button" className="flex-1" onClick={() => setShowPlanModal(false)}>Cancel</Button><Button type="submit" className="flex-1" disabled={planMutation.isPending}>{planMutation.isPending ? "Updating..." : "Save Settings"}</Button></div>
         </form>
       </Modal>
-
       <Modal open={showManualSubModal} onClose={() => setShowManualSubModal(false)} title="Create Manual Subscription" size="sm">
-        <form onSubmit={(e) => { e.preventDefault(); if(selectedBusiness) manualSubMutation.mutate({ businessId: selectedBusiness._id, planId: manualSubForm.planId, billingCycle: manualSubForm.billingCycle, amount: manualSubForm.amount ? Number(manualSubForm.amount) : undefined, paymentReference: manualSubForm.paymentReference || undefined, endDate: manualSubForm.endDate || undefined, notes: manualSubForm.notes || undefined }); }} className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); if(selectedBusiness) manualSubMutation.mutate({ businessId: selectedBusiness._id, planId: manualSubForm.planId, billingCycle: manualSubForm.billingCycle, amount: manualSubForm.amount ? Number(manualSubForm.amount) : undefined, currency: manualSubForm.currency || undefined, paymentReference: manualSubForm.paymentReference || undefined, endDate: manualSubForm.endDate || undefined, notes: manualSubForm.notes || undefined }); }} className="space-y-4">
           <div><p className="text-sm font-semibold">{selectedBusiness?.name}</p></div>
           <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Plan tier *</label><Select id="manual-plan-id" value={manualSubForm.planId} onValueChange={(v) => setManualSubForm(f => ({ ...f, planId: v }))} options={PLAN_OPTIONS} /></div>
           <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Billing Cycle</label><Select id="manual-cycle" value={manualSubForm.billingCycle} onValueChange={(v) => setManualSubForm(f => ({ ...f, billingCycle: v }))} options={[{ value: "monthly", label: "Monthly" }, { value: "yearly", label: "Yearly" }]} /></div>
-          <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Amount Paid (INR)</label><Input id="manual-amount" type="number" placeholder="Optional." value={manualSubForm.amount} onChange={(e) => setManualSubForm(f => ({ ...f, amount: e.target.value }))} /></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Amount Paid</label>
+              <Input id="manual-amount" type="number" placeholder="Optional." value={manualSubForm.amount} onChange={(e) => setManualSubForm(f => ({ ...f, amount: e.target.value }))} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Currency</label>
+              <Select
+                id="manual-currency"
+                value={manualSubForm.currency}
+                onValueChange={(v) => setManualSubForm(f => ({ ...f, currency: v }))}
+                options={[
+                  { value: "INR", label: "INR (₹)" },
+                  { value: "USD", label: "USD ($)" },
+                  { value: "EUR", label: "EUR (€)" },
+                  { value: "GBP", label: "GBP (£)" },
+                  { value: "AED", label: "AED (د.إ)" },
+                  { value: "SAR", label: "SAR (ر.س)" }
+                ]}
+              />
+            </div>
+          </div>
           <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Payment Reference</label><Input id="manual-ref" placeholder="e.g. CASH_01" value={manualSubForm.paymentReference} onChange={(e) => setManualSubForm(f => ({ ...f, paymentReference: e.target.value }))} /></div>
           <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Expiry Date</label><Input id="manual-expires" type="date" value={manualSubForm.endDate} onChange={(e) => setManualSubForm(f => ({ ...f, endDate: e.target.value }))} /></div>
           <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Internal Notes</label><Input id="manual-notes" value={manualSubForm.notes} onChange={(e) => setManualSubForm(f => ({ ...f, notes: e.target.value }))} /></div>
           <div className="flex gap-3 pt-2"><Button variant="outline" type="button" className="flex-1" onClick={() => setShowManualSubModal(false)}>Cancel</Button><Button type="submit" className="flex-1 bg-indigo-600 text-white hover:bg-indigo-700" disabled={manualSubMutation.isPending}>{manualSubMutation.isPending ? "Creating..." : "Apply Subscription"}</Button></div>
         </form>
       </Modal>
-
       <Modal open={showImpersonateModal} onClose={() => setShowImpersonateModal(false)} title={`Impersonate ${impersonateTargetBusiness?.name}`} size="md">
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">Select a staff member or owner to temporarily log into their portal session.</p>
