@@ -8,11 +8,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { RoleGate } from "@/components/auth/role-gate";
+import { useFeature } from "@/hooks/useFeature";
 
 export default function NotificationsPage() {
+  const hasNotifications = useFeature("notifications");
   const [page, setPage] = useState(1);
   const { useNotificationsList, markAsRead, markAllAsRead, isMarkingAllRead } = useNotifications();
-  const { data, isLoading, isFetching } = useNotificationsList(page, 20);
+  const { data, isLoading, isFetching } = useNotificationsList(page, 20, hasNotifications);
+
+  if (!hasNotifications) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <Bell className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
+        <h2 className="text-xl font-semibold mb-2">Notifications Unavailable</h2>
+        <p className="text-muted-foreground max-w-md">Your current plan does not include notifications. Please upgrade your plan to access this feature.</p>
+      </div>
+    );
+  }
 
   return (
     <RoleGate allowed={["owner", "manager", "staff"]}>

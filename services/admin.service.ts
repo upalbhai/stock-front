@@ -11,8 +11,8 @@ export const adminService = {
   getAdminOutlets: async (token?: string | null, params?: { search?: string; status?: string }) => {
     return getJson<{ outlets: any[] }>("/admin/outlets", token, params);
   },
-  getAdminBusinesses: async (token?: string | null, params?: { search?: string; status?: string }) => {
-    return getJson<{ businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[] }>("/admin/businesses", token, params);
+  getAdminBusinesses: async (token?: string | null, params?: { search?: string; status?: string; page?: number; limit?: number }) => {
+    return getJson<{ businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[], total: number }>("/admin/businesses", token, params);
   },
   approveOutlet: async (id: string, token?: string | null) => {
     return apiFetch(`/admin/outlets/${id}/approve`, { method: "PATCH", token });

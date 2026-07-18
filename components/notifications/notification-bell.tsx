@@ -19,10 +19,10 @@ import { cn } from "@/lib/utils";
 
 export function NotificationBell() {
   const hasNotifications = useFeature("notifications");
-  const { unreadCount, useNotificationsList, markAsRead, markAllAsRead, isMarkingAllRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
+  const { unreadCount, useNotificationsList, markAsRead, markAllAsRead, isMarkingAllRead } = useNotifications();
   
-  const { data, isLoading, error } = useNotificationsList(1, 10);
+  const { data, isLoading, error } = useNotificationsList(1, 10, hasNotifications && isOpen);
   const notifications = data?.items || [];
 
   if (!hasNotifications) return null;

@@ -15,7 +15,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
 
-  console.log('user', user)
 
   const { data: statsData } = useQuery({
     queryKey: ["admin-dashboard-stats"],

@@ -11,23 +11,20 @@ export function useNotifications() {
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["notifications", "unread-count", user?.id],
-    queryFn: async () => {
-      if (!token) return 0;
-      const res = await notificationService.getUnreadCount(token);
-      return res?.count || 0;
-    },
-    enabled: !!token,
-    refetchInterval: 60000, // Poll every minute
+    // We don't fetch from API anymore. It is populated by the global socket listener on connect.
+    queryFn: () => 0,
+    enabled: false,
+    initialData: 0,
   });
 
-  const useNotificationsList = (page = 1, limit = 20) => {
+  const useNotificationsList = (page = 1, limit = 20, enabled = true) => {
     return useQuery({
       queryKey: ["notifications", "list", page, limit, user?.id],
       queryFn: async () => {
         if (!token) return { items: [], totalPages: 1 };
         return notificationService.getNotifications(token, { page, limit });
       },
-      enabled: !!token,
+      enabled: !!token && enabled,
     });
   };
 
