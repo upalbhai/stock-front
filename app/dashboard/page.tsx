@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { StatsCard } from "@/components/ui/stats-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ import {
   BarChart3,
   Layers,
   X,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/lib/routes";
@@ -296,24 +298,26 @@ function AnalyticsSection({
 
   return (
     <Card className="border-border/70 shadow-sm bg-card/40 backdrop-blur-md overflow-hidden animate-rise">
-      <CardHeader className="flex flex-row items-start justify-between gap-2 pb-1">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="h-4 w-4" />
+      <CardHeader className="pb-1">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Icon className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-bold tracking-tight">{title}</CardTitle>
+              <CardDescription className="text-[11px]">{description}</CardDescription>
+            </div>
           </div>
-          <div>
-            <CardTitle className="text-sm font-bold tracking-tight">{title}</CardTitle>
-            <CardDescription className="text-[11px]">{description}</CardDescription>
+          <div className="flex items-center gap-1 self-end sm:self-auto">
+            <SortToggle sort={sort} onToggle={onSortToggle} />
+            <MiniPagination
+              page={page}
+              totalPages={totalPages}
+              onPrev={() => onPageChange(page - 1)}
+              onNext={() => onPageChange(page + 1)}
+            />
           </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <SortToggle sort={sort} onToggle={onSortToggle} />
-          <MiniPagination
-            page={page}
-            totalPages={totalPages}
-            onPrev={() => onPageChange(page - 1)}
-            onNext={() => onPageChange(page + 1)}
-          />
         </div>
       </CardHeader>
       <CardContent className="pt-1 pb-3 px-3">
@@ -416,6 +420,9 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
   const [revProdPage, setRevProdPage] = React.useState(1);
   const [revProdSort, setRevProdSort] = React.useState<"asc" | "desc">("desc");
   const [lowStockPage, setLowStockPage] = React.useState(1);
+  const [lowStockSearch, setLowStockSearch] = React.useState("");
+  const [lowStockCatPage, setLowStockCatPage] = React.useState(1);
+  const [lowStockCatSearch, setLowStockCatSearch] = React.useState("");
 
   const LIMIT = 5;
   const LOW_STOCK_LIMIT = 8;
@@ -442,7 +449,8 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
       topProdPage, topProdSort,
       revCatPage, revCatSort,
       revProdPage, revProdSort,
-      lowStockPage,
+      lowStockPage, lowStockSearch,
+      lowStockCatPage, lowStockCatSearch,
     ],
     queryFn: () =>
       getJson<AnalyticsData>("/reports/dashboard-analytics", token, {
@@ -453,7 +461,8 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         topProdPage, topProdLimit: LIMIT, topProdSort,
         revCatPage, revCatLimit: LIMIT, revCatSort,
         revProdPage, revProdLimit: LIMIT, revProdSort,
-        lowStockPage, lowStockLimit: LOW_STOCK_LIMIT,
+        lowStockPage, lowStockLimit: LOW_STOCK_LIMIT, lowStockSearch,
+        lowStockCatPage, lowStockCatLimit: LOW_STOCK_LIMIT, lowStockCatSearch,
       }),
     enabled: Boolean(token),
     placeholderData: keepPreviousData,
@@ -492,6 +501,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
 
   // ─── Low stock pagination ───
   const lowStockTotalPages = Math.ceil((analytics?.lowStockProducts?.total || 0) / LOW_STOCK_LIMIT) || 1;
+  const lowStockCatTotalPages = Math.ceil((analytics?.lowStockCategories?.total || 0) / LOW_STOCK_LIMIT) || 1;
 
   return (
     <div className="space-y-6">
@@ -613,7 +623,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
       {/* ═══ SALES TREND + QUICK ACTIONS ═══ */}
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2 border-border/70 shadow-sm bg-card/40 backdrop-blur-md animate-rise">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2">
             <div>
               <CardTitle className="text-lg font-bold tracking-tight">Sales Trend</CardTitle>
               <CardDescription>
@@ -622,7 +632,7 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                   : "Revenue over time"}
               </CardDescription>
             </div>
-            <Badge variant="soft" className="text-xs bg-primary/5 text-primary border-primary/20">
+            <Badge variant="soft" className="text-xs bg-primary/5 text-primary border-primary/20 w-fit">
               <BarChart3 className="h-3 w-3 mr-1" />
               {query.from ? "Custom Range" : "Live"}
             </Badge>
@@ -747,11 +757,11 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
             gradientId="gradTopCat"
             barColor="#6366f1"
             renderRow={(item: CategoryItem, i: number) => (
-              <div key={item.categoryId || i} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
-                <span className="text-base leading-none">{item.icon}</span>
-                <span className="flex-1 text-xs font-semibold truncate">{item.name}</span>
-                <span className="text-[11px] font-bold tabular-nums text-primary">{formatNumber(item.totalQty)} qty</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(item.totalRevenue, currency)}</span>
+              <div key={item.categoryId || i} className="flex items-center gap-2 sm:gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
+                <span className="text-base leading-none hidden sm:inline">{item.icon}</span>
+                <span className="flex-1 text-xs font-semibold truncate min-w-0">{item.name}</span>
+                <span className="text-[11px] font-bold tabular-nums text-primary shrink-0">{formatNumber(item.totalQty)} qty</span>
+                <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden sm:inline">{formatCurrency(item.totalRevenue, currency)}</span>
               </div>
             )}
           />
@@ -772,13 +782,13 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
             gradientId="gradTopProd"
             barColor="#8b5cf6"
             renderRow={(item: ProductItem, i: number) => (
-              <div key={item.productId || i} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
+              <div key={item.productId || i} className="flex items-center gap-2 sm:gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10 text-[10px] font-bold text-primary">
                   {i + 1}
                 </span>
-                <span className="flex-1 text-xs font-semibold truncate">{item.name}</span>
-                <span className="text-[11px] font-bold tabular-nums text-violet-600 dark:text-violet-400">{formatNumber(item.totalQty)} qty</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(item.totalRevenue, currency)}</span>
+                <span className="flex-1 text-xs font-semibold truncate min-w-0">{item.name}</span>
+                <span className="text-[11px] font-bold tabular-nums text-violet-600 dark:text-violet-400 shrink-0">{formatNumber(item.totalQty)} qty</span>
+                <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden sm:inline">{formatCurrency(item.totalRevenue, currency)}</span>
               </div>
             )}
           />
@@ -810,11 +820,11 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
             gradientId="gradRevCat"
             barColor="#22c55e"
             renderRow={(item: CategoryItem, i: number) => (
-              <div key={item.categoryId || i} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
-                <span className="text-base leading-none">{item.icon}</span>
-                <span className="flex-1 text-xs font-semibold truncate">{item.name}</span>
-                <span className="text-[11px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(item.totalRevenue, currency)}</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">{formatNumber(item.totalQty)} qty</span>
+              <div key={item.categoryId || i} className="flex items-center gap-2 sm:gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
+                <span className="text-base leading-none hidden sm:inline">{item.icon}</span>
+                <span className="flex-1 text-xs font-semibold truncate min-w-0">{item.name}</span>
+                <span className="text-[11px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400 shrink-0">{formatCurrency(item.totalRevenue, currency)}</span>
+                <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden sm:inline">{formatNumber(item.totalQty)} qty</span>
               </div>
             )}
           />
@@ -835,13 +845,13 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
             gradientId="gradRevProd"
             barColor="#14b8a6"
             renderRow={(item: ProductItem, i: number) => (
-              <div key={item.productId || i} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
+              <div key={item.productId || i} className="flex items-center gap-2 sm:gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/30 transition-colors">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-emerald-500/10 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                   {i + 1}
                 </span>
-                <span className="flex-1 text-xs font-semibold truncate">{item.name}</span>
-                <span className="text-[11px] font-bold tabular-nums text-teal-600 dark:text-teal-400">{formatCurrency(item.totalRevenue, currency)}</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">{formatNumber(item.orderCount)} orders</span>
+                <span className="flex-1 text-xs font-semibold truncate min-w-0">{item.name}</span>
+                <span className="text-[11px] font-bold tabular-nums text-teal-600 dark:text-teal-400 shrink-0">{formatCurrency(item.totalRevenue, currency)}</span>
+                <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden sm:inline">{formatNumber(item.orderCount)} orders</span>
               </div>
             )}
           />
@@ -857,25 +867,41 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
             {analytics?.lowStockProducts?.total || 0} items
           </Badge>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-3">
           {/* Low Stock Products */}
-          <Card className="md:col-span-2 border-border/70 shadow-sm bg-card/40 backdrop-blur-md animate-rise">
-            <CardHeader className="flex flex-row items-start justify-between gap-2 pb-1">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-                  <Package className="h-4 w-4" />
+          <Card className="lg:col-span-2 border-border/70 shadow-sm bg-card/40 backdrop-blur-md animate-rise">
+            <CardHeader className="pb-1">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+                    <Package className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold tracking-tight">Products Below Threshold</CardTitle>
+                    <CardDescription className="text-[11px]">Items needing restock — sorted by severity</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-sm font-bold tracking-tight">Products Below Threshold</CardTitle>
-                  <CardDescription className="text-[11px]">Items needing restock — sorted by severity</CardDescription>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Search product..."
+                      className="h-8 w-full sm:w-[150px] pl-8 text-xs bg-background/50 border-border/60 focus-visible:ring-1"
+                      value={lowStockSearch}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setLowStockSearch(e.target.value);
+                        setLowStockPage(1);
+                      }}
+                    />
+                  </div>
+                  <MiniPagination
+                    page={lowStockPage}
+                    totalPages={lowStockTotalPages}
+                    onPrev={() => setLowStockPage(p => p - 1)}
+                    onNext={() => setLowStockPage(p => p + 1)}
+                  />
                 </div>
               </div>
-              <MiniPagination
-                page={lowStockPage}
-                totalPages={lowStockTotalPages}
-                onPrev={() => setLowStockPage(p => p - 1)}
-                onNext={() => setLowStockPage(p => p + 1)}
-              />
             </CardHeader>
             <CardContent className="pt-1 pb-3 px-3">
               {analyticsLoading ? (
@@ -894,14 +920,14 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                       <div
                         key={item.productId}
                         className={cn(
-                          "flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors",
+                          "flex items-center gap-2 sm:gap-3 rounded-lg px-2 sm:px-2.5 py-2 transition-colors",
                           severity.bg
                         )}
                       >
-                        <span className="text-sm leading-none">{item.categoryIcon}</span>
+                        <span className="text-sm leading-none hidden sm:inline">{item.categoryIcon}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold truncate">{item.name}</p>
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-[10px] text-muted-foreground truncate">
                             {item.categoryName} • {item.sku || "No SKU"} • {item.unit}
                           </p>
                         </div>
@@ -913,8 +939,8 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
                             {severity.label}
                           </p>
                         </div>
-                        {/* Progress bar */}
-                        <div className="w-12 h-1.5 rounded-full bg-muted/30 overflow-hidden shrink-0">
+                        {/* Progress bar — hidden on very small screens */}
+                        <div className="w-12 h-1.5 rounded-full bg-muted/30 overflow-hidden shrink-0 hidden sm:block">
                           <div
                             className={cn(
                               "h-full rounded-full transition-all",
@@ -939,13 +965,35 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
           {/* Low Stock Categories Summary */}
           <Card className="border-border/70 shadow-sm bg-card/40 backdrop-blur-md animate-rise">
             <CardHeader className="pb-1">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-                  <Layers className="h-4 w-4" />
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+                    <Layers className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold tracking-tight">By Category</CardTitle>
+                    <CardDescription className="text-[11px]">Low-stock items grouped</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-sm font-bold tracking-tight">By Category</CardTitle>
-                  <CardDescription className="text-[11px]">Low-stock items grouped</CardDescription>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Search category..."
+                      className="h-8 w-full pl-8 text-xs bg-background/50 border-border/60 focus-visible:ring-1"
+                      value={lowStockCatSearch}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setLowStockCatSearch(e.target.value);
+                        setLowStockCatPage(1);
+                      }}
+                    />
+                  </div>
+                  <MiniPagination
+                    page={lowStockCatPage}
+                    totalPages={lowStockCatTotalPages}
+                    onPrev={() => setLowStockCatPage(p => p - 1)}
+                    onNext={() => setLowStockCatPage(p => p + 1)}
+                  />
                 </div>
               </div>
             </CardHeader>
