@@ -35,4 +35,10 @@ export const adminService = {
   cancelSubscription: async (businessId: string, token?: string | null) => {
     return apiFetch("/admin/subscriptions/cancel", { method: "POST", body: { businessId }, token });
   },
+  getSubscriptionEmailPreview: async (businessId: string, token?: string | null) => {
+    return getJson<{ html: string; subscriptionId: string }>(`/admin/businesses/${businessId}/preview-email`, token);
+  },
+  sendSubscriptionEmail: async (businessId: string, token?: string | null) => {
+    return apiFetch(`/admin/businesses/${businessId}/send-email`, { method: "POST", token });
+  },
 };

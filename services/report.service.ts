@@ -3,7 +3,7 @@ import type { Product } from "@/lib/types";
 
 export const reportService = {
   getProfitLedger: async (token?: string | null, params?: any) => {
-    return getJson<any>("/reports/profit-ledger", token, params);
+    return getJsonWithMeta<any>("/reports/profit-ledger", token, params);
   },
   getDashboardStats: async (token?: string | null, params?: any) => {
     return getJson<any>("/reports/dashboard", token, params);

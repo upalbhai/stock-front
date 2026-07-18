@@ -137,7 +137,9 @@ export default function ProfitPage() {
   const [query, setQuery] = useQueryStates({
     from: parseAsString.withDefault(defaults.from),
     to: parseAsString.withDefault(defaults.to),
-    ledgerSearch: parseAsString.withDefault("")
+    ledgerSearch: parseAsString.withDefault(""),
+    page: parseAsInteger.withDefault(1),
+    limit: parseAsInteger.withDefault(50)
   });
 
   const [showIssueModal, setShowIssueModal] = React.useState(false);
@@ -159,14 +161,15 @@ export default function ProfitPage() {
   const [editNote, setEditNote] = React.useState("");
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["profit-ledger", outletId, query.from, query.to, query.ledgerSearch],
+    queryKey: ["profit-ledger", outletId, query.from, query.to, query.ledgerSearch, query.page, query.limit],
     queryFn: () =>
       reportService.getProfitLedger(token!, {
         outletId: outletId ?? undefined,
         from: query.from,
         to: query.to,
         search: query.ledgerSearch || undefined,
-        limit: 100
+        page: query.page,
+        limit: query.limit
       }),
     enabled: Boolean(token)
   });
@@ -183,8 +186,8 @@ export default function ProfitPage() {
   });
 
   const products = prodData?.data ?? [];
-  const summary = data?.summary;
-  const movements: any[] = data?.movements ?? [];
+  const summary = data?.data?.summary;
+  const movements: any[] = data?.data?.movements ?? [];
 
   const issueConfig = ISSUE_TYPES.find((t) => t.value === issueType) ?? ISSUE_TYPES[0];
   const unitOptions = selectedProduct ? buildStockUnitOptions(selectedProduct) : [];
@@ -436,9 +439,13 @@ export default function ProfitPage() {
           keyExtractor={(m) => m._id}
           onRefetch={() => refetch()}
           searchQuery={query.ledgerSearch}
-          onSearchChange={(v) => setQuery({ ledgerSearch: v })}
+          onSearchChange={(v) => setQuery({ ledgerSearch: v, page: 1 })}
           placeholderText="Search product, note, reason..."
-          hidePagination
+          totalItems={data?.meta?.pagination?.total ?? 0}
+          page={query.page}
+          limit={query.limit}
+          onPageChange={(p) => setQuery({ page: p })}
+          onLimitChange={(l) => setQuery({ limit: l, page: 1 })}
           emptyStateText="No stock money movements in this period."
           columns={[
             {

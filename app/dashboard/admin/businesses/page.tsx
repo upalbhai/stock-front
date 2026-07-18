@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Edit3, CheckCircle2, DollarSign, LogIn } from "lucide-react";
+import { Search, Edit3, CheckCircle2, DollarSign, LogIn, Mail } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,10 @@ export default function AdminBusinessesPage() {
 
   const [showPlanModal, setShowPlanModal] = React.useState(false);
   const [showManualSubModal, setShowManualSubModal] = React.useState(false);
+  const [showEmailPreviewModal, setShowEmailPreviewModal] = React.useState(false);
+  const [previewHtml, setPreviewHtml] = React.useState("");
+  const [previewBusinessId, setPreviewBusinessId] = React.useState("");
+  const [isSendingEmail, setIsSendingEmail] = React.useState(false);
   const [selectedBusiness, setSelectedBusiness] = React.useState<Business | null>(null);
   
   const [showImpersonateModal, setShowImpersonateModal] = React.useState(false);
@@ -83,16 +87,48 @@ export default function AdminBusinessesPage() {
     onError: (err) => toast.error(getErrorMessage(err))
   });
 
+  const openEmailPreview = async (businessId: string) => {
+    try {
+      const previewRes = await adminService.getSubscriptionEmailPreview(businessId, token);
+      if (previewRes.html) {
+        setPreviewHtml(previewRes.html);
+        setPreviewBusinessId(businessId);
+        setShowEmailPreviewModal(true);
+      }
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    }
+  };
+
   const manualSubMutation = useMutation({
     mutationFn: (body: any) => adminService.manualSubscription(body, token),
-    onSuccess: () => {
+    onSuccess: async (res, variables) => {
       qc.invalidateQueries({ queryKey: ["admin-businesses"] });
       setShowManualSubModal(false);
       setSelectedBusiness(null);
       toast.success("Manual subscription added");
+
+      const bizId = (res as any)?.business?._id || variables?.businessId;
+      if (bizId) {
+        openEmailPreview(bizId);
+      }
     },
     onError: (err) => toast.error(getErrorMessage(err))
   });
+
+  const sendEmail = async () => {
+    if (!previewBusinessId) return;
+    setIsSendingEmail(true);
+    try {
+      await adminService.sendSubscriptionEmail(previewBusinessId, token);
+      toast.success("Email sent successfully");
+      setShowEmailPreviewModal(false);
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   const cancelSubMutation = useMutation({
     mutationFn: (businessId: string) => adminService.cancelSubscription(businessId, token),
@@ -220,6 +256,11 @@ export default function AdminBusinessesPage() {
                 <Button variant="outline" size="xs" className="gap-1" onClick={() => openPlanEdit(b)}><Edit3 className="h-3 w-3" /> Settings</Button>
                 <Button variant="default" size="xs" className="gap-1 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => openManualSub(b)}><DollarSign className="h-3 w-3" /> Manual Sub</Button>
                 {b.subscriptionStatus === "active" && (
+                  <Button variant="outline" size="xs" className="gap-1 bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200" onClick={() => openEmailPreview(b._id)}>
+                    <Mail className="h-3 w-3" /> Mail
+                  </Button>
+                )}
+                {b.subscriptionStatus === "active" && (
                   <Button variant="destructive" size="xs" className="gap-1" onClick={() => { if(confirm(`Cancel subscription for ${b.name}?`)) cancelSubMutation.mutate(b._id); }}>Cancel Sub</Button>
                 )}
                 <Button variant="soft" size="xs" className="gap-1" onClick={() => triggerImpersonate(b)}><LogIn className="h-3 w-3" /> Impersonate</Button>
@@ -298,6 +339,20 @@ export default function AdminBusinessesPage() {
                 <Button size="sm" onClick={() => executeImpersonation(u._id)} disabled={impersonatingId !== null}>{impersonatingId === u._id ? "Logging In..." : "Log In"}</Button>
               </div>
             ))}
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showEmailPreviewModal} onClose={() => setShowEmailPreviewModal(false)} title="Email Preview" size="lg">
+        <div className="space-y-4">
+          <div className="bg-white border rounded-md h-[60vh] shadow-inner overflow-hidden">
+            <iframe className="w-full h-full" srcDoc={previewHtml} title="Email Preview" sandbox="allow-same-origin" />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" type="button" className="flex-1" onClick={() => setShowEmailPreviewModal(false)}>Close</Button>
+            <Button className="flex-1 bg-indigo-600 text-white hover:bg-indigo-700" onClick={sendEmail} disabled={isSendingEmail}>
+              {isSendingEmail ? "Sending..." : "Send Email"}
+            </Button>
           </div>
         </div>
       </Modal>
