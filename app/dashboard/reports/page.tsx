@@ -118,7 +118,8 @@ export default function ReportsPage() {
         <StatsCard
           className="min-w-0"
           label="Total Net Revenue"
-          value={formatCurrency(report?.totalSales || 0, currency)}
+          value={formatCurrency(report?.totalSales || 0, currency, "en-IN", true)}
+          fullValue={formatCurrency(report?.totalSales || 0, currency)}
           hint={query.from && query.to ? "For selected period" : "For today"}
           icon={<DollarSign className="h-5 w-5" />}
           color="primary"
@@ -126,18 +127,21 @@ export default function ReportsPage() {
         <StatsCard
           className="min-w-0"
           label="Total Orders"
-          value={formatNumber(report?.totalOrders || 0)}
+          value={formatNumber(report?.totalOrders || 0, "en-IN", true)}
+          fullValue={formatNumber(report?.totalOrders || 0)}
           icon={<ShoppingBag className="h-5 w-5" />}
         />
         <StatsCard
           className="min-w-0"
           label="Cash Collected"
-          value={formatCurrency(report?.paymentSummary?.cash || 0, currency)}
+          value={formatCurrency(report?.paymentSummary?.cash || 0, currency, "en-IN", true)}
+          fullValue={formatCurrency(report?.paymentSummary?.cash || 0, currency)}
         />
         <StatsCard
           className="min-w-0"
           label="Digital Payments (UPI/Card)"
-          value={formatCurrency((report?.paymentSummary?.online || 0) + (report?.paymentSummary?.card || 0), currency)}
+          value={formatCurrency((report?.paymentSummary?.online || 0) + (report?.paymentSummary?.card || 0), currency, "en-IN", true)}
+          fullValue={formatCurrency((report?.paymentSummary?.online || 0) + (report?.paymentSummary?.card || 0), currency)}
           color="success"
         />
       </CardSwiper>
@@ -148,7 +152,8 @@ export default function ReportsPage() {
             <StatsCard
               className="min-w-0"
               label="GST Collected"
-              value={formatCurrency(report?.gstCollected || 0, currency)}
+              value={formatCurrency(report?.gstCollected || 0, currency, "en-IN", true)}
+              fullValue={formatCurrency(report?.gstCollected || 0, currency)}
               hint={
                 (report?.igstCollected ?? 0) > 0
                   ? `IGST ${formatCurrency(report?.igstCollected ?? 0, currency)}`
@@ -161,7 +166,8 @@ export default function ReportsPage() {
             <StatsCard
               className="min-w-0"
               label="GST Invoices"
-              value={formatNumber(report?.invoicesGenerated || 0)}
+              value={formatNumber(report?.invoicesGenerated || 0, "en-IN", true)}
+              fullValue={formatNumber(report?.invoicesGenerated || 0)}
               icon={<FileText className="h-5 w-5" />}
             />
           )}
@@ -169,7 +175,8 @@ export default function ReportsPage() {
             <StatsCard
               className="min-w-0"
               label="Wholesale Sales"
-              value={formatCurrency(report?.wholesaleSales || 0, currency)}
+              value={formatCurrency(report?.wholesaleSales || 0, currency, "en-IN", true)}
+              fullValue={formatCurrency(report?.wholesaleSales || 0, currency)}
               icon={<TrendingUp className="h-5 w-5" />}
               color="primary"
             />
@@ -178,7 +185,8 @@ export default function ReportsPage() {
             <StatsCard
               className="min-w-0"
               label="Credit Issued"
-              value={formatCurrency(report?.creditIssued || 0, currency)}
+              value={formatCurrency(report?.creditIssued || 0, currency, "en-IN", true)}
+              fullValue={formatCurrency(report?.creditIssued || 0, currency)}
               icon={<Wallet className="h-5 w-5" />}
               color="warning"
             />

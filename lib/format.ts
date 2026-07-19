@@ -1,28 +1,34 @@
 export function formatCurrency(
   value: number,
   currency = "INR",
-  locale = "en-IN"
+  locale = "en-IN",
+  compact = false
 ): string {
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 0
+      maximumFractionDigits: compact ? 4 : 2,
+      minimumFractionDigits: 0,
+      notation: compact ? "compact" : "standard"
     }).format(value);
   } catch (error) {
     // Fallback for custom symbols (e.g. '₹', 'Tk', 'AED')
     const formattedNumber = new Intl.NumberFormat(locale, {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 0
+      maximumFractionDigits: compact ? 4 : 2,
+      minimumFractionDigits: 0,
+      notation: compact ? "compact" : "standard"
     }).format(value);
     
     return `${currency} ${formattedNumber}`;
   }
 }
 
-export function formatNumber(value: number, locale = "en-IN"): string {
-  return new Intl.NumberFormat(locale).format(value);
+export function formatNumber(value: number, locale = "en-IN", compact = false): string {
+  return new Intl.NumberFormat(locale, {
+    notation: compact ? "compact" : "standard",
+    maximumFractionDigits: compact ? 1 : 2
+  }).format(value);
 }
 
 export function formatDate(date: string | Date, locale = "en-IN"): string {

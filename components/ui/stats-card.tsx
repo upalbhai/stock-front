@@ -4,9 +4,12 @@ import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent } from "./card";
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
+
 type StatsCardProps = {
   label: string;
   value: string | number;
+  fullValue?: string | number;
   hint?: string;
   trend?: { value: number; label: string };
   icon?: React.ReactNode;
@@ -41,7 +44,7 @@ const iconColorMap = {
   purple: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
 };
 
-export function StatsCard({ label, value, hint, trend, icon, className, color = "default" }: StatsCardProps) {
+export function StatsCard({ label, value, fullValue, hint, trend, icon, className, color = "default" }: StatsCardProps) {
   return (
     <Card className={cn("border transition-colors duration-200 hover:shadow-md h-full flex flex-col", bgTintMap[color], className)}>
       <CardContent className="pt-4.5 pb-4 px-4.5 flex-1 flex flex-col justify-center">
@@ -50,9 +53,24 @@ export function StatsCard({ label, value, hint, trend, icon, className, color = 
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/90 block">
               {label}
             </span>
-            <p className={cn("mt-1.5 text-3xl font-extrabold tracking-tight leading-none", colorMap[color])}>
-              {value}
-            </p>
+            {fullValue ? (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className={cn("mt-1.5 text-3xl font-extrabold tracking-tight leading-none truncate cursor-default sm:cursor-help w-fit max-w-full", colorMap[color])}>
+                      {value}
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="font-mono text-sm tracking-tight px-3 py-1.5">
+                    {String(fullValue)}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <p className={cn("mt-1.5 text-3xl font-extrabold tracking-tight leading-none truncate w-fit max-w-full", colorMap[color])}>
+                {value}
+              </p>
+            )}
             
             {trend && (
               <div

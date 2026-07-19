@@ -347,27 +347,31 @@ export default function ProfitPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             label="Sales revenue"
-            value={isLoading ? "…" : formatCurrency(summary?.realizedRevenue ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.realizedRevenue ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.realizedRevenue ?? 0, currency)}
             hint={`${summary?.ordersCount ?? 0} completed bills`}
             icon={<TrendingUp className="h-5 w-5" />}
             color="primary"
           />
           <StatsCard
             label="Cost of goods sold"
-            value={isLoading ? "…" : formatCurrency(summary?.realizedCost ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.realizedCost ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.realizedCost ?? 0, currency)}
             hint="Product cost on sold items"
             color="warning"
           />
           <StatsCard
             label="Gross profit (real)"
-            value={isLoading ? "…" : formatCurrency(summary?.realizedGrossProfit ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.realizedGrossProfit ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.realizedGrossProfit ?? 0, currency)}
             hint="Revenue − COGS — only from sales"
             icon={<TrendingUp className="h-5 w-5" />}
             color="success"
           />
           <StatsCard
             label="Net after losses"
-            value={isLoading ? "…" : formatCurrency(summary?.netProfit ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.netProfit ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.netProfit ?? 0, currency)}
             hint="Gross profit − spoilage/returns/replacements"
             color={(summary?.netProfit ?? 0) >= 0 ? "success" : "danger"}
           />
@@ -379,21 +383,24 @@ export default function ProfitPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <StatsCard
             label="Spoilage / damage"
-            value={isLoading ? "…" : formatCurrency(summary?.spoilageLoss ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.spoilageLoss ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.spoilageLoss ?? 0, currency)}
             hint="Expired or damaged before sale"
             icon={<Trash2 className="h-5 w-5" />}
             color="danger"
           />
           <StatsCard
             label="Spoiled returns"
-            value={isLoading ? "…" : formatCurrency(summary?.returnLoss ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.returnLoss ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.returnLoss ?? 0, currency)}
             hint="Customer returned spoiled goods"
             icon={<RotateCcw className="h-5 w-5" />}
             color="danger"
           />
           <StatsCard
             label="Owner replacements"
-            value={isLoading ? "…" : formatCurrency(summary?.replacementCost ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.replacementCost ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.replacementCost ?? 0, currency)}
             hint="Free replacements you gave"
             icon={<Gift className="h-5 w-5" />}
             color="warning"
@@ -406,25 +413,29 @@ export default function ProfitPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             label="Stock invested (period)"
-            value={isLoading ? "…" : formatCurrency(summary?.stockInvested ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.stockInvested ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.stockInvested ?? 0, currency)}
             hint="Cost of stock received in date range"
             icon={<Package className="h-5 w-5" />}
           />
           <StatsCard
             label="Potential margin (period)"
-            value={isLoading ? "…" : formatCurrency(summary?.potentialMargin ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.potentialMargin ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.potentialMargin ?? 0, currency)}
             hint="If all received stock sells at entry price — NOT profit"
             icon={<AlertTriangle className="h-5 w-5" />}
             color="warning"
           />
           <StatsCard
             label="On-hand stock value (cost)"
-            value={isLoading ? "…" : formatCurrency(summary?.onHandCostValue ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.onHandCostValue ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.onHandCostValue ?? 0, currency)}
             hint="Current inventory at cost price"
           />
           <StatsCard
             label="On-hand potential margin"
-            value={isLoading ? "…" : formatCurrency(summary?.onHandPotentialMargin ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.onHandPotentialMargin ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.onHandPotentialMargin ?? 0, currency)}
             hint="If current stock all sells — still not realized"
             color="default"
           />

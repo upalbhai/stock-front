@@ -574,7 +574,8 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           label={query.from || query.to ? "Sales in Period" : "Sales Today"}
-          value={isLoading ? "…" : formatCurrency(summary?.totalSalesToday ?? 0, currency)}
+          value={isLoading ? "…" : formatCurrency(summary?.totalSalesToday ?? 0, currency, "en-IN", true)}
+          fullValue={isLoading ? undefined : formatCurrency(summary?.totalSalesToday ?? 0, currency)}
           hint={`${formatNumber(summary?.totalOrdersToday ?? 0)} orders`}
           icon={<TrendingUp />}
           color="primary"
@@ -582,7 +583,8 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         {hasGstInvoices && (
           <StatsCard
             label={query.from || query.to ? "GST Collected" : "GST Collected Today"}
-            value={isLoading ? "…" : formatCurrency(summary?.gstCollectedToday ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.gstCollectedToday ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.gstCollectedToday ?? 0, currency)}
             hint={
               (summary?.igstToday ?? 0) > 0
                 ? `IGST ${formatCurrency(summary?.igstToday ?? 0, currency)}`
@@ -595,7 +597,8 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         {hasCreditKhata && (
           <StatsCard
             label="Credit Outstanding"
-            value={isLoading ? "…" : formatCurrency(summary?.totalCreditOutstanding ?? 0, currency)}
+            value={isLoading ? "…" : formatCurrency(summary?.totalCreditOutstanding ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.totalCreditOutstanding ?? 0, currency)}
             hint={`${summary?.customersWithDue ?? 0} customers with due`}
             icon={<Wallet />}
             color="warning"
@@ -604,8 +607,9 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         {hasWholesale && (
           <StatsCard
             label={query.from || query.to ? "Wholesale Sales" : "Wholesale Sales Today"}
-            value={isLoading ? "…" : formatCurrency(summary?.wholesaleSalesToday ?? 0, currency)}
-            hint={`Credit issued ${formatCurrency(summary?.creditIssuedToday ?? 0, currency)}`}
+            value={isLoading ? "…" : formatCurrency(summary?.wholesaleSalesToday ?? 0, currency, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatCurrency(summary?.wholesaleSalesToday ?? 0, currency)}
+            hint={`Credit issued ${formatCurrency(summary?.creditIssuedToday ?? 0, currency, "en-IN", true)}`}
             icon={<Store />}
             color="purple"
           />
@@ -613,7 +617,8 @@ function DashboardHome({ token, outletId }: { token: string; outletId: string | 
         {!hasCreditKhata && !hasWholesale && !hasGstInvoices && (
           <StatsCard
             label={query.from || query.to ? "Orders" : "Orders Today"}
-            value={isLoading ? "…" : formatNumber(summary?.totalOrdersToday ?? 0)}
+            value={isLoading ? "…" : formatNumber(summary?.totalOrdersToday ?? 0, "en-IN", true)}
+            fullValue={isLoading ? undefined : formatNumber(summary?.totalOrdersToday ?? 0)}
             icon={<ShoppingBag />}
             color="default"
           />
