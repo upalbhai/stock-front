@@ -101,6 +101,9 @@ export default function RolesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Roles & Permissions</h1><p className="text-sm text-muted">Control what each role can access</p></div>
+        <Button id="create-role-btn" onClick={openCreate}>
+          <Plus className="h-4 w-4 mr-1.5" /> Create Role
+        </Button>
       </div>
 
       <DataTable
@@ -111,11 +114,6 @@ export default function RolesPage() {
         emptyStateIcon={<Shield className="h-12 w-12 text-muted/30" />}
         emptyStateText="No roles configured yet."
         expandable
-        filters={
-          <Button id="create-role-btn" onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1.5" /> Create Role
-          </Button>
-        }
         columns={[
           {
             key: "name",

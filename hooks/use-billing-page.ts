@@ -84,12 +84,8 @@ export function useBillingPage() {
 
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = React.useState<
-    string | null
-  >(null);
-  const [selectedParentId, setSelectedParentId] = React.useState<string | null>(
-    null,
-  );
+  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
+  const [selectedCategoryOption, setSelectedCategoryOption] = React.useState<any>(null);
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [showCheckout, setShowCheckout] = React.useState(false);
   const [showScanner, setShowScanner] = React.useState(false);
@@ -119,12 +115,7 @@ export function useBillingPage() {
 
   const currentOutlet = user?.outlets?.find((o) => o._id === outletId);
 
-  const { data: catData } = useQuery({
-    queryKey: ["categories", "flat", outletId],
-    queryFn: () =>
-      categoryService.getCategories(token, { flat: "true", limit: 200 }),
-    enabled: Boolean(token),
-  });
+
 
   const {
     data: prodData,
@@ -264,15 +255,8 @@ export function useBillingPage() {
     };
   }, []);
 
-  const categories: Category[] = Array.isArray(catData)
-    ? catData
-    : ((catData as { categories?: Category[] } | undefined)?.categories ?? []);
-  const topCategories = categories.filter((c) => !c.parentId);
   const products: Product[] = prodData?.data ?? [];
   const prodMeta = prodData?.meta?.pagination;
-  const activeSubcategories = selectedParentId
-    ? categories.filter((c) => c.parentId === selectedParentId)
-    : [];
 
   const handleBarcodeScanned = React.useCallback(
     async (scannedBarcode: string) => {
@@ -280,7 +264,7 @@ export function useBillingPage() {
       try {
         const res = await productService.getProductsWithOffset(token || "", {
           outletId: outletId ?? undefined,
-          search: scannedBarcode,
+          scan: scannedBarcode,
           limit: 2,
         });
         const prods = res.data ?? [];
@@ -592,8 +576,8 @@ export function useBillingPage() {
     setSearch,
     selectedCategoryId,
     setSelectedCategoryId,
-    selectedParentId,
-    setSelectedParentId,
+    selectedCategoryOption,
+    setSelectedCategoryOption,
     showSuccess,
     showCheckout,
     setShowCheckout,
@@ -614,12 +598,9 @@ export function useBillingPage() {
     pendingSaleMode,
     setPendingSaleMode,
     catScrollRef,
-    categories,
-    topCategories,
     products,
     prodMeta,
     productsFetching,
-    activeSubcategories,
     supplyType,
     isInterState,
     cartTotals,

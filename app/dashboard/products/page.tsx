@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
+import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Search, Package, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { z } from "zod";
@@ -127,6 +128,7 @@ export default function ProductsPage() {
   const currency = user?.currency || "INR";
   const qc = useQueryClient();
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const router = useRouter();
 
   const [query, setQuery] = useQueryStates({
     search: parseAsString.withDefault(""),
@@ -137,8 +139,6 @@ export default function ProductsPage() {
   const [catFilter, setCatFilter] = React.useState<{ id: string, name: string, label: string } | null>(null);
   const [formCategoryOption, setFormCategoryOption] = React.useState<{ id: string, name: string, label: string } | null>(null);
   const [showModal, setShowModal] = React.useState(false);
-  const [showImportModal, setShowImportModal] = React.useState(false);
-  const [importSearch, setImportSearch] = React.useState("");
   const [showScanner, setShowScanner] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
@@ -192,31 +192,6 @@ export default function ProductsPage() {
     mutationFn: (id: string) => productService.deleteProduct(id, token),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["products"] }); setDeleteId(null); toast.success("Product deleted"); },
     onError: (err) => { toast.error(getErrorMessage(err, "Failed to delete product")); }
-  });
-
-  const [importPage, setImportPage] = React.useState(1);
-
-  const globalProductsQuery = useQuery({
-    queryKey: ["globalProducts", outletId, importSearch, importPage],
-    queryFn: () => getJsonWithMeta<any[]>(`/products/global?outletId=${outletId}&search=${importSearch}&page=${importPage}&limit=10`, token),
-    enabled: !!token && showImportModal
-  });
-
-  const importProduct = useMutation({
-    mutationFn: (productId: string) =>
-      apiFetch(`/products/${productId}/import`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ outletId })
-      }),
-    onSuccess: () => {
-      toast.success("Product imported successfully");
-      qc.invalidateQueries({ queryKey: ["products"] });
-      qc.invalidateQueries({ queryKey: ["globalProducts"] });
-    },
-    onError: (err: any) => {
-      toast.error(getErrorMessage(err));
-    }
   });
 
   const products: Product[] = productsData?.data ?? [];
@@ -384,7 +359,7 @@ export default function ProductsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-bold">Products</h1><p className="text-sm text-muted">{totalItems} products</p></div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowImportModal(true)}><Package className="h-4 w-4 mr-2" /> Import from Catalog</Button>
+          <Button variant="outline" onClick={() => router.push("/dashboard/products/import")}><Package className="h-4 w-4 mr-2" /> Import from Catalog</Button>
           <Button id="create-product-btn" onClick={openCreate}><Plus className="h-4 w-4" /> Add Product</Button>
         </div>
       </div>
@@ -609,50 +584,6 @@ export default function ProductsPage() {
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={() => deleteId && remove.mutate(deleteId)} title="Delete Product?" message="This product will be hidden from billing." confirmLabel="Delete" loading={remove.isPending} />
-
-      <Modal open={showImportModal} onClose={() => setShowImportModal(false)} title="Import from Master Catalog">
-        <div className="space-y-4">
-          <Input
-            placeholder="Search catalog..."
-            value={importSearch}
-            onChange={(e) => { setImportSearch(e.target.value); setImportPage(1); }}
-          />
-          {globalProductsQuery.isLoading ? (
-            <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-              {(globalProductsQuery.data?.data || []).map((p: any) => (
-                <div key={p._id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50">
-                  <div>
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">SKU: {p.sku || "N/A"} • Price: {formatCurrency(p.price, currency)}</p>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => importProduct.mutate(p._id)}
-                    disabled={importProduct.isPending}
-                  >
-                    Import
-                  </Button>
-                </div>
-              ))}
-              {globalProductsQuery.data?.data?.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">No products found in master catalog.</p>
-              )}
-              {globalProductsQuery.data?.meta?.pagination && globalProductsQuery.data.meta.pagination.totalPages > 1 && (
-                <div className="pt-4 border-t mt-4">
-                  <Pagination
-                    page={importPage}
-                    pageSize={10}
-                    totalPages={globalProductsQuery.data.meta.pagination.totalPages}
-                    onPageChange={setImportPage}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </Modal>
     </div>
   );
 }

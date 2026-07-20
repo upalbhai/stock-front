@@ -137,7 +137,17 @@ export default function AdminPlansPage() {
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 duration-300">
+    <div className="animate-in fade-in slide-in-from-bottom-2 space-y-6 duration-300">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Subscription Plans</h1>
+          <p className="text-sm text-muted">Manage system pricing plans, features, and limits.</p>
+        </div>
+        <Button onClick={openCreatePlan} className="gap-1">
+          <Plus className="h-4 w-4" /> Add New Plan
+        </Button>
+      </div>
+
       <DataTable
         isLoading={loadingPlans}
         data={plans}
@@ -147,11 +157,6 @@ export default function AdminPlansPage() {
         onRefetch={() => refetch()}
         placeholderText="Search plans..."
         emptyStateText="No plans configured."
-        filters={
-          <Button onClick={openCreatePlan} className="gap-1">
-            <Plus className="h-4 w-4" /> Add New Plan
-          </Button>
-        }
         columns={[
           {
             key: "name",

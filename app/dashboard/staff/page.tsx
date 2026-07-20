@@ -162,6 +162,9 @@ export default function StaffPage() {
           <h1 className="text-2xl font-bold">Staff</h1>
           <p className="text-sm text-muted">{users.length} team members</p>
         </div>
+        <Button id="add-staff-btn" onClick={openCreate}>
+          <Plus className="h-4 w-4 mr-1.5" /> Add Staff
+        </Button>
       </div>
 
       <DataTable
@@ -173,11 +176,6 @@ export default function StaffPage() {
         onRefetch={() => refetch()}
         placeholderText="Search by name or phone..."
         emptyStateText="No staff members yet."
-        filters={
-          <Button id="add-staff-btn" onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1.5" /> Add Staff
-          </Button>
-        }
         columns={[
           {
             key: "name",

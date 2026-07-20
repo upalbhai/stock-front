@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useAppSelector } from "@/store/hooks";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   Package, ArrowLeftRight, History, Play, AlertTriangle,
   Calendar, ArrowDownToLine, ArrowUpFromLine, List, Search, RefreshCw, Trash2
@@ -231,12 +232,6 @@ function buildHistoryColumns(currency: string, onDelete?: (e: StockHistoryEntry)
   return cols;
 }
 
-const TRANSFER_STATUS_COLORS: Record<string, "soft" | "warning" | "default" | "danger"> = {
-  pending: "warning",
-  approved: "soft",
-  completed: "soft",
-  rejected: "danger"
-};
 
 const HISTORY_TYPE_FILTERS = [
   { value: "", label: "All" },
@@ -258,6 +253,7 @@ export default function StockPage() {
   const currency = user?.currency || "INR";
   const hasPackaging = useFeature("packaging_units");
   const qc = useQueryClient();
+  const router = useRouter();
 
   const [query, setQuery] = useQueryStates({
     tab: parseAsString.withDefault("overview"),
@@ -271,9 +267,6 @@ export default function StockPage() {
     to: parseAsString.withDefault(""),
     historyPage: parseAsInteger.withDefault(1),
     historyLimit: parseAsInteger.withDefault(50),
-    transferSearch: parseAsString.withDefault(""),
-    transferPage: parseAsInteger.withDefault(1),
-    transferLimit: parseAsInteger.withDefault(50),
   });
 
   const [deleteEntryId, setDeleteEntryId] = React.useState<string | null>(null);
@@ -294,11 +287,6 @@ export default function StockPage() {
   const [adjustUpdateProductPrices, setAdjustUpdateProductPrices] = React.useState(false);
   const [adjustLossReason, setAdjustLossReason] = React.useState("spoilage");
 
-  // Transfer Dialog State
-  const [showTransferModal, setShowTransferModal] = React.useState(false);
-  const [transferTargetOutlet, setTransferTargetOutlet] = React.useState("");
-  const [transferItems, setTransferItems] = React.useState<{ productId: string; qty: number }[]>([]);
-  const [transferNote, setTransferNote] = React.useState("");
 
   // Start of day count state
   const [startOfDayCounts, setStartOfDayCounts] = React.useState<Record<string, number>>({});
@@ -335,11 +323,6 @@ export default function StockPage() {
     enabled: Boolean(token && outletId) && activeTab === "history"
   });
 
-  const { data: transfersData, isLoading: loadingTransfers, refetch: refetchTransfers } = useQuery({
-    queryKey: ["stock-transfers", query.transferSearch, query.transferPage, query.transferLimit],
-    queryFn: () => getJson<{ transfers: StockTransfer[]; total: number }>("/stock/transfers", token, { search: query.transferSearch || undefined, page: query.transferPage, limit: query.transferLimit }),
-    enabled: Boolean(token) && activeTab === "transfers"
-  });
 
   const authOutlets = useAppSelector((state) => state.auth.outlets);
   const outletsData = { outlets: authOutlets };
@@ -355,26 +338,6 @@ export default function StockPage() {
     onError: (err) => toast.error(getErrorMessage(err, "Failed to adjust stock"))
   });
 
-  const transferStockMutation = useMutation({
-    mutationFn: (body: unknown) => stockService.createTransfer(body, token),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["products"] });
-      qc.invalidateQueries({ queryKey: ["stock-transfers"] });
-      setShowTransferModal(false);
-      toast.success("Transfer request submitted");
-    },
-    onError: (err) => toast.error(getErrorMessage(err, "Failed to transfer stock"))
-  });
-
-  const approveTransferMutation = useMutation({
-    mutationFn: (id: string) => stockService.approveTransfer(id, token),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["products"] });
-      qc.invalidateQueries({ queryKey: ["stock-transfers"] });
-      toast.success("Transfer approved");
-    },
-    onError: (err) => toast.error(getErrorMessage(err, "Failed to approve transfer"))
-  });
 
   const resolveDiffMutation = useMutation({
     mutationFn: (body: unknown) => stockService.adjustStock(body, token),
@@ -417,9 +380,6 @@ export default function StockPage() {
   const historySummary = historyData?.summary;
   const historyTotalPages = Math.ceil(historyTotal / query.historyLimit) || 1;
   const historyColumns = React.useMemo(() => buildHistoryColumns(currency, (e) => setDeleteEntryId(e._id)), []);
-
-  const transfers = transfersData?.transfers ?? [];
-  const transferTotal = transfersData?.total ?? 0;
 
   const prodMeta = prodData?.meta?.pagination;
   const prodTotal = prodMeta?.total ?? products.length;
@@ -607,24 +567,6 @@ export default function StockPage() {
     });
   };
 
-  const handleTransferSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!transferTargetOutlet || transferItems.length === 0) return;
-    transferStockMutation.mutate({
-      fromOutletId: outletId,
-      toOutletId: transferTargetOutlet,
-      items: transferItems.map((item) => {
-        const prod = products.find((p) => p._id === item.productId);
-        return {
-          productId: item.productId,
-          productName: prod?.name || "Unknown",
-          qty: item.qty,
-          unit: prod?.unit || "pcs"
-        };
-      }),
-      note: transferNote
-    });
-  };
 
   const handleSaveOpeningStock = () => {
     // Save starting stock sequentially as adjustments
@@ -642,10 +584,6 @@ export default function StockPage() {
     });
   };
 
-  const addTransferItemRow = () => {
-    if (products.length === 0) return;
-    setTransferItems([...transferItems, { productId: products[0]._id, qty: 1 }]);
-  };
 
   return (
     <div className="space-y-6">
@@ -655,11 +593,9 @@ export default function StockPage() {
           <p className="text-sm text-muted">Monitor stock levels, adjustments, and transfers</p>
         </div>
         <div className="flex gap-2">
-          {activeTab === "transfers" && (
-            <Button id="new-transfer-btn" onClick={() => setShowTransferModal(true)}>
-              <ArrowLeftRight className="h-4 w-4" /> Request Transfer
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => router.push("/dashboard/stock/transfers")}>
+            <ArrowLeftRight className="h-4 w-4 mr-2" /> View Transfers
+          </Button>
         </div>
       </div>
 
@@ -668,8 +604,7 @@ export default function StockPage() {
         {[
           { id: "overview", label: "Overview", icon: Package },
           { id: "start-of-day", label: "Start of Day", icon: Play },
-          { id: "history", label: "History", icon: History },
-          { id: "transfers", label: "Transfers", icon: ArrowLeftRight }
+          { id: "history", label: "History", icon: History }
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -886,73 +821,6 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* TAB CONTENT: Transfers */}
-      {activeTab === "transfers" && (
-        <div className="space-y-6 animate-rise">
-          <DataTable
-            isLoading={loadingTransfers}
-            data={transfers}
-            keyExtractor={(t: StockTransfer) => t._id}
-            totalItems={transferTotal}
-            page={query.transferPage}
-            limit={query.transferLimit}
-            onPageChange={(p) => setQuery({ transferPage: p })}
-            onLimitChange={(size) => setQuery({ transferLimit: size, transferPage: 1 })}
-            searchQuery={query.transferSearch}
-            onSearchChange={(s) => setQuery({ transferSearch: s, transferPage: 1 })}
-            onRefetch={() => refetchTransfers()}
-            placeholderText="Search transfers..."
-            emptyStateText="No inventory transfers logged."
-            columns={[
-              {
-                key: "createdAt", header: "Date Requested",
-                render: (t: StockTransfer) => <span className="text-xs text-muted">{new Date(t.createdAt).toLocaleDateString("en-IN")}</span>
-              },
-              {
-                key: "route", header: "Route",
-                render: (t: StockTransfer) => (
-                  <span className="text-xs font-semibold">
-                    {t.fromOutletId?.name} ➔ {t.toOutletId?.name}
-                  </span>
-                )
-              },
-              {
-                key: "items", header: "Items (Qty)",
-                render: (t: StockTransfer) => (
-                  <div className="flex flex-col gap-0.5">
-                    {t.items.map((item: any, idx: number) => (
-                      <span key={idx} className="text-xs text-muted">
-                        • {item.productName} ({item.qty} {item.unit})
-                      </span>
-                    ))}
-                  </div>
-                )
-              },
-              {
-                key: "status", header: "Status",
-                render: (t: StockTransfer) => <Badge variant={TRANSFER_STATUS_COLORS[t.status] || "secondary"} className="capitalize text-xs">{t.status}</Badge>
-              },
-              {
-                key: "requestedBy", header: "Requested By",
-                render: (t: StockTransfer) => <span className="text-xs text-muted">{t.requestedBy?.name || "System"}</span>
-              },
-              {
-                key: "actions", header: "",
-                render: (t: StockTransfer) => (
-                  <div className="flex gap-2">
-                    {t.status === "pending" && t.toOutletId?._id === outletId && (
-                      <Button variant="default" size="sm" onClick={() => approveTransferMutation.mutate(t._id)}
-                        disabled={approveTransferMutation.isPending}>
-                        Approve & Receive
-                      </Button>
-                    )}
-                  </div>
-                )
-              }
-            ]}
-          />
-        </div>
-      )}
 
       {/* MODAL: Quick Adjust Stock */}
       <Modal open={showAdjustModal} onClose={() => setShowAdjustModal(false)} title="Adjust Stock Inventory" size={isStockInEntry ? "lg" : usePackagingEntry ? "md" : "sm"}>
@@ -1184,71 +1052,6 @@ export default function StockPage() {
         </form>
       </Modal>
 
-      {/* MODAL: Create Stock Transfer Request */}
-      <Modal open={showTransferModal} onClose={() => setShowTransferModal(false)} title="Request Stock Transfer" size="md">
-        <form onSubmit={handleTransferSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Destination Outlet *</label>
-            <Select id="transfer-target" value={transferTargetOutlet} onValueChange={setTransferTargetOutlet}
-              options={outlets.map((o) => ({ value: o._id, label: o.name }))} placeholder="Select destination location..." />
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-medium text-muted">Products & Quantities</label>
-              <Button type="button" variant="soft" size="xs" onClick={addTransferItemRow}>Add Item</Button>
-            </div>
-
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {transferItems.map((item, idx) => (
-                <div key={idx} className="flex gap-2 items-center">
-                  <div className="flex-1">
-                    <Select
-                      options={products.map((p) => ({ value: p._id, label: p.name }))}
-                      value={item.productId}
-                      onValueChange={(val) => {
-                        const copy = [...transferItems];
-                        copy[idx].productId = val;
-                        setTransferItems(copy);
-                      }}
-                    />
-                  </div>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={item.qty}
-                    onChange={(e) => {
-                      const copy = [...transferItems];
-                      copy[idx].qty = Number(e.target.value);
-                      setTransferItems(copy);
-                    }}
-                    className="w-20"
-                  />
-                  <Button type="button" variant="ghost" size="icon" className="text-danger"
-                    onClick={() => setTransferItems(transferItems.filter((_, i) => i !== idx))}>
-                    ✕
-                  </Button>
-                </div>
-              ))}
-              {transferItems.length === 0 && (
-                <p className="text-xs text-muted italic">Click "Add Item" to add products to transfer list.</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Transfer Note</label>
-            <Input id="transfer-note" value={transferNote} onChange={(e) => setTransferNote(e.target.value)} placeholder="e.g. Urgent stock shortage" />
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" type="button" className="flex-1" onClick={() => setShowTransferModal(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={transferStockMutation.isPending || transferItems.length === 0 || !transferTargetOutlet}>
-              {transferStockMutation.isPending ? "Sending..." : "Submit Transfer Request"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
 
       {/* MODAL: Delete Stock Entry */}
       <Modal open={!!deleteEntryId} onClose={() => setDeleteEntryId(null)} title="Revert Stock Entry" size="sm">

@@ -97,19 +97,18 @@ export default function BillingPage() {
           onSearchChange={b.setSearch}
           onSearchEnter={() => b.handleBarcodeScanned(b.search.trim())}
           onOpenScanner={() => b.setShowScanner(true)}
-          catScrollRef={b.catScrollRef}
-          topCategories={b.topCategories}
-          categories={b.categories}
-          selectedCategoryId={b.selectedCategoryId}
-          selectedParentId={b.selectedParentId}
-          onSelectCategory={(id, parentId) => {
-            b.setSelectedCategoryId(id);
-            b.setSelectedParentId(parentId);
+          selectedCategoryOption={b.selectedCategoryOption}
+          onSelectCategoryOption={(opt: any) => {
+            if (!opt || (Array.isArray(opt) && opt.length === 0)) {
+              b.setSelectedCategoryOption(null);
+              b.setSelectedCategoryId(null);
+            } else {
+              const selected = Array.isArray(opt) ? opt[0] : opt;
+              b.setSelectedCategoryOption(selected.id === "" ? null : selected);
+              b.setSelectedCategoryId(selected.id === "" ? null : selected.id);
+            }
+            b.setProdPage(1);
           }}
-          activeSubcategories={b.activeSubcategories}
-          onSubcategorySelect={b.setSelectedCategoryId}
-          scrollCategoryLeft={b.scrollCategoryLeft}
-          scrollCategoryRight={b.scrollCategoryRight}
           prodIsRefetching={b.prodIsRefetching}
           prodCooldownSeconds={b.prodCooldownSeconds}
           onRefetch={b.handleProdRefetch}

@@ -8,6 +8,7 @@ export const productService = {
       outletId?: string;
       categoryId?: string;
       search?: string;
+      scan?: string;
       page?: number;
       limit?: number;
     }
@@ -38,5 +39,8 @@ export const productService = {
 
   deleteProduct: async (id: string, token?: string | null) => {
     return apiFetch(`/products/${id}`, { method: "DELETE", token });
+  },
+  importProductsBulk: async (data: { outletId: string; productIds?: string[]; importAll?: boolean }, token?: string | null) => {
+    return apiFetch(`/products/import-bulk`, { method: "POST", body: data, token });
   },
 };

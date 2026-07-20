@@ -8,18 +8,20 @@ export function formatCurrency(
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
-      maximumFractionDigits: compact ? 4 : 2,
+      maximumFractionDigits: 2,
+      // maximumFractionDigits: compact ? 4 : 2,
       minimumFractionDigits: 0,
       notation: compact ? "compact" : "standard"
     }).format(value);
   } catch (error) {
     // Fallback for custom symbols (e.g. '₹', 'Tk', 'AED')
     const formattedNumber = new Intl.NumberFormat(locale, {
-      maximumFractionDigits: compact ? 4 : 2,
+      // maximumFractionDigits: compact ? 4 : 2,
+      maximumFractionDigits: 2,
       minimumFractionDigits: 0,
       notation: compact ? "compact" : "standard"
     }).format(value);
-    
+
     return `${currency} ${formattedNumber}`;
   }
 }

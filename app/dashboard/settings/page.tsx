@@ -20,14 +20,15 @@ import { RoleGate } from "@/components/auth/role-gate";
 import { SecuritySettings } from "@/components/settings/security-settings";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
-import { useAppDispatch } from "@/store/hooks";
-import { updateUser } from "@/store/authSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { updateUser, setOutlets } from "@/store/authSlice";
 
 export default function SettingsPage() {
   const { token, outletId, businessId, user } = useAuth();
   const { settings, updateSettings } = useSettings();
   const qc = useQueryClient();
   const dispatch = useAppDispatch();
+  const outlets = useAppSelector((state) => state.auth.outlets);
 
   const [bizForm, setBizForm] = React.useState({ name: "", code: "", gstNumber: "", currency: "INR" });
   const [outletForm, setOutletForm] = React.useState({ name: "", phone: "", address: "", defaultTaxRate: 5 });
@@ -82,8 +83,15 @@ export default function SettingsPage() {
 
   const saveOutletMutation = useMutation({
     mutationFn: (body: unknown) => outletService.updateOutlet(outletId!, body, token!),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ["outlet-current"] });
+      const updatedOutlet = res?.data?.outlet;
+      if (updatedOutlet) {
+        const updatedOutlets = outlets.map((o) =>
+          o._id === updatedOutlet._id ? { ...o, name: updatedOutlet.name } : o
+        );
+        dispatch(setOutlets(updatedOutlets));
+      }
       toast.success("Outlet settings saved");
     },
     onError: (err) => toast.error(getErrorMessage(err, "Failed to save outlet settings"))
@@ -115,146 +123,184 @@ export default function SettingsPage() {
 
   return (
     <RoleGate allowed={["owner", "manager"]}>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Settings className="h-6 w-6 text-primary" /> Settings
+      <div className="space-y-8 max-w-6xl mx-auto px-4 py-2 sm:px-6">
+        {/* Header Block */}
+        <div className="flex flex-col gap-1 border-b border-border/40 pb-5">
+          <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3 text-foreground">
+            <div className="p-2 bg-primary/10 rounded-lg text-primary">
+              <Settings className="h-7 w-7 animate-pulse" />
+            </div>
+            Settings
           </h1>
-          <p className="text-sm text-muted">Manage franchise credentials, active location details, and system parameters.</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+            Manage franchise credentials, active location details, and system parameters.
+          </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
-          <div className="space-y-6">
+        <div className="grid gap-8 lg:grid-cols-[5fr_3fr] items-start">
+          <div className="space-y-8">
             {/* Business/Brand Profile Settings */}
-            <Card className="rounded-xl border border-border/70 shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Building2 className="h-5 w-5 text-primary" /> Franchise Brand settings
+            <Card className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="border-b border-border/10 bg-muted/5 pb-4">
+                <CardTitle className="flex items-center gap-2.5 text-lg font-bold text-card-foreground">
+                  <Building2 className="h-5 w-5 text-primary" /> Franchise Brand Settings
                 </CardTitle>
                 <CardDescription>Configure core system identification across all locations</CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleBizSubmit} className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Brand / Company Name *</label>
-                      <Input required value={bizForm.name} onChange={(e) => setBizForm(f => ({ ...f, name: e.target.value }))} />
+              <CardContent className="pt-6">
+                <form onSubmit={handleBizSubmit} className="space-y-6">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Brand / Company Name *</label>
+                      <Input required value={bizForm.name} onChange={(e) => setBizForm(f => ({ ...f, name: e.target.value }))} className="h-10 border-border/60 focus-visible:ring-primary/40 focus-visible:border-primary" />
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Short Code *</label>
-                      <Input required disabled value={bizForm.code} className="bg-border/20 font-mono" />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Short Code *</label>
+                      <Input required disabled value={bizForm.code} className="h-10 bg-muted/30 border-border/40 font-mono text-muted-foreground cursor-not-allowed" />
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Franchise GSTIN</label>
-                      <Input value={bizForm.gstNumber} onChange={(e) => setBizForm(f => ({ ...f, gstNumber: e.target.value }))} placeholder="GST Registration No." />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Franchise GSTIN</label>
+                      <Input value={bizForm.gstNumber} onChange={(e) => setBizForm(f => ({ ...f, gstNumber: e.target.value }))} placeholder="GST Registration No." className="h-10 border-border/60 focus-visible:ring-primary/40 focus-visible:border-primary" />
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">System Currency</label>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">System Currency</label>
                       <AsyncSelect
                         value={bizForm.currency ? { id: bizForm.currency, name: bizForm.currency } : null}
                         onChange={(val: any) => setBizForm(f => ({ ...f, currency: val ? (val.id ?? val.name) : "" }))}
                         loadOptions={loadCurrencyOptions}
                         placeholder="Search or type custom..."
                         creatable={true}
+                        className="h-10"
                       />
                     </div>
                   </div>
-                  <Button type="submit" disabled={saveBusinessMutation.isPending} id="save-biz-btn">
-                    {saveBusinessMutation.isPending ? "Saving..." : "Save Brand Settings"}
-                  </Button>
+                  <div className="flex justify-end pt-2">
+                    <Button 
+                      type="submit" 
+                      disabled={saveBusinessMutation.isPending} 
+                      id="save-biz-btn" 
+                      className="w-full sm:w-auto min-w-[160px] h-10 transition-all duration-200 active:scale-95 shadow-md flex items-center justify-center gap-2 hover:opacity-95"
+                    >
+                      {saveBusinessMutation.isPending ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Building2 className="h-4 w-4" />
+                      )}
+                      <span>{saveBusinessMutation.isPending ? "Saving..." : "Save Brand Settings"}</span>
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
 
             {/* Active Outlet Settings */}
-            <Card className="rounded-xl border border-border/70 shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
+            <Card className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="border-b border-border/10 bg-muted/5 pb-4">
+                <CardTitle className="flex items-center gap-2.5 text-lg font-bold text-card-foreground">
                   <Store className="h-5 w-5 text-primary" /> Active Location (Outlet) Settings
                 </CardTitle>
                 <CardDescription>Update parameters specific to this selected outlet</CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleOutletSubmit} className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Outlet Name *</label>
-                      <Input required value={outletForm.name} onChange={(e) => setOutletForm(f => ({ ...f, name: e.target.value }))} />
+              <CardContent className="pt-6">
+                <form onSubmit={handleOutletSubmit} className="space-y-6">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Outlet Name *</label>
+                      <Input required value={outletForm.name} onChange={(e) => setOutletForm(f => ({ ...f, name: e.target.value }))} className="h-10 border-border/60 focus-visible:ring-primary/40 focus-visible:border-primary" />
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Contact Phone</label>
-                      <Input value={outletForm.phone} onChange={(e) => setOutletForm(f => ({ ...f, phone: e.target.value }))} />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact Phone</label>
+                      <Input value={outletForm.phone} onChange={(e) => setOutletForm(f => ({ ...f, phone: e.target.value }))} className="h-10 border-border/60 focus-visible:ring-primary/40 focus-visible:border-primary" />
                     </div>
-                    <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-medium text-muted">Physical Address</label>
-                      <Input value={outletForm.address} onChange={(e) => setOutletForm(f => ({ ...f, address: e.target.value }))} placeholder="Location address..." />
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Physical Address</label>
+                      <Input value={outletForm.address} onChange={(e) => setOutletForm(f => ({ ...f, address: e.target.value }))} placeholder="Location address..." className="h-10 border-border/60 focus-visible:ring-primary/40 focus-visible:border-primary" />
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted">Default GST/Tax Rate (%)</label>
-                      <Input type="number" min={0} max={100} value={outletForm.defaultTaxRate} onChange={(e) => setOutletForm(f => ({ ...f, defaultTaxRate: Number(e.target.value) }))} />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Default GST/Tax Rate (%)</label>
+                      <Input type="number" min={0} max={100} value={outletForm.defaultTaxRate} onChange={(e) => setOutletForm(f => ({ ...f, defaultTaxRate: Number(e.target.value) }))} className="h-10 border-border/60 focus-visible:ring-primary/40 focus-visible:border-primary" />
                     </div>
                   </div>
-                  <Button type="submit" disabled={saveOutletMutation.isPending} id="save-outlet-btn">
-                    {saveOutletMutation.isPending ? "Saving..." : "Save Outlet Settings"}
-                  </Button>
+                  <div className="flex justify-end pt-2">
+                    <Button 
+                      type="submit" 
+                      disabled={saveOutletMutation.isPending} 
+                      id="save-outlet-btn"
+                      className="w-full sm:w-auto min-w-[160px] h-10 transition-all duration-200 active:scale-95 shadow-md flex items-center justify-center gap-2 hover:opacity-95"
+                    >
+                      {saveOutletMutation.isPending ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Store className="h-4 w-4" />
+                      )}
+                      <span>{saveOutletMutation.isPending ? "Saving..." : "Save Outlet Settings"}</span>
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SecuritySettings />
 
             {/* System Preferences & Operational toggles */}
-            <Card className="rounded-xl border border-border/70 shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
+            <Card className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="border-b border-border/10 bg-muted/5 pb-4">
+                <CardTitle className="flex items-center gap-2.5 text-lg font-bold text-card-foreground">
                   <Database className="h-5 w-5 text-primary" /> Preferences
                 </CardTitle>
                 <CardDescription>Adjust billing rules & queue styles</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between py-2 border-b border-border/20">
-                  <div>
-                    <p className="text-sm font-semibold">Enable Sales Tax</p>
-                    <p className="text-xs text-muted">Apply tax rate in billing total</p>
+              <CardContent className="p-0">
+                <div className="divide-y divide-border/40">
+                  <div className="flex items-center justify-between p-4 sm:p-5 hover:bg-muted/10 transition-colors duration-150">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold text-foreground">Enable Sales Tax</p>
+                      <p className="text-xs text-muted-foreground">Apply tax rate in billing total</p>
+                    </div>
+                    <Switch checked={settings.taxEnabled} onCheckedChange={(val) => updateSettings({ taxEnabled: val })} />
                   </div>
-                  <Switch checked={settings.taxEnabled} onCheckedChange={(val) => updateSettings({ taxEnabled: val })} />
-                </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-border/20">
-                  <div>
-                    <p className="text-sm font-semibold">Offline Queue Mode</p>
-                    <p className="text-xs text-muted">Queue invoices if offline</p>
+                  <div className="flex items-center justify-between p-4 sm:p-5 hover:bg-muted/10 transition-colors duration-150">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold text-foreground">Offline Queue Mode</p>
+                      <p className="text-xs text-muted-foreground">Queue invoices if offline</p>
+                    </div>
+                    <Switch checked={settings.offlineMode} onCheckedChange={(val) => updateSettings({ offlineMode: val })} />
                   </div>
-                  <Switch checked={settings.offlineMode} onCheckedChange={(val) => updateSettings({ offlineMode: val })} />
-                </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-border/20">
-                  <div>
-                    <p className="text-sm font-semibold">GST Invoices View</p>
-                    <p className="text-xs text-muted">Render CGST/SGST breakdowns</p>
+                  <div className="flex items-center justify-between p-4 sm:p-5 hover:bg-muted/10 transition-colors duration-150">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold text-foreground">GST Invoices View</p>
+                      <p className="text-xs text-muted-foreground">Render CGST/SGST breakdowns</p>
+                    </div>
+                    <Switch checked={settings.gstEnabled} onCheckedChange={(val) => updateSettings({ gstEnabled: val })} />
                   </div>
-                  <Switch checked={settings.gstEnabled} onCheckedChange={(val) => updateSettings({ gstEnabled: val })} />
                 </div>
               </CardContent>
             </Card>
 
             {/* License Settings */}
-            <Card className="rounded-xl border border-border/70 shadow-soft bg-primary/[0.02]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Card className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-lg hover:shadow-xl transition-all duration-300 relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl -mr-6 -mt-6"></div>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-bold text-muted-foreground uppercase tracking-wider">
                   <ShieldCheck className="h-4 w-4 text-primary" /> Subscription License
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-muted">Plan Level:</span>
-                  <Badge variant="soft" className="capitalize font-bold">{businessData?.business?.plan || "Starter"}</Badge>
+              <CardContent className="space-y-4 pt-1">
+                <div className="flex justify-between items-center py-1.5 border-b border-border/10">
+                  <span className="text-xs text-muted-foreground">Plan Level:</span>
+                  <Badge variant="soft" className="capitalize font-bold text-xs bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors duration-200">
+                    {businessData?.business?.plan || "Starter"}
+                  </Badge>
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-muted">Assigned License Limits:</span>
-                  <span className="font-semibold">{outletId ? "Unlimited" : "1 Outlet"}</span>
+                <div className="flex justify-between items-center py-1.5">
+                  <span className="text-xs text-muted-foreground">Assigned License Limits:</span>
+                  <span className="text-xs font-semibold text-foreground bg-muted/40 px-2.5 py-1 rounded-md border border-border/20">
+                    {outletId ? "Unlimited" : "1 Outlet"}
+                  </span>
                 </div>
               </CardContent>
             </Card>

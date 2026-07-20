@@ -9,10 +9,12 @@ import {
   ScanLine,
   Check,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import AsyncSelect from "@/components/ui/async-select";
 import { Pagination } from "@/components/ui/pagination";
 import { formatCurrency } from "@/lib/format";
 import { getProductUnitLabel, getWholesalePriceHint, getActivePackagingUnits } from "@/lib/productUtils";
@@ -20,22 +22,15 @@ import { cn } from "@/lib/utils";
 import type { Product, Category } from "@/lib/types";
 import type { LineItem } from "@/store/billingSlice";
 import { useAuth } from "@/components/auth/auth-provider";
+import { categoryService } from "@/services/category.service";
 
 type BillingProductPanelProps = {
   search: string;
   onSearchChange: (value: string) => void;
   onSearchEnter: () => void;
   onOpenScanner: () => void;
-  catScrollRef: React.Ref<HTMLDivElement>;
-  topCategories: Category[];
-  categories: Category[];
-  selectedCategoryId: string | null;
-  selectedParentId: string | null;
-  onSelectCategory: (id: string | null, parentId: string | null) => void;
-  activeSubcategories: Category[];
-  onSubcategorySelect: (id: string) => void;
-  scrollCategoryLeft: () => void;
-  scrollCategoryRight: () => void;
+  selectedCategoryOption: any;
+  onSelectCategoryOption: (opt: any) => void;
   prodIsRefetching: boolean;
   prodCooldownSeconds: number;
   onRefetch: () => void;
@@ -57,16 +52,8 @@ export function BillingProductPanel({
   onSearchChange,
   onSearchEnter,
   onOpenScanner,
-  catScrollRef,
-  topCategories,
-  categories,
-  selectedCategoryId,
-  selectedParentId,
-  onSelectCategory,
-  activeSubcategories,
-  onSubcategorySelect,
-  scrollCategoryLeft,
-  scrollCategoryRight,
+  selectedCategoryOption,
+  onSelectCategoryOption,
   prodIsRefetching,
   prodCooldownSeconds,
   onRefetch,
@@ -82,8 +69,29 @@ export function BillingProductPanel({
   onAddProduct,
   mobileBottomPadding = true,
 }: BillingProductPanelProps) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const currency = user?.currency || "INR";
+  const qc = useQueryClient();
+
+  const loadCategoryFilterOptions = React.useCallback(
+    async (params: { page: number; limit: number; search?: string }) => {
+      const res = await qc.fetchQuery({
+        queryKey: ["categories", "options", params.page, params.limit, params.search],
+        queryFn: () => categoryService.getCategoriesWithMeta(token, params),
+        staleTime: 1000 * 60 * 5,
+      });
+      const meta = res.meta || undefined;
+      if (params.page === 1 && !params.search) {
+        return {
+          ...res,
+          data: [{ id: "", _id: "", name: "All Categories", label: "All Categories" }, ...res.data],
+          meta
+        };
+      }
+      return { ...res, meta };
+    },
+    [token, qc]
+  );
 
   return (
     <div
@@ -118,109 +126,36 @@ export function BillingProductPanel({
         </Button>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5 px-2 sm:px-0">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={scrollCategoryLeft}
-          className="hidden h-9 w-9 shrink-0 sm:flex"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        <div
-          ref={catScrollRef}
-          className="flex flex-1 gap-2 overflow-x-auto pb-0.5 scroll-smooth scrollbar-hide"
-        >
-          <button
-            type="button"
-            onClick={() => onSelectCategory(null, null)}
-            className={cn(
-              "shrink-0 rounded-xl px-4.5 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-95",
-              !selectedCategoryId
-                ? "bg-primary text-white shadow-md shadow-primary/20"
-                : "border border-border/80 bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/50"
-            )}
-          >
-            All
-          </button>
-          {topCategories.map((cat) => (
-            <button
-              key={cat._id}
-              type="button"
-              onClick={() => {
-                const hasChildren = categories.some((c) => c.parentId === cat._id);
-                if (hasChildren) {
-                  onSelectCategory(cat._id, selectedParentId === cat._id ? null : cat._id);
-                } else {
-                  onSelectCategory(cat._id, null);
-                }
-              }}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-xl px-4.5 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-95",
-                selectedCategoryId === cat._id
-                  ? "text-white shadow-md shadow-primary/20"
-                  : "border border-border/80 bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/50"
-              )}
-              style={selectedCategoryId === cat._id ? { backgroundColor: cat.color } : {}}
-            >
-              <span>{cat.icon}</span>
-              {cat.name}
-              {categories.some((c) => c.parentId === cat._id) && (
-                <ChevronRight className="h-2.5 w-2.5" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={scrollCategoryRight}
-          className="hidden h-9 w-9 shrink-0 sm:flex"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {activeSubcategories.length > 0 && (
-        <div className="flex shrink-0 gap-2 overflow-x-auto px-2 pb-0.5 sm:px-0">
-          {activeSubcategories.map((sub) => (
-            <button
-              key={sub._id}
-              type="button"
-              onClick={() => onSubcategorySelect(sub._id)}
-              className={cn(
-                "shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
-                selectedCategoryId === sub._id
-                  ? "border-primary/30 bg-primary/10 text-primary"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {sub.icon} {sub.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="flex shrink-0 items-center justify-between gap-2 px-2 sm:px-0">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefetch}
-          disabled={prodIsRefetching}
-          className="h-9 gap-1.5"
-        >
-          <RefreshCw className={cn("h-3.5 w-3.5", prodIsRefetching && "animate-spin")} />
-          <span className="hidden xs:inline sm:inline">
-            {prodIsRefetching ? `${prodCooldownSeconds}s` : "Refetch"}
-          </span>
-        </Button>
-        {prodMeta && (
-          <span className="text-xs text-muted-foreground">
-            Page {prodPage} of {prodMeta.totalPages || 1}
-          </span>
-        )}
+        <div className="w-full sm:w-64 shrink-0">
+          <AsyncSelect
+            value={selectedCategoryOption}
+            onChange={onSelectCategoryOption}
+            loadOptions={loadCategoryFilterOptions}
+            placeholder="All Categories"
+            className="h-9"
+          />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {prodMeta && (
+            <span className="text-xs text-muted-foreground hidden xs:inline-block">
+              Page {prodPage} of {prodMeta.totalPages || 1}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefetch}
+            disabled={prodIsRefetching}
+            className="h-9 gap-1.5"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", prodIsRefetching && "animate-spin")} />
+            <span className="hidden xs:inline sm:inline">
+              {prodIsRefetching ? `${prodCooldownSeconds}s` : "Refetch"}
+            </span>
+          </Button>
+        </div>
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-y-auto p-2">
