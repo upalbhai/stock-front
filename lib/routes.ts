@@ -60,8 +60,10 @@ export const APP_ROUTES = {
   ADMIN_BUSINESSES: appRoute("/admin/businesses"),
   ADMIN_OUTLETS: appRoute("/admin/outlets"),
   ADMIN_USERS: appRoute("/admin/users"),
+  ADMIN_SUBSCRIPTIONS: appRoute("/admin/subscriptions"),
   ADMIN_AUDIT_LOGS: appRoute("/admin/audit-logs"),
   ADMIN_PLANS: appRoute("/admin/plans"),
+  ADMIN_SETTINGS: appRoute("/admin/settings"),
   customerDetail: (id: string) => appRoute(`/customers/${id}`),
   invoiceDetail: (id: string) => appRoute(`/invoices/${id}`),
 };

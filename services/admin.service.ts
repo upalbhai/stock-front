@@ -3,7 +3,7 @@ import { Business, AuditLog } from "@/lib/types";
 
 export const adminService = {
   getDashboardStats: async (token?: string | null) => {
-    return getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number }>("/admin/stats", token);
+    return getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number; activeSubscriptions: number; mrr: number; recentBusinesses: any[] }>("/admin/stats", token);
   },
   getAuditLogs: async (token?: string | null, params?: Record<string, any>) => {
     return getJson<{ logs?: AuditLog[]; data?: AuditLog[]; total?: number; meta?: any }>("/audit-logs", token, params);
@@ -13,6 +13,9 @@ export const adminService = {
   },
   getAdminBusinesses: async (token?: string | null, params?: { search?: string; status?: string; page?: number; limit?: number }) => {
     return getJson<{ businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[], total: number }>("/admin/businesses", token, params);
+  },
+  getAllSubscriptions: async (token?: string | null, params?: { search?: string; status?: string; page?: number; limit?: number }) => {
+    return getJson<{ subscriptions: any[], total: number }>("/admin/subscriptions", token, params);
   },
   approveOutlet: async (id: string, token?: string | null) => {
     return apiFetch(`/admin/outlets/${id}/approve`, { method: "PATCH", token });
@@ -40,5 +43,14 @@ export const adminService = {
   },
   sendSubscriptionEmail: async (businessId: string, token?: string | null) => {
     return apiFetch(`/admin/businesses/${businessId}/send-email`, { method: "POST", token });
+  },
+  createSystemAdmin: async (data: unknown, token?: string | null) => {
+    return apiFetch("/admin/system-users", { method: "POST", body: data, token });
+  },
+  getSettings: async (token?: string | null) => {
+    return getJson<{ settings: any }>("/admin/settings", token);
+  },
+  updateSettings: async (data: unknown, token?: string | null) => {
+    return apiFetch("/admin/settings", { method: "PUT", body: data, token });
   },
 };

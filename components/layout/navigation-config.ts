@@ -191,10 +191,11 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
     items: [
       {
         title: "Platform Dashboard",
-        path: APP_ROUTES.ADMIN_BUSINESSES,
+        path: APP_ROUTES.ADMIN,
         icon: Sparkles,
         keywords: ["dashboard", "stats", "overview", "platform"],
         roles: ["superadmin"],
+        feature: "dashboard"
       },
     ],
   },
@@ -207,6 +208,15 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         icon: Store,
         keywords: ["businesses", "clients", "accounts"],
         roles: ["superadmin"],
+        feature: "businesses"
+      },
+      {
+        title: "Subscriptions",
+        path: APP_ROUTES.ADMIN_SUBSCRIPTIONS,
+        icon: Receipt,
+        keywords: ["subscriptions", "billing"],
+        roles: ["superadmin"],
+        feature: "subscriptions"
       },
       {
         title: "Outlets",
@@ -214,6 +224,7 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         icon: Store,
         keywords: ["outlets", "branches"],
         roles: ["superadmin"],
+        feature: "businesses"
       },
       {
         title: "Users Registry",
@@ -221,6 +232,7 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         icon: Users,
         keywords: ["users", "accounts", "registry"],
         roles: ["superadmin"],
+        feature: "users"
       },
       {
         title: "Audit Trails",
@@ -228,6 +240,7 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         icon: ClipboardList,
         keywords: ["audit", "logs", "trails"],
         roles: ["superadmin"],
+        feature: "audit_logs"
       },
       {
         title: "Plans",
@@ -235,6 +248,15 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         icon: CreditCard,
         keywords: ["plans", "subscriptions", "pricing"],
         roles: ["superadmin"],
+        feature: "plans"
+      },
+      {
+        title: "Platform Settings",
+        path: APP_ROUTES.ADMIN_SETTINGS,
+        icon: Settings,
+        keywords: ["settings", "global", "configuration"],
+        roles: ["superadmin"],
+        feature: "settings"
       },
     ],
   },
