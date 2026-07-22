@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { adminService } from "@/services/admin.service";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/format";
 import Link from "next/link";
 import { APP_ROUTES } from "@/lib/routes";
 import { Badge } from "@/components/ui/badge";

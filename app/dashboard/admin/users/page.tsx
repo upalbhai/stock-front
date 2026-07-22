@@ -173,7 +173,7 @@ export default function AdminUsersPage() {
                 {SYSTEM_MODULES.map(mod => (
                   <Badge 
                     key={mod}
-                    variant={form.allowedModules.includes(mod) ? "default" : "outline"}
+                    variant={form.allowedModules.includes(mod) ? "default" : "soft"}
                     className="cursor-pointer capitalize text-xs px-3 py-1"
                     onClick={() => toggleModule(mod)}
                   >
