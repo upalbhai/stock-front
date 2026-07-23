@@ -12,7 +12,7 @@ import { APP_ROUTES } from "@/lib/routes";
 export type { AuthUser, UserRole } from "@/lib/types";
 
 type AuthResponse = { token: string; user: AuthUser };
-type RegisterPayload = { name: string; email: string; password?: string; phone?: string; businessName?: string; outletName?: string; outletId?: string };
+type RegisterPayload = { name: string; email: string; password?: string; phone?: string; businessName?: string; outletName?: string; outletId?: string; agentCode?: string };
 type EmailLoginPayload = { email: string; password?: string };
 
 type AuthContextValue = {

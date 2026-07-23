@@ -44,12 +44,47 @@ export default function LoginPage() {
     phone: "",
     code: "", // for otp/reset
     businessName: "",
-    outletName: ""
+    outletName: "",
+    agentCode: ""
   });
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const urlEmail = params.get("email");
+    const urlCode = params.get("code");
+    if (urlEmail && urlCode) {
+      setForm(prev => ({ ...prev, email: urlEmail, code: urlCode }));
+      setLoginStep("otp");
+      setLoading(true);
+      setSuccess("Verifying your login link...");
+      verifyOtp({ email: urlEmail, code: urlCode })
+        .then((res: any) => {
+          if (res?.message && !res?.token && !res?.user) {
+            setError(res.message);
+          } else {
+            const loggedInUser = res?.user || res;
+            if (loggedInUser?.role === "superadmin") {
+              router.push(APP_ROUTES.ADMIN);
+            } else if (loggedInUser?.role === "agent") {
+              router.push(APP_ROUTES.AGENT);
+            } else {
+              router.push(APP_ROUTES.DASHBOARD);
+            }
+          }
+        })
+        .catch(err => {
+          setError(getErrorMessage(err, "Verification failed"));
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [verifyOtp, router]);
 
 
 
@@ -95,6 +130,8 @@ export default function LoginPage() {
 
       if (loggedInUser?.role === "superadmin") {
         router.push(APP_ROUTES.ADMIN);
+      } else if (loggedInUser?.role === "agent") {
+        router.push(APP_ROUTES.AGENT);
       } else {
         router.push(APP_ROUTES.DASHBOARD);
       }
@@ -117,7 +154,8 @@ export default function LoginPage() {
         email: form.email,
         phone: form.phone || undefined,
         businessName: form.businessName,
-        outletName: form.outletName || `${form.businessName} Main`
+        outletName: form.outletName || `${form.businessName} Main`,
+        agentCode: form.agentCode || undefined
       });
 
       if ((res as any)?.message) {
@@ -282,6 +320,10 @@ export default function LoginPage() {
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">Phone (Optional)</label>
                   <Input type="tel" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="9876543210" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Referral Code (Optional)</label>
+                  <Input value={form.agentCode} onChange={(e) => handleChange("agentCode", e.target.value)} placeholder="e.g. AGT-JOHN-123" />
                 </div>
               </div>
             )}

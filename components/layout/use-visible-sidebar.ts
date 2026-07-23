@@ -5,6 +5,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
 import {
   adminSidebarGroups,
+  agentSidebarGroups,
   sidebarGroups,
   type SidebarGroupDef,
   type SidebarItem,
@@ -61,6 +62,9 @@ export function useVisibleSidebarGroups(): SidebarGroupDef[] {
 
     if (role === "superadmin" && !impersonating) {
       return filterGroups(adminSidebarGroups, role, user?.customPermissions, featureFlags);
+    }
+    if (role === "agent") {
+      return filterGroups(agentSidebarGroups, role, user?.customPermissions, featureFlags);
     }
     return filterGroups(sidebarGroups, role, user?.customPermissions, featureFlags);
   }, [role, impersonating, hasOrderHistory, hasCustomers, hasGstInvoices, user?.enabledFeatures, user?.customPermissions]);

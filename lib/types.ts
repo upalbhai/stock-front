@@ -1,4 +1,4 @@
-export type UserRole = "superadmin" | "owner" | "manager" | "staff";
+export type UserRole = "superadmin" | "owner" | "manager" | "staff" | "agent";
 
 export interface PaginationMeta {
   page: number;

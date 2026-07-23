@@ -20,6 +20,8 @@ import {
   TrendingUp,
   CreditCard,
   Sparkles,
+  UserCheck,
+  Banknote,
 } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { APP_ROUTES } from "@/lib/routes";
@@ -211,6 +213,22 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         feature: "businesses"
       },
       {
+        title: "Agents",
+        path: APP_ROUTES.ADMIN_AGENTS,
+        icon: UserCheck,
+        keywords: ["agents", "sales", "partners", "commission"],
+        roles: ["superadmin"],
+        feature: "agents"
+      },
+      {
+        title: "Manual Payments",
+        path: APP_ROUTES.ADMIN_PAYMENTS,
+        icon: Banknote,
+        keywords: ["payments", "verification", "manual", "proofs"],
+        roles: ["superadmin"],
+        feature: "payments"
+      },
+      {
         title: "Subscriptions",
         path: APP_ROUTES.ADMIN_SUBSCRIPTIONS,
         icon: Receipt,
@@ -262,9 +280,32 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
   },
 ];
 
+export const agentSidebarGroups: SidebarGroupDef[] = [
+  {
+    label: "Agent Portal",
+    items: [
+      {
+        title: "Dashboard",
+        path: APP_ROUTES.AGENT,
+        icon: LayoutDashboard,
+        keywords: ["dashboard", "stats", "overview", "agent"],
+        roles: ["agent"],
+      },
+      {
+        title: "Clients & Custom Plans",
+        path: APP_ROUTES.AGENT_CLIENTS,
+        icon: Users,
+        keywords: ["clients", "plans", "custom", "pricing"],
+        roles: ["agent"],
+      },
+    ],
+  },
+];
+
 export const allSidebarItems = [
   ...sidebarGroups.flatMap((g) => g.items),
   ...adminSidebarGroups.flatMap((g) => g.items),
+  ...agentSidebarGroups.flatMap((g) => g.items),
 ];
 
 export const bottomNavItems = [

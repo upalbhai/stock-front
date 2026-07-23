@@ -64,9 +64,19 @@ export function AppSidebar() {
             <SidebarGroupContent className="mt-1">
               <SidebarMenu>
                 {group.items.map((item) => {
-                  const isActive =
-                    pathname === item.path ||
-                    (item.path !== APP_ROUTES.DASHBOARD && pathname.startsWith(item.path + "/"));
+                  const isRootPath =
+                    item.path === APP_ROUTES.DASHBOARD ||
+                    item.path === APP_ROUTES.ADMIN ||
+                    item.path === APP_ROUTES.AGENT;
+
+                  const hasExactMatch = visibleSidebarGroups.some((g) =>
+                    g.items.some((i) => i.path === pathname)
+                  );
+
+                  const isActive = hasExactMatch
+                    ? pathname === item.path
+                    : pathname === item.path || (!isRootPath && pathname.startsWith(item.path + "/"));
+
                   const Icon = item.icon;
                   return (
                     <SidebarMenuItem key={item.path}>

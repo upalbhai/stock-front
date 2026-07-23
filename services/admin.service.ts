@@ -53,4 +53,19 @@ export const adminService = {
   updateSettings: async (data: unknown, token?: string | null) => {
     return apiFetch("/admin/settings", { method: "PUT", body: data, token });
   },
+  getAgents: async (token?: string | null) => {
+    return getJson<{ agents: any[] }>("/admin/agents", token);
+  },
+  approveAgent: async (id: string, data: any, token?: string | null) => {
+    return apiFetch(`/admin/agents/${id}/approve`, { method: "PUT", body: data, token });
+  },
+  createAgent: async (data: any, token?: string | null) => {
+    return apiFetch("/admin/agents", { method: "POST", body: data, token });
+  },
+  getManualPayments: async (token?: string | null, status?: string) => {
+    return getJson<{ payments: any[] }>(`/admin/payments/manual${status ? `?status=${status}` : ""}`, token);
+  },
+  verifyManualPayment: async (paymentId: string, token?: string | null) => {
+    return apiFetch(`/admin/payments/manual/${paymentId}/verify`, { method: "PUT", token });
+  },
 };

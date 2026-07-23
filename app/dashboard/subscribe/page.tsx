@@ -2,138 +2,108 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Script from "next/script";
-import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Sparkles, AlertCircle } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { AlertCircle, FileText, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
-import { apiFetch, apiFetchData, getJson } from "@/lib/api-client";
+import { apiFetch, getJson } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
-import { formatCurrency } from "@/lib/format";
 import { APP_ROUTES } from "@/lib/routes";
-import type { Plan } from "@/lib/types";
 
 export default function SubscribePage() {
   const router = useRouter();
   const { user, token, logout } = useAuth();
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("INR");
+  const [transactionId, setTransactionId] = useState("");
   const [error, setError] = useState<string | null>(null);
-
-  // const { data: plansData, isLoading: loadingPlans } = useQuery({
-  //   queryKey: ["plans"],
-  //   queryFn: () => getJson<{ plans: Plan[] }>("/plans")
-  // });
+  const [success, setSuccess] = useState<string | null>(null);
 
   const { data: statusData } = useQuery({
     queryKey: ["subscription-status"],
-    queryFn: () => getJson<{ subscriptionStatus: string, trialEndsAt: string, currentPeriodEnd: string, plan: Plan }>("/payments/status", token),
+    queryFn: () => getJson<any>("/payments/status", token),
     enabled: !!token
   });
 
   useEffect(() => {
-    // If user is superadmin, they shouldn't be here
     if (user?.role === "superadmin") {
       router.push(APP_ROUTES.ADMIN);
     }
   }, [user, router]);
 
-  // const handleSubscribe = async (plan: Plan) => {
-  //   if (!token) {
-  //     router.push(APP_ROUTES.LOGIN);
-  //     return;
-  //   }
+  const uploadMutation = useMutation({
+    mutationFn: (data: any) => apiFetch("/payments/manual", { method: "POST", body: data, token }),
+    onSuccess: () => {
+      setSuccess("Payment details uploaded successfully. Your account will be activated once verified by an admin.");
+      setAmount("");
+      setTransactionId("");
+    },
+    onError: (err) => {
+      setError(getErrorMessage(err, "Failed to upload payment details"));
+    }
+  });
 
-  //   setLoadingPlan(plan._id);
-  //   setError(null);
+  const requestGraceMutation = useMutation({
+    mutationFn: () => apiFetch("/payments/request-grace", { method: "POST", token }),
+    onSuccess: () => {
+      // Hard reload to update auth context from new session if needed, 
+      // or simply push to dashboard so it re-fetches.
+      window.location.href = APP_ROUTES.DASHBOARD;
+    },
+    onError: (err) => {
+      setError(getErrorMessage(err, "Failed to request grace period"));
+    }
+  });
 
-  //   try {
-  //     // 1. Create order
-  //     const orderData = await apiFetchData<{ orderId: string; keyId: string; amount: number; currency: string }>("/payments/create-order", {
-  //       method: "POST",
-  //       body: { planId: plan._id, billingCycle },
-  //       token
-  //     });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    if (!amount || !transactionId) {
+      setError("Please fill all required fields");
+      return;
+    }
+    
+    uploadMutation.mutate({
+      amount: Number(amount),
+      currency,
+      screenshotUrl: `TXN:${transactionId}`
+    });
+  };
 
-  //     if (!orderData.orderId) {
-  //       throw new Error("Failed to create order");
-  //     }
-
-  //     // 2. Open Razorpay checkout
-  //     const options = {
-  //       key: orderData.keyId,
-  //       amount: orderData.amount,
-  //       currency: orderData.currency,
-  //       name: "Mini Hisab",
-  //       description: `${plan.name} Plan (${billingCycle})`,
-  //       order_id: orderData.orderId,
-  //       handler: async function (response: any) {
-  //         // 3. Verify payment
-  //         try {
-  //           const verifyRes = await apiFetch<any>("/payments/verify", {
-  //             method: "POST",
-  //             body: {
-  //               razorpay_payment_id: response.razorpay_payment_id,
-  //               razorpay_order_id: response.razorpay_order_id,
-  //               razorpay_signature: response.razorpay_signature,
-  //               planId: plan._id,
-  //               billingCycle
-  //             },
-  //             token
-  //           });
-
-  //           if (verifyRes.success) {
-  //             // Force reload to update token and app state
-  //             window.location.href = APP_ROUTES.SUBSCRIBE_SUCCESS;
-  //           } else {
-  //             setError("Payment verification failed");
-  //           }
-  //         } catch (err) {
-  //           setError(getErrorMessage(err, "Failed to verify payment"));
-  //         }
-  //       },
-  //       prefill: {
-  //         name: user?.name || "",
-  //         email: "",
-  //         contact: ""
-  //       },
-  //       theme: {
-  //         color: "#4f46e5"
-  //       }
-  //     };
-
-  //     const rzp = new (window as any).Razorpay(options);
-  //     rzp.on("payment.failed", function (response: any) {
-  //       setError(`Payment failed: ${response.error.description}`);
-  //     });
-  //     rzp.open();
-
-  //   } catch (err) {
-  //     setError(getErrorMessage(err, "Payment initialization failed"));
-  //   } finally {
-  //     setLoadingPlan(null);
-  //   }
-  // };
-
-  // const plans = plansData?.plans || [];
-  const activePlanId = statusData?.plan?._id;
   const isTrialExpired = user?.trialExpired;
+  const isLocked = user?.subscriptionStatus === "payment_locked";
 
   return (
     <div className="min-h-screen py-12 px-4 bg-surface">
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
+      <div className="max-w-2xl mx-auto space-y-12">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold tracking-tight">Upload Payment Details</h1>
+          <p className="text-lg text-muted">Submit your manual payment transaction details to activate or renew your subscription.</p>
 
-      <div className="max-w-6xl mx-auto space-y-12">
-        {/* Header */}
-        <div className="text-center max-w-2xl mx-auto space-y-4">
-          <h1 className="text-4xl font-bold tracking-tight">Simple, transparent pricing</h1>
-          <p className="text-lg text-muted">Choose the plan that fits your business needs. Upgrade, downgrade, or cancel anytime.</p>
+          {isLocked && (
+            <div className="bg-danger/10 text-danger p-4 rounded-2xl flex flex-col items-center justify-center gap-4 mt-4">
+              <div className="flex items-center gap-2 animate-pulse">
+                <AlertCircle className="h-5 w-5" />
+                <span className="font-medium">Your account is locked. Please submit payment details to restore access.</span>
+              </div>
+              <Button 
+                variant="outline" 
+                className="bg-background text-danger hover:text-danger border-danger/50"
+                onClick={() => requestGraceMutation.mutate()}
+                disabled={requestGraceMutation.isPending}
+              >
+                {requestGraceMutation.isPending ? "Requesting..." : "Unlock for 3 Days to Pay"}
+              </Button>
+            </div>
+          )}
 
-          {isTrialExpired && (
-            <div className="bg-danger/10 text-danger p-4 rounded-2xl flex items-center justify-center gap-2 mt-4 animate-pulse">
+          {isTrialExpired && !isLocked && (
+            <div className="bg-warning/20 text-warning-foreground p-4 rounded-2xl flex items-center justify-center gap-2 mt-4">
               <AlertCircle className="h-5 w-5" />
-              <span className="font-medium">Your free trial has expired. Please select a plan to continue using Mini Hisab.</span>
+              <span className="font-medium">Your free trial has expired. Upload payment to continue.</span>
             </div>
           )}
 
@@ -143,108 +113,75 @@ export default function SubscribePage() {
               <span className="font-medium">{error}</span>
             </div>
           )}
+          
+          {success && (
+            <div className="bg-success/10 text-success p-4 rounded-2xl flex flex-col items-center justify-center gap-2 mt-4">
+              <CheckCircle2 className="h-8 w-8" />
+              <span className="font-bold text-lg">{success}</span>
+              <p className="text-sm">You can sign out while you wait for verification.</p>
+              <Button variant="outline" onClick={logout} className="mt-4">Sign Out</Button>
+            </div>
+          )}
         </div>
 
-        {/* Billing Toggle */}
-        {/* <div className="flex justify-center">
-          <div className="bg-border/40 p-1.5 rounded-2xl flex gap-1">
-            <button
-              onClick={() => setBillingCycle("monthly")}
-              className={`px-6 py-2.5 text-sm font-semibold rounded-xl transition ${billingCycle === "monthly" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
-            >
-              Monthly billing
-            </button>
-            <button
-              onClick={() => setBillingCycle("yearly")}
-              className={`px-6 py-2.5 text-sm font-semibold rounded-xl transition flex items-center gap-2 ${billingCycle === "yearly" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
-            >
-              Yearly billing
-              <span className="bg-success/20 text-success text-[10px] px-2 py-0.5 rounded-full">Save 20%</span>
-            </button>
-          </div>
-        </div> */}
-
-        {/* Pricing Cards */}
-        {/* {loadingPlans ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-3 gap-8 items-start">
-            {plans.map((plan) => {
-              const price = billingCycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
-              const isCurrentPlan = activePlanId === plan._id;
-
-              return (
-                <Card key={plan._id} className={`relative flex flex-col h-full rounded-3xl overflow-hidden transition-all duration-300 hover:shadow-soft ${plan.isPopular ? "border-primary shadow-soft scale-105 z-10" : "border-border/60"}`}>
-                  {plan.isPopular && (
-                    <div className="absolute top-0 inset-x-0 bg-primary text-primary-foreground text-xs font-bold text-center py-1.5 uppercase tracking-wider flex items-center justify-center gap-1">
-                      <Sparkles className="h-3.5 w-3.5" /> Most Popular
-                    </div>
-                  )}
-                  
-                  <CardHeader className={plan.isPopular ? "pt-10" : ""}>
-                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                    <CardDescription className="min-h-[40px]">{plan.description}</CardDescription>
-                    <div className="mt-4 flex items-baseline text-5xl font-extrabold">
-                      {formatCurrency(price, currency)}
-                      <span className="ml-1 text-xl font-medium text-muted">
-                        /{billingCycle === "yearly" ? "yr" : "mo"}
-                      </span>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="flex-1 space-y-6">
-                    <ul className="space-y-3 text-sm">
-                      <li className="flex items-center gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                        <span>Up to <strong>{plan.maxOutlets}</strong> outlets</span>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                        <span>Up to <strong>{plan.maxStaff}</strong> staff members</span>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                        <span>Up to <strong>{plan.maxProducts}</strong> products</span>
-                      </li>
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-
-                  <div className="p-6 pt-0">
-                    {isCurrentPlan ? (
-                      <Button className="w-full rounded-2xl py-6 bg-success text-success-foreground hover:bg-success" disabled>
-                        Current Plan
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="w-full rounded-2xl py-6 font-semibold" 
-                        variant={plan.isPopular ? "default" : "outline"}
-                        onClick={() => handleSubscribe(plan)}
-                        disabled={!!loadingPlan}
-                      >
-                        {loadingPlan === plan._id ? "Processing..." : "Subscribe Now"}
-                      </Button>
-                    )}
+        {!success && (
+          <Card className="shadow-lg border-border/50">
+            <CardHeader>
+              <CardTitle>Payment Information</CardTitle>
+              <CardDescription>
+                Transfer the agreed amount to the company account and enter the transaction ID below.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Amount Paid *</label>
+                  <div className="flex gap-2">
+                    <select 
+                      value={currency} 
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="flex h-10 w-24 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="INR">INR</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                    <Input 
+                      type="number" 
+                      required 
+                      value={amount} 
+                      onChange={(e) => setAmount(e.target.value)} 
+                      placeholder="e.g. 5000" 
+                      className="flex-1"
+                    />
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-        )} */}
+                </div>
 
-        {/* Footer Actions */}
-        {/* <div className="flex justify-center pt-8 border-t border-border/50">
-          <Button variant="ghost" onClick={logout} className="text-muted hover:text-text">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Transaction ID / Reference Number *</label>
+                  <Input 
+                    type="text" 
+                    required 
+                    value={transactionId} 
+                    onChange={(e) => setTransactionId(e.target.value)} 
+                    placeholder="e.g. UTR123456789" 
+                  />
+                  <p className="text-xs text-muted-foreground">This helps us verify your payment quickly.</p>
+                </div>
+
+                <Button type="submit" className="w-full h-12 text-lg" disabled={uploadMutation.isPending}>
+                  {uploadMutation.isPending ? "Submitting..." : "Submit Payment Details"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="flex justify-center pt-8 border-t border-border/50">
+          <Button variant="ghost" onClick={logout} className="text-muted-foreground hover:text-foreground">
             Sign Out
           </Button>
-        </div> */}
+        </div>
       </div>
     </div>
   );

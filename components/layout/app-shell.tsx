@@ -10,6 +10,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Lock,
 } from "lucide-react";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { BottomNav } from "@/components/layout/navigation";
@@ -116,6 +117,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ) {
       router.push(APP_ROUTES.ADMIN);
     }
+    
+    if (
+      user?.role === "agent" &&
+      !impersonating &&
+      pathname !== APP_ROUTES.AGENT &&
+      !pathname.startsWith(`${APP_ROUTES.AGENT}/`) &&
+      !isAuthRoute
+    ) {
+      router.push(APP_ROUTES.AGENT);
+    }
   }, [user, impersonating, pathname, isAuthRoute, router]);
 
   useEffect(() => {
@@ -138,6 +149,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <main className="min-h-svh px-4 py-10">{children}</main>;
   }
 
+  if (user?.subscriptionStatus === "payment_locked") {
+    return (
+      <div className="flex h-svh items-center justify-center bg-muted/30 p-4">
+        <div className="max-w-md w-full bg-card rounded-xl border border-border shadow-xl p-8 text-center animate-in fade-in zoom-in duration-500">
+          <div className="mx-auto bg-danger/10 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+            <Lock className="h-8 w-8 text-danger" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Account Locked</h1>
+          <p className="text-sm text-muted-foreground mb-8">
+            Your grace period has expired. Please complete your payment to resume access to the dashboard.
+          </p>
+          
+          <Button asChild className="w-full" size="lg">
+            <Link href={APP_ROUTES.SUBSCRIBE}>Upload Payment Details</Link>
+          </Button>
+
+          <div className="mt-8 pt-6 border-t border-border">
+            <Button variant="ghost" className="text-xs text-muted-foreground" onClick={logout}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <RequireAuth>
       <SidebarProvider defaultOpen className="h-svh overflow-hidden">
@@ -158,6 +195,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
               <Button size="xs" variant="default" className="h-6 shrink-0 rounded-full px-2.5 py-0 text-[10px] font-bold shadow-sm" asChild>
                 <Link href={APP_ROUTES.SUBSCRIBE}>Upgrade</Link>
+              </Button>
+            </div>
+          )}
+
+          {user?.subscriptionStatus === "grace_period" && (
+            <div className="flex shrink-0 animate-fade flex-row items-center justify-center gap-3 border-b border-warning/30 bg-warning/20 px-4 py-2 text-xs font-semibold text-warning-foreground">
+              <span className="leading-none flex items-center gap-2">
+                <span className="bg-warning w-2 h-2 rounded-full animate-pulse" />
+                GRACE PERIOD: Your subscription has expired. Please upload payment details immediately to prevent account lock.
+              </span>
+              <Button size="xs" variant="default" className="h-6 shrink-0 rounded-full px-2.5 py-0 text-[10px] font-bold shadow-sm" asChild>
+                <Link href={APP_ROUTES.SUBSCRIBE}>Pay Now</Link>
               </Button>
             </div>
           )}
