@@ -84,13 +84,13 @@ export function useBillingPage() {
 
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = React.useState<string[]>([]);
   const [selectedCategoryOption, setSelectedCategoryOption] = React.useState<any>(null);
   const [showSuccess, setShowSuccess] = React.useState(false);
-  const [showCheckout, setShowCheckout] = React.useState(false);
+  const [showPaymentView, setShowPaymentView] = React.useState(false);
   const [showScanner, setShowScanner] = React.useState(false);
   const [prodPage, setProdPage] = React.useState(1);
-  const [prodLimit, setProdLimit] = React.useState(12);
+  const [prodLimit, setProdLimit] = React.useState(20);
   const [prodIsRefetching, setProdIsRefetching] = React.useState(false);
   const [prodCooldownSeconds, setProdCooldownSeconds] = React.useState(0);
   const [unitPickProduct, setUnitPickProduct] = React.useState<Product | null>(
@@ -125,7 +125,7 @@ export function useBillingPage() {
     queryKey: [
       "products",
       outletId,
-      selectedCategoryId,
+      selectedCategoryIds,
       debouncedSearch,
       prodPage,
       prodLimit,
@@ -133,7 +133,7 @@ export function useBillingPage() {
     queryFn: () =>
       productService.getProductsWithOffset(token || "", {
         outletId: outletId ?? undefined,
-        categoryId: selectedCategoryId ?? undefined,
+        categoryId: selectedCategoryIds.length > 0 ? selectedCategoryIds.join(",") : undefined,
         search: debouncedSearch || undefined,
         page: prodPage,
         limit: prodLimit,
@@ -192,7 +192,7 @@ export function useBillingPage() {
       }
       dispatch(clearBill());
       setShowSuccess(true);
-      setShowCheckout(false);
+      setShowPaymentView(false);
       toast.success("Bill placed successfully");
       setTimeout(() => setShowSuccess(false), 3000);
       qc.invalidateQueries({ queryKey: ["report"] });
@@ -421,10 +421,10 @@ export function useBillingPage() {
     const paymentSplit =
       billing.paymentMethod === "split"
         ? {
-            cash: billing.payment.cash,
-            upi: billing.payment.upi,
-            card: billing.payment.card,
-          }
+          cash: billing.payment.cash,
+          upi: billing.payment.upi,
+          card: billing.payment.card,
+        }
         : undefined;
 
     let amountReceived = total;
@@ -574,13 +574,13 @@ export function useBillingPage() {
     paymentMethods,
     search,
     setSearch,
-    selectedCategoryId,
-    setSelectedCategoryId,
+    selectedCategoryIds,
+    setSelectedCategoryIds,
     selectedCategoryOption,
     setSelectedCategoryOption,
     showSuccess,
-    showCheckout,
-    setShowCheckout,
+    showPaymentView,
+    setShowPaymentView,
     showScanner,
     setShowScanner,
     prodPage,

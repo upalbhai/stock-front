@@ -198,8 +198,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <RequireAuth>
-      <SidebarProvider defaultOpen className="h-svh overflow-hidden">
-        <AppSidebar />
+        <SidebarProvider defaultOpen={!isBillingRoute} open={isBillingRoute ? false : undefined} className="h-svh overflow-hidden">
+        {!isBillingRoute && <AppSidebar />}
 
         <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {user?.subscriptionStatus === "trial" && user.trialEndsAt && (
@@ -251,7 +251,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-30 shrink-0 border-b border-border bg-card/95 backdrop-blur-md">
             <div className="flex h-14 items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4 lg:px-6">
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                <SidebarTrigger className="shrink-0 text-foreground transition-colors hover:bg-accent" />
+                {!isBillingRoute && (
+                  <SidebarTrigger className="shrink-0 text-foreground transition-colors hover:bg-accent" />
+                )}
 
                 {/* Mobile: current page title only */}
                 <span className="truncate text-sm font-semibold text-foreground sm:hidden">

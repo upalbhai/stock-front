@@ -42,7 +42,7 @@ export type SidebarGroupDef = {
 
 export const sidebarGroups: SidebarGroupDef[] = [
   {
-    label: "Operations",
+    label: "MyStore",
     items: [
       {
         title: "Dashboard",
@@ -51,6 +51,11 @@ export const sidebarGroups: SidebarGroupDef[] = [
         keywords: ["home", "stats", "overview", "analytics"],
         roles: ["owner", "manager", "staff"],
       },
+    ],
+  },
+  {
+    label: "Sales & Payments",
+    items: [
       {
         title: "Billing",
         path: APP_ROUTES.BILLING,
@@ -67,14 +72,6 @@ export const sidebarGroups: SidebarGroupDef[] = [
         feature: "order_history",
       },
       {
-        title: "Customers",
-        path: APP_ROUTES.CUSTOMERS,
-        icon: UserCircle,
-        keywords: ["customers", "clients", "khata"],
-        roles: ["owner", "manager"],
-        feature: "customers",
-      },
-      {
         title: "Invoices",
         path: APP_ROUTES.INVOICES,
         icon: FileText,
@@ -82,6 +79,11 @@ export const sidebarGroups: SidebarGroupDef[] = [
         roles: ["owner", "manager"],
         feature: "gst_invoices",
       },
+    ],
+  },
+  {
+    label: "Product & Catalog",
+    items: [
       {
         title: "Products",
         path: APP_ROUTES.PRODUCTS,
@@ -95,6 +97,14 @@ export const sidebarGroups: SidebarGroupDef[] = [
         icon: FolderOpen,
         keywords: ["categories", "groups"],
         roles: ["owner", "manager"],
+      },
+      {
+        title: "Customers",
+        path: APP_ROUTES.CUSTOMERS,
+        icon: UserCircle,
+        keywords: ["customers", "clients", "khata"],
+        roles: ["owner", "manager"],
+        feature: "customers",
       },
     ],
   },

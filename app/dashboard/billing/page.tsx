@@ -8,8 +8,9 @@ import { UnitPickerModal } from "@/components/billing/unit-picker";
 import { BillingSaleModeTabs } from "@/components/billing/billing-sale-mode-tabs";
 import { BillingProductPanel } from "@/components/billing/billing-product-panel";
 import { BillingCartPanel } from "@/components/billing/billing-cart-panel";
+import { BillingCategoryPanel } from "@/components/billing/billing-category-panel";
+import { BillingPaymentModal } from "@/components/billing/billing-payment-modal";
 import { MobileCartBar } from "@/components/billing/mobile-cart-bar";
-import { CheckoutSheet } from "@/components/billing/checkout-sheet";
 import { useBillingPage } from "@/hooks/use-billing-page";
 import { useGlobalBarcodeScanner } from "@/hooks/use-global-barcode-scanner";
 
@@ -91,54 +92,68 @@ export default function BillingPage() {
         onSaleModeChange={b.handleSaleModeChange}
       />
 
-      <div className="relative flex min-h-0 flex-1 flex-col gap-2 overflow-hidden lg:flex-row p-2">
-        <BillingProductPanel
-          search={b.search}
-          onSearchChange={b.setSearch}
-          onSearchEnter={() => b.handleBarcodeScanned(b.search.trim())}
-          onOpenScanner={() => b.setShowScanner(true)}
-          selectedCategoryOption={b.selectedCategoryOption}
-          onSelectCategoryOption={(opt: any) => {
-            if (!opt || (Array.isArray(opt) && opt.length === 0)) {
+      <div className="relative flex min-h-0 flex-1 flex-col gap-2 lg:gap-4 overflow-hidden lg:flex-row">
+        {/* Category Sidebar (desktop) / Pill Bar (mobile) */}
+        <BillingCategoryPanel
+          selectedCategoryIds={b.selectedCategoryIds}
+          onSelectCategory={(id, option) => {
+            if (!id) {
+              // "All Categories" selected
               b.setSelectedCategoryOption(null);
-              b.setSelectedCategoryId(null);
+              b.setSelectedCategoryIds([]);
             } else {
-              const selected = Array.isArray(opt) ? opt[0] : opt;
-              b.setSelectedCategoryOption(selected.id === "" ? null : selected);
-              b.setSelectedCategoryId(selected.id === "" ? null : selected.id);
+              // Toggle category
+              b.setSelectedCategoryOption(option);
+              b.setSelectedCategoryIds((prev: string[]) => 
+                prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+              );
             }
             b.setProdPage(1);
           }}
-          prodIsRefetching={b.prodIsRefetching}
-          prodCooldownSeconds={b.prodCooldownSeconds}
-          onRefetch={b.handleProdRefetch}
-          products={b.products}
-          productsFetching={b.productsFetching}
-          prodMeta={b.prodMeta}
-          prodPage={b.prodPage}
-          prodLimit={b.prodLimit}
-          onPageChange={b.setProdPage}
-          onPageSizeChange={b.setProdLimit}
-          cartItems={b.billing.items}
-          isWholesale={b.isWholesale}
-          onAddProduct={b.handleAddProduct}
         />
 
+        {/* Products */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <BillingProductPanel
+            search={b.search}
+            onSearchChange={b.setSearch}
+            onSearchEnter={() => b.handleBarcodeScanned(b.search.trim())}
+            onOpenScanner={() => b.setShowScanner(true)}
+            prodIsRefetching={b.prodIsRefetching}
+            prodCooldownSeconds={b.prodCooldownSeconds}
+            onRefetch={b.handleProdRefetch}
+            products={b.products}
+            productsFetching={b.productsFetching}
+            prodMeta={b.prodMeta}
+            prodPage={b.prodPage}
+            prodLimit={b.prodLimit}
+            onPageChange={b.setProdPage}
+            onPageSizeChange={b.setProdLimit}
+            cartItems={b.billing.items}
+            isWholesale={b.isWholesale}
+            onAddProduct={b.handleAddProduct}
+          />
+        </div>
+
         <div className="hidden min-h-0 w-80 shrink-0 flex-col overflow-hidden xl:w-96 lg:flex">
-          <BillingCartPanel variant="desktop" {...sharedCartProps} />
+          <BillingCartPanel 
+            variant="desktop" 
+            onProceedToPayment={() => b.setShowPaymentView(true)}
+            {...sharedCartProps} 
+          />
         </div>
       </div>
 
       <MobileCartBar
         itemCount={b.cartItemCount}
         total={b.total}
-        hidden={b.showCheckout}
-        onOpenCheckout={() => b.setShowCheckout(true)}
+        hidden={b.showPaymentView}
+        onOpenCheckout={() => b.setShowPaymentView(true)}
       />
 
-      <CheckoutSheet
-        open={b.showCheckout}
-        onOpenChange={b.setShowCheckout}
+      <BillingPaymentModal
+        open={b.showPaymentView}
+        onClose={() => b.setShowPaymentView(false)}
         {...sharedCartProps}
       />
 

@@ -124,20 +124,14 @@ export function BillingCartPanel({
   setEditingPriceId,
   setEditPriceValue,
   onCheckout,
+  onProceedToPayment,
   onOpenPrinterSettings,
   printerConnected,
-}: BillingCartPanelProps) {
+}: BillingCartPanelProps & { onProceedToPayment?: () => void }) {
   const { user } = useAuth();
   const userCurrency = user?.currency || "INR";
   
   const isSheet = variant === "sheet";
-  const [step, setStep] = useState<"cart" | "payment">("cart");
-
-  useEffect(() => {
-    if (billing.items.length === 0 && step === "payment") {
-      setStep("cart");
-    }
-  }, [billing.items.length, step]);
 
   return (
     <div
@@ -148,7 +142,7 @@ export function BillingCartPanel({
     >
       {isSheet && (
         <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="text-base font-bold">{step === "cart" ? "Your Cart" : "Payment Options"}</h2>
+          <h2 className="text-base font-bold">Your Cart</h2>
           {onClose && (
             <Button variant="ghost" size="sm" onClick={onClose}>
               Close
@@ -186,73 +180,36 @@ export function BillingCartPanel({
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        {step === "cart" ? (
-          billing.items.length === 0 ? (
-            <div className="flex h-full min-h-[12rem] flex-col items-center justify-center py-8 text-center">
-              <ShoppingBag className="h-12 w-12 text-muted-foreground/30" />
-              <p className="mt-3 text-sm text-muted-foreground">Cart is empty</p>
-              <p className="text-xs text-muted-foreground/70">
-                Tap a product to add it
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {billing.items.map((item) => (
-                <BillingCartLine
-                  key={item.cartLineId}
-                  item={item}
-                  isWholesale={isWholesale}
-                  isEditing={editingPriceId === item.cartLineId}
-                  editPriceValue={editPriceValue}
-                  onEditPriceValue={setEditPriceValue}
-                  onStartEdit={() => {
-                    setEditingPriceId(item.cartLineId);
-                    setEditPriceValue(String(item.price));
-                  }}
-                  onCommitEdit={(price) => {
-                    dispatch.updateLinePrice({
-                      cartLineId: item.cartLineId,
-                      price,
-                    });
-                    setEditingPriceId(null);
-                  }}
-                  onCancelEdit={() => setEditingPriceId(null)}
-                  onUpdateQty={(qty) =>
-                    dispatch.updateQty({ cartLineId: item.cartLineId, qty })
-                  }
-                  onRemove={() => dispatch.removeItem(item.cartLineId)}
-                />
-              ))}
-            </div>
-          )
-        ) : (
-          <div className="space-y-4 pb-4 animate-in slide-in-from-right-4 fade-in duration-300">
-            <BillingPaymentSection
-              paymentMethods={paymentMethods}
-              selectedMethod={
-                billing.paymentMethod as (typeof PAYMENT_METHODS)[number]["value"]
-              }
-              isKhataPayment={isKhataPayment}
-              payment={billing.payment}
-              onSelectMethod={(method) => {
-                dispatch.setPaymentMethod(method);
-                if (method === "credit") dispatch.setCreditSale(true);
-              }}
-              onSplitAmountChange={(field, value) =>
-                dispatch.setPaymentAmount({ field, value })
-              }
-            />
-
-            {isKhataPayment && hasCreditKhata && (
-              <BillingKhataSection
-                total={total}
-                amountReceived={billing.amountReceived}
-                amountDuePreview={amountDuePreview}
-                hasCustomer={Boolean(billing.customerId)}
-                onAmountChange={(n) => dispatch.setAmountReceived(n)}
+          <div className="space-y-2">
+            {billing.items.map((item) => (
+              <BillingCartLine
+                key={item.cartLineId}
+                item={item}
+                isWholesale={isWholesale}
+                isEditing={editingPriceId === item.cartLineId}
+                editPriceValue={editPriceValue}
+                onEditPriceValue={setEditPriceValue}
+                onStartEdit={() => {
+                  setEditingPriceId(item.cartLineId);
+                  setEditPriceValue(String(item.price));
+                }}
+                onCommitEdit={(price) => {
+                  dispatch.updateLinePrice({
+                    cartLineId: item.cartLineId,
+                    price,
+                  });
+                  setEditingPriceId(null);
+                }}
+                onCancelEdit={() => setEditingPriceId(null)}
+                onUpdateQty={(qty) =>
+                  dispatch.updateQty({ cartLineId: item.cartLineId, qty })
+                }
+                onRemove={() => dispatch.removeItem(item.cartLineId)}
               />
-            )}
+            ))}
+          </div>
 
+          <div className="space-y-4 pt-4 animate-in slide-in-from-right-4 fade-in duration-300">
             {showCustomerSection && (
               <CustomerPicker
                 token={token}
@@ -293,28 +250,7 @@ export function BillingCartPanel({
                 </span>
               </label>
             )}
-
-            <div className="space-y-2 pt-4 border-t border-border/50">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Order Summary</h3>
-              <div className="space-y-1.5 bg-muted/10 rounded-xl p-3 border border-border/50 max-h-[235px] overflow-y-auto">
-                {billing.items.map((item) => {
-                  const lineQty = item.soldQty ?? item.qty;
-                  return (
-                    <div key={item.cartLineId} className="flex justify-between items-start gap-2 text-sm">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-foreground/90">{lineQty}x {item.name}</p>
-                        <p className="text-[11px] text-muted-foreground/70">{formatCurrency(item.price, userCurrency)} / {item.soldUnit ?? item.unit}</p>
-                      </div>
-                      <span className="shrink-0 font-semibold text-foreground/90">
-                        {formatCurrency(item.price * lineQty, userCurrency)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
-        )}
       </div>
 
       <div className="shrink-0 space-y-3 border-t border-border p-3">
@@ -334,8 +270,8 @@ export function BillingCartPanel({
                 min={0}
                 value={billing.discount || ""}
                 onChange={(e) => dispatch.setDiscount(Number(e.target.value))}
-                className="h-[38px] w-[100px] pl-7 pr-3 text-right text-sm font-semibold bg-muted/20 border-border/60 hover:bg-muted/40 transition-colors focus:bg-background"
-                placeholder="0"
+                className="h-[38px] w-[120px] pl-9 pr-3 text-right text-sm font-semibold border-input bg-background placeholder:font-normal focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                placeholder="Discount"
               />
             </div>
           </div>
@@ -429,75 +365,42 @@ export function BillingCartPanel({
         </div>
 
         <div className="flex gap-2">
-          {step === "cart" ? (
-            <>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 shrink-0"
-                onClick={() => dispatch.clearBill()}
-                disabled={billing.items.length === 0}
-                aria-label="Clear cart"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <Button
-                className="h-12 flex-1 gap-2 text-[15px] font-bold"
-                onClick={() => setStep("payment")}
-                disabled={billing.items.length === 0}
-              >
-                <span>Proceed to Payment</span>
-                <ArrowRight className="h-4.5 w-4.5" />
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 shrink-0"
-                onClick={() => setStep("cart")}
-                aria-label="Back to Cart"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              {onOpenPrinterSettings && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="relative h-12 w-12 shrink-0"
-                  onClick={onOpenPrinterSettings}
-                  title="Printer settings"
-                  aria-label="Printer settings"
-                >
-                  <Settings2 className="h-4 w-4" />
-                  <span
-                    className={cn(
-                      "absolute right-1.5 top-1.5 h-2 w-2 rounded-full",
-                      printerConnected ? "bg-green-500" : "bg-muted-foreground/30",
-                    )}
-                  />
-                </Button>
-              )}
-              <Button
-                className="h-12 flex-1 gap-2 text-[15px] font-bold bg-green-600 hover:bg-green-700 text-white shadow-md shadow-green-600/20"
-                onClick={onCheckout}
-                disabled={
-                  billing.items.length === 0 || submitPending || outletMissing
-                }
-                title={outletMissing ? "Please select an outlet" : undefined}
-              >
-                {submitPending ? (
-                  <span className="animate-pulse">Processing...</span>
-                ) : (
-                  <>
-                    <Printer className="h-4.5 w-4.5" />
-                    Place Bill — {formatCurrency(total, userCurrency)}
-                  </>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 shrink-0"
+            onClick={() => dispatch.clearBill()}
+            disabled={billing.items.length === 0}
+            aria-label="Clear cart"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+          {onOpenPrinterSettings && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="relative h-12 w-12 shrink-0"
+              onClick={onOpenPrinterSettings}
+              title="Printer settings"
+              aria-label="Printer settings"
+            >
+              <Settings2 className="h-4 w-4" />
+              <span
+                className={cn(
+                  "absolute right-1.5 top-1.5 h-2 w-2 rounded-full",
+                  printerConnected ? "bg-green-500" : "bg-muted-foreground/30",
                 )}
-              </Button>
-            </>
+              />
+            </Button>
           )}
+          <Button
+            className="h-12 flex-1 gap-2 text-[15px] font-bold"
+            onClick={() => onProceedToPayment?.()}
+            disabled={billing.items.length === 0}
+          >
+            <span>Proceed to Payment</span>
+            <ArrowRight className="h-4.5 w-4.5" />
+          </Button>
         </div>
 
         {outletMissing && (
