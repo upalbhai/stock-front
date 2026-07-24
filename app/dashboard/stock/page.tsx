@@ -811,9 +811,9 @@ export default function StockPage() {
             onRefetch={() => refetchHistory()}
             placeholderText="Search product, SKU, or note..."
             emptyStateText={
-              query.historyDirection === "in" ? "No stock in entries for this filter." 
-              : query.historyDirection === "out" ? "No stock out entries for this filter." 
-              : "No stock entries for this filter."
+              query.historyDirection === "in" ? "No stock in entries for this filter."
+                : query.historyDirection === "out" ? "No stock out entries for this filter."
+                  : "No stock entries for this filter."
             }
             filters={historyFilters}
             columns={historyColumns}
@@ -954,7 +954,7 @@ export default function StockPage() {
                   <Input
                     type="number"
                     min={0}
-                    step="0.01"
+                    step="0.001"
                     value={adjustSellPrice}
                     onChange={(e) => setAdjustSellPrice(e.target.value)}
                     placeholder="What you will sell at"
