@@ -149,6 +149,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <main className="min-h-svh px-4 py-10">{children}</main>;
   }
 
+  if (user?.maintenanceMode && user?.role !== "superadmin") {
+    return (
+      <div className="flex h-svh flex-col items-center justify-center bg-muted/30 p-4 text-center">
+        <div className="max-w-md w-full bg-card rounded-xl border border-border shadow-xl p-8 animate-in fade-in zoom-in duration-500">
+          <div className="mx-auto bg-warning/10 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+            <Lock className="h-8 w-8 text-warning" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Under Maintenance</h1>
+          <p className="text-sm text-muted-foreground mb-8">
+            The system is currently undergoing scheduled maintenance. Please try again later.
+          </p>
+          <div className="pt-6 border-t border-border">
+            <Button variant="outline" className="w-full" onClick={logout}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (user?.subscriptionStatus === "payment_locked" && pathname !== APP_ROUTES.SUBSCRIBE) {
     return (
       <div className="flex h-svh items-center justify-center bg-muted/30 p-4">

@@ -28,6 +28,11 @@ export function GlobalSocketListener() {
       }
     };
 
+    // Fetch user on connect/reconnect to sync any missed updates while offline
+    if (user?.id) {
+      handleSubscriptionUpdated();
+    }
+
     const handleUnreadCount = (data: { count: number }) => {
       if (user?.id) {
         queryClient.setQueryData(["notifications", "unread-count", user.id], data.count);
@@ -46,11 +51,13 @@ export function GlobalSocketListener() {
     };
 
     socket.on("subscriptionUpdated", handleSubscriptionUpdated);
+    socket.on("maintenanceUpdated", handleSubscriptionUpdated);
     socket.on("notification:unread-count", handleUnreadCount);
     socket.on("notification:new", handleNewNotification);
 
     return () => {
       socket.off("subscriptionUpdated", handleSubscriptionUpdated);
+      socket.off("maintenanceUpdated", handleSubscriptionUpdated);
       socket.off("notification:unread-count", handleUnreadCount);
       socket.off("notification:new", handleNewNotification);
     };

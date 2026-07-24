@@ -40,6 +40,7 @@ export type AuthUser = {
   preferredLoginMethod?: "password" | "otp";
   currency?: string;
   outlets?: Outlet[];
+  maintenanceMode?: boolean;
 };
 
 export type Plan = {

@@ -14,11 +14,23 @@ import { APP_ROUTES } from "@/lib/routes";
 export default function AgentRootPage() {
   const { token } = useAuth();
 
+  const [selectedCurrency, setSelectedCurrency] = React.useState<string>("INR");
+
   const { data, isLoading } = useQuery({
     queryKey: ["agent-stats"],
     queryFn: () => agentService.getStats(token!),
     enabled: Boolean(token)
   });
+
+  // Effect to auto-select the first available currency if wallets exist and current isn't valid
+  React.useEffect(() => {
+    if (data?.wallets?.length) {
+      const hasCurrency = data.wallets.some((w: any) => w.currency === selectedCurrency);
+      if (!hasCurrency) {
+        setSelectedCurrency(data.wallets[0].currency);
+      }
+    }
+  }, [data, selectedCurrency]);
 
   if (isLoading) {
     return (
@@ -43,7 +55,8 @@ export default function AgentRootPage() {
   }
 
   const stats = data;
-  const mainWallet = stats?.wallets?.[0] || { currency: "INR", pending: 0, paid: 0 };
+  const availableCurrencies = stats?.wallets?.map((w: any) => w.currency) || ["INR"];
+  const activeWallet = stats?.wallets?.find((w: any) => w.currency === selectedCurrency) || { currency: selectedCurrency, totalSales: 0, pending: 0, paid: 0 };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -54,22 +67,35 @@ export default function AgentRootPage() {
             Overview of your sales, clients, and commissions.
           </p>
         </div>
-        {stats?.agentCode && (
-          <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-md font-mono text-sm border border-primary/20">
-            Ref Code: <span className="font-bold">{stats.agentCode}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {availableCurrencies.length > 0 && (
+            <select
+              value={selectedCurrency}
+              onChange={(e) => setSelectedCurrency(e.target.value)}
+              className="h-9 rounded-md border border-input bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-semibold text-primary"
+            >
+              {availableCurrencies.map((cur: string) => (
+                <option key={cur} value={cur}>{cur} Wallet</option>
+              ))}
+            </select>
+          )}
+          {stats?.agentCode && (
+            <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-md font-mono text-sm border border-primary/20">
+              Ref Code: <span className="font-bold">{stats.agentCode}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-card to-card/50 shadow-sm border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sales</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sales ({activeWallet.currency})</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(stats?.totalSales || 0, "INR")}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total revenue generated</p>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(activeWallet.totalSales || 0, activeWallet.currency)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Revenue generated in {activeWallet.currency}</p>
           </CardContent>
         </Card>
 
@@ -97,12 +123,12 @@ export default function AgentRootPage() {
 
         <Card className="bg-gradient-to-br from-card to-card/50 shadow-sm border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payout</CardTitle>
-            <Wallet className="h-4 w-4 text-purple-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payout ({activeWallet.currency})</CardTitle>
+            <Wallet className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(mainWallet.pending, mainWallet.currency)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Already Paid: {formatCurrency(mainWallet.paid, mainWallet.currency)}</p>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(activeWallet.pending || 0, activeWallet.currency)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Already Paid: {formatCurrency(activeWallet.paid || 0, activeWallet.currency)}</p>
           </CardContent>
         </Card>
       </div>

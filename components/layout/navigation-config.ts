@@ -229,6 +229,14 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         feature: "payments"
       },
       {
+        title: "Plan Requests",
+        path: APP_ROUTES.ADMIN_PLAN_REQUESTS,
+        icon: Receipt,
+        keywords: ["plan", "requests", "custom", "approval"],
+        roles: ["superadmin"],
+        feature: "plans"
+      },
+      {
         title: "Subscriptions",
         path: APP_ROUTES.ADMIN_SUBSCRIPTIONS,
         icon: Receipt,

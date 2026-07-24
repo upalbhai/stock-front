@@ -146,20 +146,49 @@ export default function AgentClientsPage() {
     },
     {
       header: "Custom Plan",
-      render: (client) => {
+      render: (client: any) => {
+        if (client.pendingCustomPlan) {
+          return (
+            <div className="text-xs space-y-0.5">
+              <Badge variant="warning" className="mb-1">Pending Approval</Badge>
+              <div className="font-semibold text-foreground mt-1">
+                Requested: {formatCurrency(client.pendingCustomPlan.price, client.pendingCustomPlan.currency || "INR")} / mo
+              </div>
+              <div className="text-muted-foreground">
+                {client.pendingCustomPlan.maxProducts || 50} Products • {client.pendingCustomPlan.maxOutlets || 1} Outlet(s)
+              </div>
+            </div>
+          );
+        }
+
         const price = client.customPlanDetails?.price ?? 0;
         const currency = client.customPlanDetails?.currency || "INR";
         const maxProducts = client.customPlanDetails?.maxProducts ?? 50;
         const maxOutlets = client.customPlanDetails?.maxOutlets ?? 1;
 
         return (
-          <div className="text-xs space-y-0.5">
+          <div className="text-xs space-y-0.5 relative group">
             <div className="font-semibold text-foreground">
               {formatCurrency(price, currency)} / mo
             </div>
             <div className="text-muted-foreground">
               {maxProducts} Products • {maxOutlets} Outlet(s)
             </div>
+            {!client.pendingCustomPlan && client.lastPlanRequestStatus && (
+              <div className="mt-1">
+                {client.lastPlanRequestStatus.status === "rejected" ? (
+                  <div className="text-destructive font-medium">
+                    Last request rejected
+                    {client.lastPlanRequestStatus.reason && `: ${client.lastPlanRequestStatus.reason}`}
+                  </div>
+                ) : (
+                  <div className="text-success font-medium">
+                    Last request approved
+                    {client.lastPlanRequestStatus.reason && `: ${client.lastPlanRequestStatus.reason}`}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       },
@@ -175,11 +204,13 @@ export default function AgentClientsPage() {
     },
     {
       header: "Action",
-      render: (client) => (
+      render: (client: any) => (
         <Button
           variant="outline"
           size="sm"
           onClick={() => handleOpenManagePlan(client)}
+          disabled={!!client.pendingCustomPlan}
+          title={client.pendingCustomPlan ? "A plan change is currently pending admin approval" : "Manage Plan"}
         >
           Manage Plan
         </Button>

@@ -71,4 +71,13 @@ export const adminService = {
   resendManualPaymentInvoice: async (paymentId: string, token?: string | null) => {
     return apiFetch(`/admin/payments/manual/${paymentId}/resend-invoice`, { method: "POST", token });
   },
+  getPendingPlanRequests: async (token?: string | null, params?: { search?: string; page?: number; limit?: number }) => {
+    return getJsonWithMeta<{ requests: any[] }>("/admin/businesses/pending-plans", token, params);
+  },
+  approvePlanRequest: async (businessId: string, reason: string, token?: string | null) => {
+    return apiFetch(`/admin/businesses/${businessId}/approve-plan`, { method: "POST", body: { reason }, token });
+  },
+  rejectPlanRequest: async (businessId: string, reason: string, token?: string | null) => {
+    return apiFetch(`/admin/businesses/${businessId}/reject-plan`, { method: "POST", body: { reason }, token });
+  }
 };
