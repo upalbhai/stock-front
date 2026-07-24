@@ -3,7 +3,7 @@ import { Business, AuditLog } from "@/lib/types";
 
 export const adminService = {
   getDashboardStats: async (token?: string | null) => {
-    return getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number; activeSubscriptions: number; mrr: number; recentBusinesses: any[] }>("/admin/stats", token);
+    return getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number; activeSubscriptions: number; mrrByCurrency: {currency: string, mrr: number, grossMrr: number}[]; recentBusinesses: any[] }>("/admin/stats", token);
   },
   getAuditLogs: async (token?: string | null, params?: Record<string, any>) => {
     return getJson<{ logs?: AuditLog[]; data?: AuditLog[]; total?: number; meta?: any }>("/audit-logs", token, params);
@@ -32,6 +32,9 @@ export const adminService = {
   updateBusinessPlan: async (id: string, data: unknown, token?: string | null) => {
     return apiFetch(`/admin/businesses/${id}/plan`, { method: "PATCH", body: data, token });
   },
+  getPlanRequestHistory: async (id: string, token?: string | null) => {
+    return getJson<{ logs: any[] }>(`/admin/businesses/${id}/plan-history`, token);
+  },
   manualSubscription: async (data: unknown, token?: string | null) => {
     return apiFetch("/admin/subscriptions/manual", { method: "POST", body: data, token });
   },
@@ -56,11 +59,20 @@ export const adminService = {
   getAgents: async (token?: string | null) => {
     return getJson<{ agents: any[] }>("/admin/agents", token);
   },
+  getAgentPerformanceStats: async (token?: string | null) => {
+    return getJson<{ stats: any[] }>("/admin/agents/performance", token);
+  },
   approveAgent: async (id: string, data: any, token?: string | null) => {
     return apiFetch(`/admin/agents/${id}/approve`, { method: "PUT", body: data, token });
   },
   createAgent: async (data: any, token?: string | null) => {
     return apiFetch("/admin/agents", { method: "POST", body: data, token });
+  },
+  getPayoutRequests: async (token?: string | null) => {
+    return getJson<{ requests: any[] }>("/admin/payout-requests", token);
+  },
+  processPayoutRequest: async (id: string, payload: any, token?: string | null) => {
+    return apiFetch(`/admin/payout-requests/${id}/process`, { method: "POST", body: payload, token });
   },
   getManualPayments: async (token?: string | null, params?: { status?: string; page?: number; limit?: number }) => {
     return getJsonWithMeta<{ payments: any[] }>("/admin/payments/manual", token, params);

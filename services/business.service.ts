@@ -8,4 +8,7 @@ export const businessService = {
   updateBusiness: async (id: string, data: unknown, token?: string | null) => {
     return apiFetch(`/businesses/mine`, { method: "PATCH", body: data, token });
   },
+  requestCustomPlan: async (data: { maxOutlets: number, maxProducts: number, features: string[], notes: string }, token?: string | null) => {
+    return apiFetch(`/businesses/mine/request-plan`, { method: "POST", body: data, token });
+  },
 };

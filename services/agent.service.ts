@@ -2,11 +2,12 @@ import { apiFetch, getJson, getJsonWithMeta } from "@/lib/api-client";
 import { PaginationMeta } from "@/lib/types";
 
 export interface AgentStats {
-  totalSales: number;
-  wallets: { currency: string; pending: number; paid: number }[];
+  totalSales?: number;
+  wallets: { currency: string; totalSales?: number; pending: number; paid: number }[];
   commissionPercentage: number;
   activeClients: number;
   agentCode: string;
+  pendingRequests?: any[];
 }
 
 export interface AgentClient {
@@ -41,5 +42,18 @@ export const agentService = {
 
   updateCustomPlan: async (businessId: string, data: any, token: string) => {
     return apiFetch(`/agent/clients/${businessId}/custom-plan`, { method: "PUT", body: data, token });
+  },
+
+  requestPayout: async (data: { currency: string; amount: number }, token: string) => {
+    return apiFetch("/agent/payout-requests", { method: "POST", body: data, token });
+  },
+
+  getPlanRequestHistory: async (businessId: string, token: string) => {
+    return getJson<{ logs: any[] }>(`/agent/clients/${businessId}/plan-history`, token);
+  },
+
+  getWalletHistory: async (token: string, currency?: string) => {
+    const params = currency ? { currency } : undefined;
+    return getJson<{ transactions: any[] }>("/agent/wallet/history", token, params);
   }
 };

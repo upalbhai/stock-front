@@ -3,7 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Edit3, CheckCircle2, DollarSign, LogIn, Mail, MoreHorizontal } from "lucide-react";
+import { Search, Edit3, CheckCircle2, DollarSign, LogIn, Mail, MoreHorizontal, History } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,9 @@ export default function AdminBusinessesPage() {
   const [previewBusinessId, setPreviewBusinessId] = React.useState("");
   const [isSendingEmail, setIsSendingEmail] = React.useState(false);
   const [selectedBusiness, setSelectedBusiness] = React.useState<Business | null>(null);
+
+  const [showHistoryModal, setShowHistoryModal] = React.useState(false);
+  const [historyBusiness, setHistoryBusiness] = React.useState<Business | null>(null);
   
   const [showImpersonateModal, setShowImpersonateModal] = React.useState(false);
   const [impersonateTargetBusiness, setImpersonateTargetBusiness] = React.useState<Business | null>(null);
@@ -71,6 +74,12 @@ export default function AdminBusinessesPage() {
     queryKey: ["plans", "all"],
     queryFn: () => planService.getAllPlans(token),
     enabled: Boolean(token)
+  });
+
+  const { data: historyData, isLoading: loadingHistory } = useQuery({
+    queryKey: ["admin-plan-history", historyBusiness?._id],
+    queryFn: () => adminService.getPlanRequestHistory(historyBusiness!._id, token!),
+    enabled: Boolean(token && historyBusiness)
   });
 
   const { data: usersData, isLoading: loadingUsers } = useQuery({
@@ -260,6 +269,9 @@ export default function AdminBusinessesPage() {
               <DropdownMenuItem onClick={() => openPlanEdit(b)}>
                 <Edit3 className="mr-2 h-4 w-4" /> Settings
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setHistoryBusiness(b); setShowHistoryModal(true); }}>
+                <History className="mr-2 h-4 w-4" /> Plan History
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openManualSub(b)}>
                 <DollarSign className="mr-2 h-4 w-4" /> Manual Sub
               </DropdownMenuItem>
@@ -409,6 +421,52 @@ export default function AdminBusinessesPage() {
           </div>
         </Modal>
       )}
+
+      {showHistoryModal && historyBusiness && (
+        <Modal
+          open={showHistoryModal}
+          onClose={() => { setShowHistoryModal(false); setHistoryBusiness(null); }}
+          title={`Plan Request History - ${historyBusiness.name}`}
+        >
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 pt-2">
+            {loadingHistory ? (
+              <div className="animate-pulse space-y-4">Loading history...</div>
+            ) : historyData?.logs?.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg">
+                No plan request history found for this client.
+              </div>
+            ) : (
+              <div className="relative border-l border-border ml-3 space-y-6">
+                {historyData?.logs?.map((log: any) => (
+                  <div key={log._id} className="relative pl-6">
+                    <div className={`absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-background ${
+                      log.action === "admin_plan_change_approved" ? "bg-success" : 
+                      log.action === "admin_plan_change_rejected" ? "bg-destructive" : 
+                      "bg-primary"
+                    }`} />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </span>
+                      <span className="text-sm font-medium mt-1">
+                        {log.action === "agent_plan_change_requested" && "Agent requested a custom plan change"}
+                        {log.action === "admin_plan_change_approved" && "Admin approved the plan request"}
+                        {log.action === "admin_plan_change_rejected" && "Admin rejected the plan request"}
+                      </span>
+                      {log.message && (
+                        <div className="text-sm text-muted-foreground mt-1 bg-muted/30 p-2 rounded border border-border/50">
+                          {log.message}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
     </div>
   );
 }

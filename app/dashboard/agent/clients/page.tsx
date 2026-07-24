@@ -43,10 +43,19 @@ export default function AgentClientsPage() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
 
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [selectedHistoryClient, setSelectedHistoryClient] = useState<AgentClient | null>(null);
+
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["agent-clients", page, limit, search],
     queryFn: () => agentService.getClients(token!, { page, limit, search }),
     enabled: Boolean(token)
+  });
+
+  const { data: historyData, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ["agent-client-history", selectedHistoryClient?._id],
+    queryFn: () => agentService.getPlanRequestHistory(selectedHistoryClient!._id, token!),
+    enabled: Boolean(token && selectedHistoryClient?._id),
   });
 
   const clients = data?.data?.clients || [];
@@ -205,15 +214,27 @@ export default function AgentClientsPage() {
     {
       header: "Action",
       render: (client: any) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleOpenManagePlan(client)}
-          disabled={!!client.pendingCustomPlan}
-          title={client.pendingCustomPlan ? "A plan change is currently pending admin approval" : "Manage Plan"}
-        >
-          Manage Plan
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleOpenManagePlan(client)}
+            disabled={!!client.pendingCustomPlan}
+            title={client.pendingCustomPlan ? "A plan change is currently pending admin approval" : "Manage Plan"}
+          >
+            Manage Plan
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedHistoryClient(client);
+              setIsHistoryOpen(true);
+            }}
+          >
+            View History
+          </Button>
+        </div>
       ),
     },
   ];
@@ -394,6 +415,52 @@ export default function AgentClientsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {isHistoryOpen && selectedHistoryClient && (
+        <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Plan Request History - {selectedHistoryClient.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 pt-2">
+              {isLoadingHistory ? (
+                <div className="animate-pulse space-y-4">Loading history...</div>
+              ) : historyData?.logs?.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg">
+                  No plan request history found for this client.
+                </div>
+              ) : (
+                <div className="relative border-l border-border ml-3 space-y-6">
+                  {historyData?.logs?.map((log: any, idx: number) => (
+                    <div key={log._id} className="relative pl-6">
+                      <div className={`absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-background ${
+                        log.action === "admin_plan_change_approved" ? "bg-success" : 
+                        log.action === "admin_plan_change_rejected" ? "bg-destructive" : 
+                        "bg-primary"
+                      }`} />
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {new Date(log.createdAt).toLocaleString()}
+                        </span>
+                        <span className="text-sm font-medium mt-1">
+                          {log.action === "agent_plan_change_requested" && "Agent requested a custom plan change"}
+                          {log.action === "admin_plan_change_approved" && "Admin approved the plan request"}
+                          {log.action === "admin_plan_change_rejected" && "Admin rejected the plan request"}
+                        </span>
+                        {log.message && (
+                          <div className="text-sm text-muted-foreground mt-1 bg-muted/30 p-2 rounded border border-border/50">
+                            {log.message}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

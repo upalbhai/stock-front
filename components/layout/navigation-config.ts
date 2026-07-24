@@ -221,6 +221,14 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         feature: "agents"
       },
       {
+        title: "Agent Performance",
+        path: APP_ROUTES.ADMIN_AGENTS_PERFORMANCE,
+        icon: TrendingUp,
+        keywords: ["agents", "performance", "commission", "sales", "stats"],
+        roles: ["superadmin"],
+        feature: "agents"
+      },
+      {
         title: "Manual Payments",
         path: APP_ROUTES.ADMIN_PAYMENTS,
         icon: Banknote,

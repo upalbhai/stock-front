@@ -59,6 +59,7 @@ export const APP_ROUTES = {
   ADMIN: appRoute("/admin"),
   ADMIN_BUSINESSES: appRoute("/admin/businesses"),
   ADMIN_AGENTS: appRoute("/admin/agents"),
+  ADMIN_AGENTS_PERFORMANCE: appRoute("/admin/agents/performance"),
   ADMIN_PAYMENTS: appRoute("/admin/payments"),
   ADMIN_OUTLETS: appRoute("/admin/outlets"),
   ADMIN_USERS: appRoute("/admin/users"),

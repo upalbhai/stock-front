@@ -15,6 +15,8 @@ type SelectProps = {
   className?: string;
   triggerClassName?: string;
   id?: string;
+  name?: string;
+  defaultValue?: string;
   size?: "default" | "sm";
 };
 
@@ -27,6 +29,8 @@ export function Select({
   className,
   triggerClassName,
   id,
+  name,
+  defaultValue,
   size = "default",
 }: SelectProps) {
   const mappedValue = value === "" ? "__empty__" : value;
@@ -39,7 +43,7 @@ export function Select({
 
   return (
     <div className={cn("inline-flex min-w-0", className)}>
-      <SelectPrimitive.Root value={mappedValue} onValueChange={handleValueChange} disabled={disabled}>
+      <SelectPrimitive.Root value={mappedValue} onValueChange={handleValueChange} disabled={disabled} name={name} defaultValue={defaultValue}>
         <SelectPrimitive.Trigger
           id={id}
           className={cn(

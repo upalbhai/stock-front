@@ -11,15 +11,27 @@ import { formatCurrency } from "@/lib/format";
 import Link from "next/link";
 import { APP_ROUTES } from "@/lib/routes";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 
 export default function AdminRootPage() {
   const { token } = useAuth();
+  const [selectedCurrency, setSelectedCurrency] = React.useState<string>("INR");
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-platform-stats"],
     queryFn: () => adminService.getDashboardStats(token),
     enabled: Boolean(token)
   });
+
+  const stats = data;
+
+  React.useEffect(() => {
+    if (stats?.mrrByCurrency && stats.mrrByCurrency.length > 0) {
+      if (!stats.mrrByCurrency.find((m: any) => m.currency === selectedCurrency)) {
+        setSelectedCurrency(stats.mrrByCurrency[0].currency);
+      }
+    }
+  }, [stats, selectedCurrency]);
 
   if (isLoading) {
     return (
@@ -43,8 +55,6 @@ export default function AdminRootPage() {
     );
   }
 
-  const stats = data;
-
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -54,17 +64,35 @@ export default function AdminRootPage() {
             Monitor the health and growth of your SaaS platform.
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          {stats?.mrrByCurrency && stats.mrrByCurrency.length > 0 && (
+            <Select
+              value={selectedCurrency}
+              onValueChange={setSelectedCurrency}
+              options={stats.mrrByCurrency.map((curr: any) => ({
+                value: curr.currency,
+                label: `${curr.currency} MRR`
+              }))}
+              className="w-32 h-9 text-sm font-semibold text-primary"
+            />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-card to-card/50 shadow-sm border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Recurring Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Recurring Revenue ({selectedCurrency})</CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(stats?.mrr || 0, "INR")}</div>
-            <p className="text-xs text-muted-foreground mt-1">From active subscriptions</p>
+            <div className="text-2xl font-bold text-foreground">
+              {formatCurrency(stats?.mrrByCurrency?.find((m: any) => m.currency === selectedCurrency)?.mrr || 0, selectedCurrency)}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1 flex flex-col gap-1">
+              <span className="font-medium text-success">Net Revenue (after commissions)</span>
+              <span>Gross: {formatCurrency(stats?.mrrByCurrency?.find((m: any) => m.currency === selectedCurrency)?.grossMrr || 0, selectedCurrency)}</span>
+            </div>
           </CardContent>
         </Card>
 

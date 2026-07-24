@@ -11,6 +11,8 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { apiFetch, getJson } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
 import { APP_ROUTES } from "@/lib/routes";
+import { businessService } from "@/services/business.service";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function SubscribePage() {
   const router = useRouter();
@@ -18,6 +20,12 @@ export default function SubscribePage() {
   const [transactionId, setTransactionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  const [planRequestForm, setPlanRequestForm] = useState({
+    maxOutlets: 1,
+    maxProducts: 0,
+    notes: ""
+  });
 
   const { data: statusData } = useQuery({
     queryKey: ["subscription-status"],
@@ -39,6 +47,18 @@ export default function SubscribePage() {
     },
     onError: (err) => {
       setError(getErrorMessage(err, "Failed to upload payment details"));
+    }
+  });
+
+  const requestPlanMutation = useMutation({
+    mutationFn: (data: any) => businessService.requestCustomPlan(data, token),
+    onSuccess: () => {
+      setSuccess("Plan request submitted successfully! Our team will review it and provide a quote shortly.");
+      // refetch status
+      window.location.reload();
+    },
+    onError: (err) => {
+      setError(getErrorMessage(err, "Failed to submit plan request"));
     }
   });
 
@@ -74,15 +94,34 @@ export default function SubscribePage() {
     });
   };
 
+  const handleRequestPlan = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    requestPlanMutation.mutate({
+      ...planRequestForm,
+      features: []
+    });
+  };
+
   const isTrialExpired = user?.trialExpired;
   const isLocked = user?.subscriptionStatus === "payment_locked";
+  
+  const hasCustomPlan = !!statusData?.customPlanDetails;
+  const hasPendingPlan = !!statusData?.pendingCustomPlan;
 
   return (
     <div className="min-h-screen py-12 px-4 bg-surface">
       <div className="max-w-2xl mx-auto space-y-12">
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold tracking-tight">Upload Payment Details</h1>
-          <p className="text-lg text-muted">Submit your manual payment transaction details to activate or renew your subscription.</p>
+          <h1 className="text-4xl font-bold tracking-tight">
+            {!hasCustomPlan && !hasPendingPlan ? "Request a Plan" : "Subscription"}
+          </h1>
+          <p className="text-lg text-muted">
+            {!hasCustomPlan && !hasPendingPlan 
+              ? "Tell us what you need and we'll build a tailored plan for your business."
+              : "Complete your payment to activate or renew your subscription."}
+          </p>
 
           {isLocked && (
             <div className="bg-danger/10 text-danger p-4 rounded-2xl flex flex-col items-center justify-center gap-4 mt-4">
@@ -125,7 +164,73 @@ export default function SubscribePage() {
           )}
         </div>
 
-        {!success && (
+        {!success && hasPendingPlan && !hasCustomPlan && (
+          <Card className="shadow-lg border-border/50">
+            <CardHeader className="text-center pb-8">
+              <div className="mx-auto bg-primary/10 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                <FileText className="h-8 w-8 text-primary animate-pulse" />
+              </div>
+              <CardTitle className="text-2xl">Plan Request Under Review</CardTitle>
+              <CardDescription className="text-base mt-2">
+                We have received your requirements and are currently putting together the best custom plan for your business. We will notify you once your plan is ready!
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+
+        {!success && !hasPendingPlan && !hasCustomPlan && (
+          <Card className="shadow-lg border-border/50">
+            <CardHeader>
+              <CardTitle>Tell us about your business</CardTitle>
+              <CardDescription>
+                We'll use this information to calculate a custom plan and price for you.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleRequestPlan} className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Number of Outlets</label>
+                    <Input 
+                      type="number" 
+                      min="1"
+                      required 
+                      value={planRequestForm.maxOutlets} 
+                      onChange={(e) => setPlanRequestForm(f => ({ ...f, maxOutlets: parseInt(e.target.value) || 1 }))} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Number of Products</label>
+                    <Input 
+                      type="number" 
+                      min="0"
+                      required 
+                      value={planRequestForm.maxProducts} 
+                      onChange={(e) => setPlanRequestForm(f => ({ ...f, maxProducts: parseInt(e.target.value) || 0 }))} 
+                    />
+                    <p className="text-xs text-muted-foreground">Enter 0 if unlimited.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Additional Requirements (Optional)</label>
+                  <Textarea 
+                    placeholder="Tell us about any specific features you need, or special requests." 
+                    value={planRequestForm.notes}
+                    onChange={(e) => setPlanRequestForm(f => ({ ...f, notes: e.target.value }))}
+                    className="min-h-[100px]"
+                  />
+                </div>
+
+                <Button type="submit" className="w-full h-12 text-lg" disabled={requestPlanMutation.isPending}>
+                  {requestPlanMutation.isPending ? "Submitting..." : "Request Plan Quote"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {!success && hasCustomPlan && (
           <Card className="shadow-lg border-border/50">
             <CardHeader>
               <CardTitle>Payment Information</CardTitle>
