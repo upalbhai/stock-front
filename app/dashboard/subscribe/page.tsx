@@ -20,7 +20,7 @@ export default function SubscribePage() {
   const [transactionId, setTransactionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const [planRequestForm, setPlanRequestForm] = useState({
     maxOutlets: 1,
     maxProducts: 0,
@@ -78,7 +78,7 @@ export default function SubscribePage() {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    
+
     const planPrice = statusData?.customPlanDetails?.price || 0;
     const planCurrency = statusData?.customPlanDetails?.currency || "INR";
 
@@ -86,7 +86,7 @@ export default function SubscribePage() {
       setError("Please fill all required fields");
       return;
     }
-    
+
     uploadMutation.mutate({
       amount: planPrice,
       currency: planCurrency,
@@ -106,7 +106,7 @@ export default function SubscribePage() {
 
   const isTrialExpired = user?.trialExpired;
   const isLocked = user?.subscriptionStatus === "payment_locked";
-  
+
   const hasCustomPlan = !!statusData?.customPlanDetails;
   const hasPendingPlan = !!statusData?.pendingCustomPlan;
 
@@ -118,7 +118,7 @@ export default function SubscribePage() {
             {!hasCustomPlan && !hasPendingPlan ? "Request a Plan" : "Subscription"}
           </h1>
           <p className="text-lg text-muted">
-            {!hasCustomPlan && !hasPendingPlan 
+            {!hasCustomPlan && !hasPendingPlan
               ? "Tell us what you need and we'll build a tailored plan for your business."
               : "Complete your payment to activate or renew your subscription."}
           </p>
@@ -129,8 +129,8 @@ export default function SubscribePage() {
                 <AlertCircle className="h-5 w-5" />
                 <span className="font-medium">Your account is locked. Please submit payment details to restore access.</span>
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="bg-background text-danger hover:text-danger border-danger/50"
                 onClick={() => requestGraceMutation.mutate()}
                 disabled={requestGraceMutation.isPending}
@@ -153,7 +153,7 @@ export default function SubscribePage() {
               <span className="font-medium">{error}</span>
             </div>
           )}
-          
+
           {success && (
             <div className="bg-success/10 text-success p-4 rounded-2xl flex flex-col items-center justify-center gap-2 mt-4">
               <CheckCircle2 className="h-8 w-8" />
@@ -191,22 +191,22 @@ export default function SubscribePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Number of Outlets</label>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       min="1"
-                      required 
-                      value={planRequestForm.maxOutlets} 
-                      onChange={(e) => setPlanRequestForm(f => ({ ...f, maxOutlets: parseInt(e.target.value) || 1 }))} 
+                      required
+                      value={planRequestForm.maxOutlets}
+                      onChange={(e) => setPlanRequestForm(f => ({ ...f, maxOutlets: parseInt(e.target.value) || 1 }))}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Number of Products</label>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       min="0"
-                      required 
-                      value={planRequestForm.maxProducts} 
-                      onChange={(e) => setPlanRequestForm(f => ({ ...f, maxProducts: parseInt(e.target.value) || 0 }))} 
+                      required
+                      value={planRequestForm.maxProducts}
+                      onChange={(e) => setPlanRequestForm(f => ({ ...f, maxProducts: parseInt(e.target.value) || 0 }))}
                     />
                     <p className="text-xs text-muted-foreground">Enter 0 if unlimited.</p>
                   </div>
@@ -214,8 +214,8 @@ export default function SubscribePage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Additional Requirements (Optional)</label>
-                  <Textarea 
-                    placeholder="Tell us about any specific features you need, or special requests." 
+                  <Textarea
+                    placeholder="Tell us about any specific features you need, or special requests."
                     value={planRequestForm.notes}
                     onChange={(e) => setPlanRequestForm(f => ({ ...f, notes: e.target.value }))}
                     className="min-h-[100px]"
@@ -251,12 +251,12 @@ export default function SubscribePage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Transaction ID / Reference Number *</label>
-                  <Input 
-                    type="text" 
-                    required 
-                    value={transactionId} 
-                    onChange={(e) => setTransactionId(e.target.value)} 
-                    placeholder="e.g. UTR123456789" 
+                  <Input
+                    type="text"
+                    required
+                    value={transactionId}
+                    onChange={(e) => setTransactionId(e.target.value)}
+                    placeholder="e.g. UTR123456789"
                   />
                   <p className="text-xs text-muted-foreground">This helps us verify your payment quickly.</p>
                 </div>
