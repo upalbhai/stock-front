@@ -107,24 +107,6 @@ export default function AgentRootPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
-            <div>
-              <CardTitle className="text-base font-semibold text-foreground">Your Clients</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">Manage and build custom plans</p>
-            </div>
-            <Link href={APP_ROUTES.AGENT_CLIENTS} className="text-xs flex items-center text-primary hover:underline">
-              View all <ArrowRight className="ml-1 h-3 w-3" />
-            </Link>
-          </CardHeader>
-          <CardContent className="pt-4">
-             <div className="text-center py-6 text-sm text-muted-foreground">
-                Go to the Clients page to view or add new clients.
-             </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

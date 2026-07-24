@@ -136,10 +136,10 @@ export default function AgentClientsPage() {
           client.subscriptionStatus === "active"
             ? "success"
             : client.subscriptionStatus === "trial"
-            ? "info"
-            : client.subscriptionStatus === "grace_period"
-            ? "warning"
-            : "danger";
+              ? "info"
+              : client.subscriptionStatus === "grace_period"
+                ? "warning"
+                : "danger";
 
         return <Badge variant={variant}>{client.subscriptionStatus}</Badge>;
       },
@@ -247,7 +247,7 @@ export default function AgentClientsPage() {
       />
 
       <Dialog open={Boolean(selectedClient)} onOpenChange={(open) => !open && setSelectedClient(null)}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="min-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Configure Custom Plan for {selectedClient?.name}</DialogTitle>
           </DialogHeader>
@@ -257,8 +257,8 @@ export default function AgentClientsPage() {
                 <div className="space-y-2">
                   <label htmlFor="price" className="text-xs font-medium leading-none">Monthly Price</label>
                   <div className="flex gap-2">
-                    <select 
-                      name="currency" 
+                    <select
+                      name="currency"
                       defaultValue={selectedClient.customPlanDetails?.currency || "INR"}
                       className="flex h-9 w-20 rounded-md border border-input bg-transparent px-2 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     >
@@ -268,34 +268,34 @@ export default function AgentClientsPage() {
                       <option value="GBP">GBP</option>
                       <option value="AED">AED</option>
                     </select>
-                    <Input 
-                      id="price" 
-                      name="price" 
-                      type="number" 
-                      defaultValue={selectedClient.customPlanDetails?.price || 0} 
-                      required 
+                    <Input
+                      id="price"
+                      name="price"
+                      type="number"
+                      defaultValue={selectedClient.customPlanDetails?.price || 0}
+                      required
                       className="flex-1"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="maxProducts" className="text-xs font-medium leading-none">Max Products</label>
-                  <Input 
-                    id="maxProducts" 
-                    name="maxProducts" 
-                    type="number" 
-                    defaultValue={selectedClient.customPlanDetails?.maxProducts || 50} 
-                    required 
+                  <Input
+                    id="maxProducts"
+                    name="maxProducts"
+                    type="number"
+                    defaultValue={selectedClient.customPlanDetails?.maxProducts || 50}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="maxOutlets" className="text-xs font-medium leading-none">Max Outlets</label>
-                  <Input 
-                    id="maxOutlets" 
-                    name="maxOutlets" 
-                    type="number" 
-                    defaultValue={selectedClient.customPlanDetails?.maxOutlets || 1} 
-                    required 
+                  <Input
+                    id="maxOutlets"
+                    name="maxOutlets"
+                    type="number"
+                    defaultValue={selectedClient.customPlanDetails?.maxOutlets || 1}
+                    required
                   />
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function AgentClientsPage() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1.5 border border-border rounded-lg bg-muted/20">
                   {AVAILABLE_FEATURES.map((feat) => {
                     const isChecked = selectedFeatures.includes(feat.key);
@@ -335,16 +335,15 @@ export default function AgentClientsPage() {
                               : [...prev, feat.key]
                           );
                         }}
-                        className={`flex items-start gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition ${
-                          isChecked
+                        className={`flex items-start gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition ${isChecked
                             ? "bg-primary/10 border-primary text-foreground shadow-sm"
                             : "bg-card border-border text-muted-foreground hover:border-foreground/30"
-                        }`}
+                          }`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => {}}
+                          onChange={() => { }}
                           className="mt-0.5 h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary pointer-events-none"
                         />
                         <div className="min-w-0">

@@ -29,7 +29,7 @@ export type AuthUser = {
   businessId?: string | null;
   outletId?: string | null;
   outletIds?: string[];
-  subscriptionStatus?: "trial" | "active" | "expired" | "cancelled" | null;
+  subscriptionStatus?: "trial" | "active" | "expired" | "cancelled" | "payment_locked" | "grace_period" | null;
   trialEndsAt?: string | null;
   trialExpired?: boolean;
   enabledFeatures?: string[];
@@ -65,7 +65,7 @@ export type Business = {
   code: string;
   plan?: string;
   planId?: Plan | string;
-  subscriptionStatus?: "trial" | "active" | "expired" | "cancelled";
+  subscriptionStatus?: "trial" | "active" | "expired" | "cancelled" | "payment_locked" | "grace_period";
   status?: "pending" | "active" | "suspended" | "banned";
   trialEndsAt?: string;
   currentPeriodEnd?: string;

@@ -15,8 +15,6 @@ import { APP_ROUTES } from "@/lib/routes";
 export default function SubscribePage() {
   const router = useRouter();
   const { user, token, logout } = useAuth();
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("INR");
   const [transactionId, setTransactionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -37,7 +35,6 @@ export default function SubscribePage() {
     mutationFn: (data: any) => apiFetch("/payments/manual", { method: "POST", body: data, token }),
     onSuccess: () => {
       setSuccess("Payment details uploaded successfully. Your account will be activated once verified by an admin.");
-      setAmount("");
       setTransactionId("");
     },
     onError: (err) => {
@@ -61,14 +58,18 @@ export default function SubscribePage() {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    if (!amount || !transactionId) {
+    
+    const planPrice = statusData?.customPlanDetails?.price || 0;
+    const planCurrency = statusData?.customPlanDetails?.currency || "INR";
+
+    if (!transactionId) {
       setError("Please fill all required fields");
       return;
     }
     
     uploadMutation.mutate({
-      amount: Number(amount),
-      currency,
+      amount: planPrice,
+      currency: planCurrency,
       screenshotUrl: `TXN:${transactionId}`
     });
   };
@@ -135,25 +136,11 @@ export default function SubscribePage() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Amount Paid *</label>
-                  <div className="flex gap-2">
-                    <select 
-                      value={currency} 
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="flex h-10 w-24 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    >
-                      <option value="INR">INR</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                    <Input 
-                      type="number" 
-                      required 
-                      value={amount} 
-                      onChange={(e) => setAmount(e.target.value)} 
-                      placeholder="e.g. 5000" 
-                      className="flex-1"
-                    />
+                  <label className="text-sm font-medium">Amount Due</label>
+                  <div className="flex items-center gap-2">
+                    <div className="px-4 py-2 bg-muted rounded-md text-foreground font-semibold flex-1 border border-border">
+                      {statusData?.customPlanDetails?.currency || "INR"} {statusData?.customPlanDetails?.price || 0}
+                    </div>
                   </div>
                 </div>
 

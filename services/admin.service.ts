@@ -1,4 +1,4 @@
-import { apiFetch, getJson } from "@/lib/api-client";
+import { apiFetch, getJson, getJsonWithMeta } from "@/lib/api-client";
 import { Business, AuditLog } from "@/lib/types";
 
 export const adminService = {
@@ -62,10 +62,13 @@ export const adminService = {
   createAgent: async (data: any, token?: string | null) => {
     return apiFetch("/admin/agents", { method: "POST", body: data, token });
   },
-  getManualPayments: async (token?: string | null, status?: string) => {
-    return getJson<{ payments: any[] }>(`/admin/payments/manual${status ? `?status=${status}` : ""}`, token);
+  getManualPayments: async (token?: string | null, params?: { status?: string; page?: number; limit?: number }) => {
+    return getJsonWithMeta<{ payments: any[] }>("/admin/payments/manual", token, params);
   },
   verifyManualPayment: async (paymentId: string, token?: string | null) => {
     return apiFetch(`/admin/payments/manual/${paymentId}/verify`, { method: "PUT", token });
+  },
+  resendManualPaymentInvoice: async (paymentId: string, token?: string | null) => {
+    return apiFetch(`/admin/payments/manual/${paymentId}/resend-invoice`, { method: "POST", token });
   },
 };

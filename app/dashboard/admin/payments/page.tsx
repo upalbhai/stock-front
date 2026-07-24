@@ -4,12 +4,14 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "@/services/admin.service";
 import { useAuth } from "@/components/auth/auth-provider";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
 import { getErrorMessage } from "@/lib/error";
 import { formatCurrency } from "@/lib/format";
+import { DataTable, ColumnDef } from "@/components/ui/data-table";
+import { Select } from "@/components/ui/select";
+import { ExternalLink, CheckCircle, Mail } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,14 +24,18 @@ export default function AdminPaymentsPage() {
   const queryClient = useQueryClient();
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-manual-payments"],
-    queryFn: () => adminService.getManualPayments(token!),
+    queryKey: ["admin-manual-payments", page, limit, statusFilter],
+    queryFn: () => adminService.getManualPayments(token!, { page, limit, status: statusFilter || undefined }),
     enabled: Boolean(token)
   });
 
-  const payments = data?.payments || [];
+  const payments = data?.data?.payments || [];
+  const meta = data?.meta?.pagination;
 
   const verifyMutation = useMutation({
     mutationFn: (paymentId: string) => adminService.verifyManualPayment(paymentId, token!),
@@ -50,7 +56,70 @@ export default function AdminPaymentsPage() {
     verifyMutation.mutate(paymentId);
   };
 
-  if (isLoading) return <div className="p-4">Loading payments...</div>;
+  const resendInvoiceMutation = useMutation({
+    mutationFn: (paymentId: string) => adminService.resendManualPaymentInvoice(paymentId, token!),
+    onSuccess: () => {
+      toast.success("Invoice resent successfully");
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
+    }
+  });
+
+  const columns: ColumnDef<any>[] = [
+    {
+      header: "Business",
+      render: (row) => row.businessId?.name || "Unknown Business",
+    },
+    {
+      header: "Amount",
+      render: (row) => formatCurrency(row.amount, row.currency),
+    },
+    {
+      header: "Agent",
+      render: (row) => row.agentId ? row.agentId.name : "-",
+    },
+    {
+      header: "Date",
+      render: (row) => new Date(row.createdAt).toLocaleDateString(),
+    },
+    {
+      header: "Status",
+      render: (row) => (
+        <Badge variant={row.status === "verified" ? "success" : row.status === "pending_verification" ? "warning" : "secondary"}>
+          {row.status.replace("_", " ")}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          {row.screenshotUrl && (
+            <Button variant="ghost" size="icon" onClick={() => window.open(row.screenshotUrl, "_blank")} title="View Screenshot">
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          )}
+          {row.status === "pending_verification" && (
+            <Button variant="ghost" size="icon" onClick={() => setSelectedPayment(row)} title="Verify Payment">
+              <CheckCircle className="h-4 w-4 text-success" />
+            </Button>
+          )}
+          {row.status === "verified" && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => resendInvoiceMutation.mutate(row._id)} 
+              title="Resend Invoice"
+              disabled={resendInvoiceMutation.isPending && resendInvoiceMutation.variables === row._id}
+            >
+              <Mail className="h-4 w-4 text-primary" />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -58,47 +127,39 @@ export default function AdminPaymentsPage() {
         <h1 className="text-2xl font-bold">Manual Payment Verifications</h1>
       </div>
 
-      <div className="grid gap-4">
-        {payments.map((payment: any) => (
-          <Card key={payment._id}>
-            <CardContent className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h3 className="font-semibold text-lg">{payment.businessId?.name || "Unknown Business"}</h3>
-                <p className="text-sm text-muted-foreground">Amount: {formatCurrency(payment.amount, payment.currency)}</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant={payment.status === "verified" ? "success" : "warning"}>
-                    {payment.status}
-                  </Badge>
-                  {payment.agentId && (
-                    <Badge variant="soft">Agent: {payment.agentId.name}</Badge>
-                  )}
-                  <Badge variant="secondary">
-                    {new Date(payment.createdAt).toLocaleDateString()}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 w-full md:w-auto">
-                 {payment.screenshotUrl ? (
-                    <Button variant="outline" onClick={() => window.open(payment.screenshotUrl, "_blank")}>
-                      View Screenshot
-                    </Button>
-                 ) : (
-                    <span className="text-xs text-muted-foreground italic">No screenshot</span>
-                 )}
-                 {payment.status === "pending_verification" && (
-                    <Button onClick={() => setSelectedPayment(payment)}>Verify Payment</Button>
-                 )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {payments.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg">
-            No manual payments found.
+      <DataTable
+        data={payments}
+        columns={columns}
+        isLoading={isLoading}
+        searchQuery=""
+        onSearchChange={() => {}}
+        placeholderText="Search payments..."
+        onRefetch={() => queryClient.invalidateQueries({ queryKey: ["admin-manual-payments"] })}
+        emptyStateText="No manual payments found."
+        emptyStateIcon="💳"
+        page={meta?.page || 1}
+        limit={meta?.limit || 10}
+        totalItems={meta?.total || 0}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+        filters={
+          <div className="w-[180px]">
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              placeholder="All Statuses"
+              options={[
+                { label: "All Statuses", value: "" },
+                { label: "Pending", value: "pending_verification" },
+                { label: "Verified", value: "verified" },
+                { label: "Rejected", value: "rejected" },
+              ]}
+            />
           </div>
-        )}
-      </div>
+        }
+        hasActiveFilters={!!statusFilter}
+        onClearFilters={() => setStatusFilter("")}
+      />
 
       <Dialog open={Boolean(selectedPayment)} onOpenChange={(open) => !open && !isVerifying && setSelectedPayment(null)}>
         <DialogContent>

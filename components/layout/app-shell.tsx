@@ -95,7 +95,7 @@ function LastUpdated() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, impersonating, exitImpersonation } = useAuth();
+  const { user, impersonating, exitImpersonation, logout } = useAuth();
   const isAuthRoute = pathname.startsWith(APP_ROUTES.LOGIN);
   const isOnline = useOnlineStatus();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -149,7 +149,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <main className="min-h-svh px-4 py-10">{children}</main>;
   }
 
-  if (user?.subscriptionStatus === "payment_locked") {
+  if (user?.subscriptionStatus === "payment_locked" && pathname !== APP_ROUTES.SUBSCRIBE) {
     return (
       <div className="flex h-svh items-center justify-center bg-muted/30 p-4">
         <div className="max-w-md w-full bg-card rounded-xl border border-border shadow-xl p-8 text-center animate-in fade-in zoom-in duration-500">

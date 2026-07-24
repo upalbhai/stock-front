@@ -28,7 +28,7 @@ export interface AgentClient {
 
 export const agentService = {
   getStats: async (token: string) => {
-    return getJson<{ data: AgentStats }>("/agent/stats", token).then(res => res.data);
+    return getJson<AgentStats>("/agent/stats", token);
   },
   
   getClients: async (token: string, params?: { page?: number; limit?: number; search?: string }) => {
