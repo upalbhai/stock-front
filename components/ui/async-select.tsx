@@ -65,7 +65,7 @@ export default function AsyncSelect({ value, onChange, loadOptions, multi = fals
     async function fetchPage() {
       const cached = cacheRef.current[debouncedSearch];
       if (cached && cached.page >= page && cached.items.length > 0) return;
-      if (!hasMore) return;
+      if (page !== 1 && !hasMore) return;
       
       setLoading(true);
       try {
