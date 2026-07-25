@@ -491,23 +491,6 @@ export default function ProductsPage() {
           <div className="flex justify-end gap-3 w-full">
             <Button variant="outline" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" form="product-form" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Product")}</Button>
-            <div className="w-48 shrink-0">
-              <AsyncSelect
-                value={brandFilter}
-                onChange={(opt: any) => {
-                  if (!opt || (Array.isArray(opt) && opt.length === 0)) {
-                    setBrandFilter(null);
-                  } else {
-                    const selected = Array.isArray(opt) ? opt[0] : opt;
-                    setBrandFilter(selected.id === "" ? null : selected);
-                  }
-                  setQuery({ page: 1 });
-                }}
-                loadOptions={loadBrandFilterOptions}
-                placeholder="All Brands"
-                className="h-10"
-              />
-            </div>
           </div>
         }
       >
