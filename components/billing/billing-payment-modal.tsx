@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/format";
 import { useAuth } from "@/components/auth/auth-provider";
 import type { LineItem } from "@/store/billingSlice";
 import type { PAYMENT_METHODS } from "@/components/billing/billing-constants";
+import type { Customer } from "@/lib/types";
 import { toast } from "react-hot-toast";
 
 type PaymentMethodItem = (typeof PAYMENT_METHODS)[number];
@@ -276,7 +277,18 @@ export function BillingPaymentModal({
                     token={token}
                     outletId={outletId}
                     selectedId={billing.customerId}
-                    onSelect={(c) => dispatch.selectCustomer(c)}
+                    onSelect={(c: Customer | null) =>
+                      dispatch.selectCustomer(
+                        c
+                          ? {
+                              id: c._id,
+                              name: c.name,
+                              phone: c.phone,
+                              defaultTaxMode: c.defaultTaxMode,
+                            }
+                          : null
+                      )
+                    }
                   />
                   {hasGstInvoices && (
                     <label className="flex items-center gap-2 text-sm cursor-pointer mt-2">
