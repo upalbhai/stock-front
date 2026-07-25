@@ -27,6 +27,7 @@ import { productService } from "@/services/product.service";
 import { unitService } from "@/services/unit.service";
 import { outletService } from "@/services/outlet.service";
 import { categoryService } from "@/services/category.service";
+import { brandService } from "@/services/brand.service";
 import Pagination from "@/components/ui/pagination";
 import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
 
@@ -48,6 +49,7 @@ const productSchema = z.object({
   price: z.string().min(1, "Selling Price is required").refine(val => !isNaN(Number(val)) && Number(val) >= 0, "Invalid price"),
   costPrice: z.string().min(1, "Cost Price is required").refine(val => !isNaN(Number(val)) && Number(val) >= 0, "Invalid cost price"),
   categoryId: z.string().min(1, "Category is required"),
+  brandId: z.string().optional(),
   taxRate: z.string().optional(),
   gstRate: z.string().optional(),
   hsnCode: z.string().optional(),
@@ -123,6 +125,20 @@ async function loadCategories(
   return { data: items, meta: res.meta ?? undefined };
 }
 
+async function loadBrands(
+  token: string | null,
+  { page, limit, search }: { page: number; limit: number; search?: string }
+) {
+  const res = await brandService.getBrandsWithMeta(token, { page, limit, search: search || undefined });
+  let items = (res.data ?? []).map((b) => ({
+    ...b,
+    id: b._id,
+    name: b.name,
+    label: b.name
+  }));
+  return { data: items, meta: res.meta ?? undefined };
+}
+
 export default function ProductsPage() {
   const { user, token, outletId } = useAuth();
   const currency = user?.currency || "INR";
@@ -137,7 +153,9 @@ export default function ProductsPage() {
   });
 
   const [catFilter, setCatFilter] = React.useState<{ id: string, name: string, label: string } | null>(null);
+  const [brandFilter, setBrandFilter] = React.useState<{ id: string, name: string, label: string } | null>(null);
   const [formCategoryOption, setFormCategoryOption] = React.useState<{ id: string, name: string, label: string } | null>(null);
+  const [formBrandOption, setFormBrandOption] = React.useState<{ id: string, name: string, label: string } | null>(null);
   const [showModal, setShowModal] = React.useState(false);
   const [showScanner, setShowScanner] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
@@ -149,7 +167,7 @@ export default function ProductsPage() {
 
   const { register, control, handleSubmit, reset, setValue, watch, clearErrors, formState: { errors } } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
-    defaultValues: { name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0", packagingUnits: [] }
+    defaultValues: { name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", brandId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0", packagingUnits: [] }
   });
 
   const { fields: pkgFields, append: appendPkg, remove: removePkg } = useFieldArray({
@@ -164,12 +182,13 @@ export default function ProductsPage() {
 
 
   const { data: productsData, isLoading, refetch: refetchProducts } = useQuery({
-    queryKey: ["products", outletId, query.search, catFilter?.id, query.page, query.limit],
+    queryKey: ["products", outletId, query.search, catFilter?.id, brandFilter?.id, query.page, query.limit],
     queryFn: () =>
       getJsonWithMeta<Product[]>("/products", token, {
         outletId: outletId ?? undefined,
         search: query.search || undefined,
         categoryId: catFilter?.id || undefined,
+        brandId: brandFilter?.id || undefined,
         page: query.page,
         limit: query.limit
       }),
@@ -214,6 +233,34 @@ export default function ProductsPage() {
       }
       return res;
     },
+    [token, qc]
+  );
+
+  const loadBrandFilterOptions = React.useCallback(
+    async (params: { page: number; limit: number; q?: string }) => {
+      const res = await qc.fetchQuery({
+        queryKey: ["brands", "options", params.page, params.limit, params.q],
+        queryFn: () => loadBrands(token, { ...params, search: params.q }),
+        staleTime: 1000 * 60 * 5,
+      });
+      if (params.page === 1 && !params.q) {
+        return {
+          ...res,
+          data: [{ id: "", _id: "", name: "All Brands", label: "All Brands" }, ...res.data]
+        };
+      }
+      return res;
+    },
+    [token, qc]
+  );
+
+  const loadBrandFormOptions = React.useCallback(
+    (params: { page: number; limit: number; search?: string }) => 
+      qc.fetchQuery({
+        queryKey: ["brands", "options", params.page, params.limit, params.search],
+        queryFn: () => loadBrands(token, params),
+        staleTime: 1000 * 60 * 5,
+      }),
     [token, qc]
   );
 
@@ -290,7 +337,8 @@ export default function ProductsPage() {
   const openCreate = () => {
     setEditId(null);
     setFormCategoryOption(null);
-    reset({ name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0", packagingUnits: [] });
+    setFormBrandOption(null);
+    reset({ name: "", description: "", sku: "", barcode: "", unit: "pcs", unitId: "", price: "", costPrice: "", categoryId: "", brandId: "", taxRate: "0", gstRate: "0", hsnCode: "", onHandQty: "0", lowStockThreshold: "10", sortOrder: "0", packagingUnits: [] });
     setShowModal(true);
   };
   const openEdit = (p: Product) => {
@@ -301,6 +349,11 @@ export default function ProductsPage() {
       catOpt = { id: p.categoryId._id, name: label, label };
     }
     setFormCategoryOption(catOpt);
+    let brandOpt = null;
+    if (typeof p.brandId === "object" && p.brandId) {
+      brandOpt = { id: (p.brandId as any)._id, name: (p.brandId as any).name, label: (p.brandId as any).name };
+    }
+    setFormBrandOption(brandOpt);
     reset({
       name: p.name,
       description: p.description ?? "",
@@ -311,6 +364,7 @@ export default function ProductsPage() {
       price: String(p.price),
       costPrice: String(p.costPrice ?? 0),
       categoryId: typeof p.categoryId === "object" ? p.categoryId?._id ?? "" : p.categoryId ?? "",
+      brandId: typeof p.brandId === "object" ? (p.brandId as any)?._id ?? "" : p.brandId ?? "",
       taxRate: String(p.taxRate ?? 0),
       gstRate: String(p.gstRate ?? 0),
       hsnCode: p.hsnCode ?? "",
@@ -340,6 +394,7 @@ export default function ProductsPage() {
       lowStockThreshold: Number(data.lowStockThreshold || 0),
       sortOrder: Number(data.sortOrder || 0),
       categoryId: data.categoryId || undefined,
+      brandId: data.brandId || undefined,
       hsnCode: data.hsnCode || undefined
     };
     if (hasPackaging && data.packagingUnits && data.packagingUnits.length) {
@@ -396,10 +451,27 @@ export default function ProductsPage() {
                 className="h-10"
               />
             </div>
+            <div className="w-48 shrink-0">
+              <AsyncSelect
+                value={brandFilter}
+                onChange={(opt: any) => {
+                  if (!opt || (Array.isArray(opt) && opt.length === 0)) {
+                    setBrandFilter(null);
+                  } else {
+                    const selected = Array.isArray(opt) ? opt[0] : opt;
+                    setBrandFilter(selected.id === "" ? null : selected);
+                  }
+                  setQuery({ page: 1 });
+                }}
+                loadOptions={loadBrandFilterOptions}
+                placeholder="All Brands"
+                className="h-10"
+              />
+            </div>
           </div>
         }
         columns={[
-          { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image && <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1">SKU: {p.sku}</p>}</div></div>) },
+          { key: "name", header: "Product", render: (p) => (<div className="flex items-center gap-4 py-2">{p.image && <img src={p.image} className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />}<div className="flex-1 min-w-0"><p className="font-semibold text-base">{p.name}</p>{p.sku && <p className="text-xs text-muted mt-1 inline-block mr-2">SKU: {p.sku}</p>}{p.brandId && typeof p.brandId === "object" && <Badge variant="soft" className="text-[9px] px-1 py-0 h-4 mt-1">{(p.brandId as any).name}</Badge>}</div></div>) },
           { key: "category", header: "Category", render: (p) => typeof p.categoryId === "object" && p.categoryId ? <span className="text-sm font-medium">{p.categoryId.icon} {p.categoryId.name}</span> : <span className="text-xs text-muted">—</span> },
           { key: "price", header: "Price", render: (p) => <span className="font-bold text-lg">{formatCurrency(p.price, currency)}</span> },
           { key: "onHandQty", header: "Stock", render: (p) => (<div><p className={p.onHandQty <= p.lowStockThreshold ? "font-bold text-danger text-base" : "font-bold text-base"}>{p.onHandQty} {(p as any).unitId?.abbreviation ?? p.unit}</p>{p.packagingUnits && p.packagingUnits.length > 0 && <div className="mt-0.5">{p.packagingUnits.map((pkg: any, idx: number) => <p key={idx} className="text-[11px] text-muted-foreground font-semibold">{pkg.onHandBulkQty ?? Math.floor(p.onHandQty / (pkg.qtyPerUnit || 1))} {typeof pkg.unitId === 'object' ? (pkg.unitId?.abbreviation || pkg.unitId?.name) : ''}</p>)}</div>}{p.onHandQty <= p.lowStockThreshold && <Badge variant="warning" className="text-[10px] mt-1">Low Stock</Badge>}</div>) },
@@ -419,6 +491,23 @@ export default function ProductsPage() {
           <div className="flex justify-end gap-3 w-full">
             <Button variant="outline" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
             <Button type="submit" form="product-form" disabled={save.isPending}>{save.isPending ? "Saving..." : (editId ? "Save Changes" : "Add Product")}</Button>
+            <div className="w-48 shrink-0">
+              <AsyncSelect
+                value={brandFilter}
+                onChange={(opt: any) => {
+                  if (!opt || (Array.isArray(opt) && opt.length === 0)) {
+                    setBrandFilter(null);
+                  } else {
+                    const selected = Array.isArray(opt) ? opt[0] : opt;
+                    setBrandFilter(selected.id === "" ? null : selected);
+                  }
+                  setQuery({ page: 1 });
+                }}
+                loadOptions={loadBrandFilterOptions}
+                placeholder="All Brands"
+                className="h-10"
+              />
+            </div>
           </div>
         }
       >
@@ -447,6 +536,42 @@ export default function ProductsPage() {
                 pageSize={25}
               />
               {errors.categoryId && <p className="text-danger text-[10px] mt-1">{errors.categoryId.message}</p>}
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <label className="mb-1 block text-xs font-medium text-muted">Brand</label>
+              <AsyncSelect
+                value={formBrandOption}
+                onChange={async (opt: any) => {
+                  const o = Array.isArray(opt) ? opt[0] : opt;
+                  if (!o) {
+                    setFormBrandOption(null);
+                    setValue("brandId", "", { shouldValidate: true });
+                    return;
+                  }
+                  if (String(o.id).startsWith("new_")) {
+                    const name = (o.name ?? o.label ?? "").trim();
+                    if (!name) return;
+                    try {
+                      const res = await brandService.createBrand({ name }, token!);
+                      if (res.brand) {
+                        const newBrand = res.brand;
+                        setFormBrandOption({ id: newBrand._id, name: newBrand.name, label: newBrand.name });
+                        setValue("brandId", newBrand._id, { shouldValidate: true });
+                      }
+                    } catch (err) {
+                      toast.error("Failed to create brand");
+                    }
+                  } else {
+                    setFormBrandOption(o);
+                    setValue("brandId", o.id || o._id || "", { shouldValidate: true });
+                  }
+                }}
+                loadOptions={loadBrandFormOptions}
+                placeholder="Select or create brand"
+                searchable
+                creatable
+                pageSize={25}
+              />
             </div>
             <div className="col-span-2 md:col-span-1">
               <label className="mb-1 block text-xs font-medium text-muted">Unit *</label>

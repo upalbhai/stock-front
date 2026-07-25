@@ -125,6 +125,15 @@ export type Category = {
   children?: Category[];
 };
 
+export type Brand = {
+  _id: string;
+  businessId: string;
+  name: string;
+  slug: string;
+  logo?: string;
+  isActive: boolean;
+};
+
 export type Unit = {
   _id: string;
   businessId: string;
@@ -151,6 +160,7 @@ export type Product = {
   businessId: string;
   outletId: string;
   categoryId?: Category | string | null;
+  brandId?: Brand | string | null;
   name: string;
   description?: string;
   sku?: string;

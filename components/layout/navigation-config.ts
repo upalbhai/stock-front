@@ -22,6 +22,7 @@ import {
   Sparkles,
   UserCheck,
   Banknote,
+  Award,
 } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { APP_ROUTES } from "@/lib/routes";
@@ -96,6 +97,13 @@ export const sidebarGroups: SidebarGroupDef[] = [
         path: APP_ROUTES.CATEGORIES,
         icon: FolderOpen,
         keywords: ["categories", "groups"],
+        roles: ["owner", "manager"],
+      },
+      {
+        title: "Brands",
+        path: APP_ROUTES.BRANDS,
+        icon: Award,
+        keywords: ["brands", "labels", "manufacturers"],
         roles: ["owner", "manager"],
       },
       {

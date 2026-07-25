@@ -43,6 +43,7 @@ export const APP_ROUTES = {
   INVOICES: appRoute("/invoices"),
   PRODUCTS: appRoute("/products"),
   CATEGORIES: appRoute("/categories"),
+  BRANDS: appRoute("/brands"),
   STOCK: appRoute("/stock"),
   STOCK_TRANSFERS: appRoute("/stock/transfers"),
   UNITS: appRoute("/units"),
