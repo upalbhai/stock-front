@@ -81,6 +81,16 @@ export type Business = {
   gstNumber?: string;
   phone?: string;
   email?: string;
+  enabledFeatures?: string[];
+  businessProfile?: "retail" | "wholesale" | "hybrid" | "distributor";
+  planType?: string;
+  customPlanDetails?: {
+    price?: number;
+    currency?: string;
+    maxProducts?: number;
+    maxOutlets?: number;
+    enabledFeatures?: string[];
+  };
   settings?: {
     requireCustomerName?: boolean;
     defaultTaxRate?: number;

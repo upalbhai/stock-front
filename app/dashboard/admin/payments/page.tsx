@@ -11,7 +11,8 @@ import { getErrorMessage } from "@/lib/error";
 import { formatCurrency } from "@/lib/format";
 import { DataTable, ColumnDef } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
-import { ExternalLink, CheckCircle, Mail } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ExternalLink, CheckCircle, Mail, XCircle, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,10 @@ export default function AdminPaymentsPage() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
+  const [paymentToReject, setPaymentToReject] = useState<any | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -56,6 +60,29 @@ export default function AdminPaymentsPage() {
     verifyMutation.mutate(paymentId);
   };
 
+  const rejectMutation = useMutation({
+    mutationFn: ({ paymentId, reason }: { paymentId: string, reason: string }) => 
+      adminService.rejectManualPayment(paymentId, reason, "", token!),
+    onSuccess: () => {
+      toast.success("Payment rejected successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-manual-payments"] });
+      setPaymentToReject(null);
+      setRejectReason("");
+      setIsRejecting(false);
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
+      setIsRejecting(false);
+    }
+  });
+
+  const handleReject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectReason.trim()) return toast.error("Please enter a rejection reason");
+    setIsRejecting(true);
+    rejectMutation.mutate({ paymentId: paymentToReject._id, reason: rejectReason });
+  };
+
   const resendInvoiceMutation = useMutation({
     mutationFn: (paymentId: string) => adminService.resendManualPaymentInvoice(paymentId, token!),
     onSuccess: () => {
@@ -80,15 +107,29 @@ export default function AdminPaymentsPage() {
       render: (row) => row.agentId ? row.agentId.name : "-",
     },
     {
+      header: "Reference",
+      render: (row) => row.screenshotUrl?.startsWith("TXN:") ? (
+        <span className="text-xs font-mono bg-muted px-2 py-1 rounded">{row.screenshotUrl.replace("TXN:", "")}</span>
+      ) : "-",
+    },
+    {
       header: "Date",
       render: (row) => new Date(row.createdAt).toLocaleDateString(),
     },
     {
       header: "Status",
       render: (row) => (
-        <Badge variant={row.status === "verified" ? "success" : row.status === "pending_verification" ? "warning" : "secondary"}>
-          {row.status.replace("_", " ")}
-        </Badge>
+        <div className="flex flex-col items-start gap-1">
+          <Badge variant={row.status === "verified" ? "success" : row.status === "pending_verification" ? "warning" : "danger"}>
+            {row.status.replace("_", " ")}
+          </Badge>
+          {row.status === "rejected" && row.rejectionReason && (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1 max-w-[150px] truncate" title={row.rejectionReason}>
+              <Info className="h-3 w-3 shrink-0" />
+              {row.rejectionReason}
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -101,9 +142,14 @@ export default function AdminPaymentsPage() {
             </Button>
           )}
           {row.status === "pending_verification" && (
-            <Button variant="ghost" size="icon" onClick={() => setSelectedPayment(row)} title="Verify Payment">
-              <CheckCircle className="h-4 w-4 text-success" />
-            </Button>
+            <>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedPayment(row)} title="Verify Payment">
+                <CheckCircle className="h-4 w-4 text-success" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setPaymentToReject(row)} title="Reject Payment">
+                <XCircle className="h-4 w-4 text-destructive" />
+              </Button>
+            </>
           )}
           {row.status === "verified" && (
             <Button 
@@ -180,6 +226,34 @@ export default function AdminPaymentsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(paymentToReject)} onOpenChange={(open) => !open && !isRejecting && setPaymentToReject(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Payment</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleReject} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please provide a reason for rejecting this payment from <strong>{paymentToReject?.businessId?.name}</strong>.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rejection Reason *</label>
+              <Input
+                required
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="e.g. Transaction ID not found in bank statement"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setPaymentToReject(null)} disabled={isRejecting}>Cancel</Button>
+              <Button type="submit" variant="destructive" disabled={isRejecting}>
+                {isRejecting ? "Rejecting..." : "Reject Payment"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

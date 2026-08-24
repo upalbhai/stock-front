@@ -170,20 +170,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user?.subscriptionStatus === "payment_locked" && pathname !== APP_ROUTES.SUBSCRIBE) {
+  const isSubscriptionExpired =
+    user?.role !== "superadmin" &&
+    user?.role !== "agent" &&
+    (user?.subscriptionStatus === "payment_locked" ||
+      user?.subscriptionStatus === "expired" ||
+      user?.subscriptionStatus === "cancelled" ||
+      user?.trialExpired);
+
+  if (isSubscriptionExpired && pathname !== APP_ROUTES.SUBSCRIBE) {
     return (
       <div className="flex h-svh items-center justify-center bg-muted/30 p-4">
         <div className="max-w-md w-full bg-card rounded-xl border border-border shadow-xl p-8 text-center animate-in fade-in zoom-in duration-500">
           <div className="mx-auto bg-danger/10 w-16 h-16 rounded-full flex items-center justify-center mb-6">
             <Lock className="h-8 w-8 text-danger" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Account Locked</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Subscription Expired</h1>
           <p className="text-sm text-muted-foreground mb-8">
-            Your grace period has expired. Please complete your payment to resume access to the dashboard.
+            Your subscription or free trial has expired. Please renew your plan or complete payment to resume access to the dashboard.
           </p>
           
           <Button asChild className="w-full" size="lg">
-            <Link href={APP_ROUTES.SUBSCRIBE}>Upload Payment Details</Link>
+            <Link href={APP_ROUTES.SUBSCRIBE}>Renew Plan / Complete Payment</Link>
           </Button>
 
           <div className="mt-8 pt-6 border-t border-border">

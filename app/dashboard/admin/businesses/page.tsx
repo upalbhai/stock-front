@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 const Modal = dynamic(() => import("@/components/ui/modal").then(m => ({ default: m.Modal })), { ssr: false });
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -27,6 +28,19 @@ import { getErrorMessage } from "@/lib/error";
 import { APP_ROUTES } from "@/lib/routes";
 import type { Business, StaffUser, Plan } from "@/lib/types";
 import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+
+const AVAILABLE_FEATURES = [
+  { key: "retail_billing", label: "Retail POS Billing" },
+  { key: "wholesale_billing", label: "Wholesale Billing" },
+  { key: "packaging_units", label: "Packaging Units" },
+  { key: "gst_invoices", label: "GST Invoices" },
+  { key: "credit_khata", label: "Credit / Khata" },
+  { key: "customers", label: "Customer Directory" },
+  { key: "bulk_stock_in", label: "Bulk Stock Receive" },
+  { key: "order_void", label: "Void Bills" },
+  { key: "order_history", label: "Order History" },
+  { key: "notifications", label: "In-App Notifications" },
+];
 
 export default function AdminBusinessesPage() {
   const { token, impersonate } = useAuth();
@@ -48,21 +62,32 @@ export default function AdminBusinessesPage() {
 
   const [showHistoryModal, setShowHistoryModal] = React.useState(false);
   const [historyBusiness, setHistoryBusiness] = React.useState<Business | null>(null);
-  
+
   const [showImpersonateModal, setShowImpersonateModal] = React.useState(false);
   const [impersonateTargetBusiness, setImpersonateTargetBusiness] = React.useState<Business | null>(null);
   const [userSearch, setUserSearch] = React.useState("");
   const [impersonatingId, setImpersonatingId] = React.useState<string | null>(null);
+  const [cancelBusiness, setCancelBusiness] = React.useState<Business | null>(null);
 
-  const [planForm, setPlanForm] = React.useState({ plan: "free", maxOutlets: 1, subscriptionStatus: "trial", planExpiresAt: "" });
+  const [planForm, setPlanForm] = React.useState({ 
+    plan: "free", 
+    maxOutlets: 1, 
+    subscriptionStatus: "trial", 
+    planExpiresAt: "",
+    isCustomPlan: false,
+    price: 0,
+    currency: "INR",
+    maxProducts: 50,
+    enabledFeatures: [] as string[]
+  });
   const [manualSubForm, setManualSubForm] = React.useState({
     planId: "", billingCycle: "monthly", amount: "", currency: "INR", paymentReference: "", endDate: "", notes: ""
   });
 
   const { data: bizData, isLoading: loadingBiz, refetch } = useQuery({
     queryKey: ["admin-businesses", query.search, query.statusFilter, query.page],
-    queryFn: () => adminService.getAdminBusinesses(token, { 
-      search: query.search || undefined, 
+    queryFn: () => adminService.getAdminBusinesses(token, {
+      search: query.search || undefined,
       status: query.statusFilter !== "all" ? query.statusFilter : undefined,
       page: query.page,
       limit: 10
@@ -159,6 +184,7 @@ export default function AdminBusinessesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-businesses"] });
       toast.success("Subscription cancelled");
+      setCancelBusiness(null);
     },
     onError: (err) => toast.error(getErrorMessage(err))
   });
@@ -172,11 +198,19 @@ export default function AdminBusinessesPage() {
 
   const openPlanEdit = (biz: Business) => {
     setSelectedBusiness(biz);
-    setPlanForm({ 
-      plan: (biz.planId as any)?._id || biz.planId || biz.plan || "", 
+    const isCustom = biz.customPlanDetails !== undefined || biz.planId === null;
+    const customDetails = biz.customPlanDetails || {} as any;
+
+    setPlanForm({
+      plan: (biz.planId as any)?._id || biz.planId || biz.plan || "",
       maxOutlets: biz.maxOutlets || 1,
       subscriptionStatus: biz.subscriptionStatus || "trial",
-      planExpiresAt: biz.currentPeriodEnd ? new Date(biz.currentPeriodEnd).toISOString().split('T')[0] : ""
+      planExpiresAt: biz.currentPeriodEnd ? new Date(biz.currentPeriodEnd).toISOString().split('T')[0] : "",
+      isCustomPlan: isCustom,
+      price: customDetails.price || 0,
+      currency: customDetails.currency || biz.currency || "INR",
+      maxProducts: customDetails.maxProducts || biz.maxProducts || 50,
+      enabledFeatures: customDetails.enabledFeatures || biz.enabledFeatures || AVAILABLE_FEATURES.map(f => f.key)
     });
     setShowPlanModal(true);
   };
@@ -234,7 +268,7 @@ export default function AdminBusinessesPage() {
       render: (b: Business) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge variant="soft" className="capitalize text-[10px]">{typeof b.planId === "object" ? (b.planId as any).name : b.planId || b.plan}</Badge>
+            <Badge variant="soft" className="capitalize text-[10px]">{b.planId && typeof b.planId === "object" ? (b.planId as any).name : b.planId || b.plan || (b.customPlanDetails ? "Custom Plan" : "Unknown")}</Badge>
             <Badge variant={b.subscriptionStatus === "active" ? "default" : b.subscriptionStatus === "trial" ? "soft" : "danger"} className="capitalize text-[10px]">{b.subscriptionStatus || "unknown"}</Badge>
           </div>
           {b.subscriptionStatus === "trial" && b.trialEndsAt && <span className="text-[10px] text-muted-foreground">Trial ends: {new Date(b.trialEndsAt).toLocaleDateString()}</span>}
@@ -275,13 +309,14 @@ export default function AdminBusinessesPage() {
               <DropdownMenuItem onClick={() => openManualSub(b)}>
                 <DollarSign className="mr-2 h-4 w-4" /> Manual Sub
               </DropdownMenuItem>
+
               {b.subscriptionStatus === "active" && (
                 <DropdownMenuItem onClick={() => openEmailPreview(b._id)}>
                   <Mail className="mr-2 h-4 w-4" /> Mail
                 </DropdownMenuItem>
               )}
               {b.subscriptionStatus === "active" && (
-                <DropdownMenuItem onClick={() => { if(confirm(`Cancel subscription for ${b.name}?`)) cancelSubMutation.mutate(b._id); }} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                <DropdownMenuItem onClick={() => setCancelBusiness(b)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                   Cancel Sub
                 </DropdownMenuItem>
               )}
@@ -335,13 +370,93 @@ export default function AdminBusinessesPage() {
       />
 
       {showPlanModal && (
-        <Modal open={showPlanModal} onClose={() => setShowPlanModal(false)} title="Update Subscription Plan" size="sm">
-          <form onSubmit={(e) => { e.preventDefault(); if (selectedBusiness) planMutation.mutate({ id: selectedBusiness._id, body: { planId: planForm.plan, maxOutlets: Number(planForm.maxOutlets), subscriptionStatus: planForm.subscriptionStatus, currentPeriodEnd: planForm.planExpiresAt ? new Date(planForm.planExpiresAt).toISOString() : undefined } }); }} className="space-y-4">
+        <Modal open={showPlanModal} onClose={() => setShowPlanModal(false)} title="Update Subscription Plan" size="md">
+          <form onSubmit={(e) => { 
+            e.preventDefault(); 
+            if (selectedBusiness) {
+              const body: any = { 
+                maxOutlets: Number(planForm.maxOutlets), 
+                subscriptionStatus: planForm.subscriptionStatus, 
+                currentPeriodEnd: planForm.planExpiresAt ? new Date(planForm.planExpiresAt).toISOString() : undefined,
+                isCustomPlan: planForm.isCustomPlan
+              };
+              if (planForm.isCustomPlan) {
+                body.customPlanDetails = {
+                  price: Number(planForm.price),
+                  currency: planForm.currency,
+                  maxProducts: Number(planForm.maxProducts),
+                  maxOutlets: Number(planForm.maxOutlets),
+                  enabledFeatures: planForm.enabledFeatures
+                };
+              } else {
+                body.planId = planForm.plan;
+              }
+              planMutation.mutate({ id: selectedBusiness._id, body }); 
+            }
+          }} className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
             <div>
               <p className="text-sm font-semibold">{selectedBusiness?.name}</p>
               <p className="text-xs text-muted-foreground">Customize account features level and boundaries.</p>
             </div>
-            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Plan tier *</label><Select id="plan-level" value={planForm.plan} onValueChange={(v) => setPlanForm(f => ({ ...f, plan: v }))} options={PLAN_OPTIONS} /></div>
+            <div>
+              <label className="mb-2 block text-xs font-medium text-muted-foreground">Plan Mode</label>
+              <div className="flex bg-muted p-1 rounded-md mb-4">
+                <button type="button" onClick={() => setPlanForm(f => ({ ...f, isCustomPlan: false }))} className={`flex-1 py-1.5 text-xs font-medium rounded-sm transition-colors ${!planForm.isCustomPlan ? 'bg-background shadow text-foreground' : 'text-muted-foreground'}`}>Preset Plan</button>
+                <button type="button" onClick={() => setPlanForm(f => ({ ...f, isCustomPlan: true }))} className={`flex-1 py-1.5 text-xs font-medium rounded-sm transition-colors ${planForm.isCustomPlan ? 'bg-background shadow text-foreground' : 'text-muted-foreground'}`}>Custom Plan</button>
+              </div>
+            </div>
+
+            {!planForm.isCustomPlan ? (
+              <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Plan tier *</label><Select id="plan-level" value={planForm.plan} onValueChange={(v) => setPlanForm(f => ({ ...f, plan: v }))} options={PLAN_OPTIONS} /></div>
+            ) : (
+              <div className="space-y-4 border p-4 rounded-lg bg-muted/30">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Custom Price</label>
+                    <Input id="custom-price" type="number" min={0} value={planForm.price} onChange={(e) => setPlanForm(f => ({ ...f, price: Number(e.target.value) }))} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Currency</label>
+                    <Select id="custom-currency" value={planForm.currency} onValueChange={(v) => setPlanForm(f => ({ ...f, currency: v }))} options={[{ value: "INR", label: "INR (₹)" }, { value: "USD", label: "USD ($)" }, { value: "EUR", label: "EUR (€)" }, { value: "GBP", label: "GBP (£)" }, { value: "AED", label: "AED (د.إ)" }, { value: "SAR", label: "SAR (ر.س)" }]} />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Max Products limit</label>
+                  <Input id="max-products" type="number" min={1} value={planForm.maxProducts} onChange={(e) => setPlanForm(f => ({ ...f, maxProducts: Number(e.target.value) }))} />
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-medium text-muted-foreground">Enabled Features</label>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="ghost" size="xs" className="h-6 text-[10px]" onClick={() => setPlanForm(f => ({ ...f, enabledFeatures: AVAILABLE_FEATURES.map(feat => feat.key) }))}>Select All</Button>
+                      <Button type="button" variant="ghost" size="xs" className="h-6 text-[10px]" onClick={() => setPlanForm(f => ({ ...f, enabledFeatures: [] }))}>Clear</Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {AVAILABLE_FEATURES.map((feat) => {
+                      const isSelected = planForm.enabledFeatures.includes(feat.key);
+                      return (
+                        <div
+                          key={feat.key}
+                          onClick={() => {
+                            setPlanForm(f => {
+                              const newFeats = isSelected ? f.enabledFeatures.filter(x => x !== feat.key) : [...f.enabledFeatures, feat.key];
+                              return { ...f, enabledFeatures: newFeats };
+                            });
+                          }}
+                          className={`flex items-center gap-2 p-2 rounded-md border text-xs cursor-pointer transition-colors ${isSelected ? 'bg-primary/10 border-primary/50 text-primary font-medium' : 'bg-background hover:bg-muted text-muted-foreground'}`}
+                        >
+                          <div className={`w-3 h-3 rounded flex items-center justify-center border ${isSelected ? 'bg-primary border-primary' : 'border-input'}`}>
+                            {isSelected && <CheckCircle2 className="h-2.5 w-2.5 text-primary-foreground" />}
+                          </div>
+                          {feat.label}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
             <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Max Outlets permitted</label><Input id="max-outlets" type="number" min={1} max={100} value={planForm.maxOutlets} onChange={(e) => setPlanForm(f => ({ ...f, maxOutlets: Number(e.target.value) }))} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label><Select id="sub-status" value={planForm.subscriptionStatus} onValueChange={(v) => setPlanForm(f => ({ ...f, subscriptionStatus: v }))} options={[{ value: "trial", label: "Free Trial" }, { value: "active", label: "Active subscription" }, { value: "past_due", label: "Past Due" }, { value: "unpaid", label: "Unpaid / Suspended" }]} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Plan Expiry Date</label><Input id="plan-expires" type="date" value={planForm.planExpiresAt} onChange={(e) => setPlanForm(f => ({ ...f, planExpiresAt: e.target.value }))} /></div>
@@ -352,9 +467,22 @@ export default function AdminBusinessesPage() {
 
       {showManualSubModal && (
         <Modal open={showManualSubModal} onClose={() => setShowManualSubModal(false)} title="Create Manual Subscription" size="sm">
-          <form onSubmit={(e) => { e.preventDefault(); if(selectedBusiness) manualSubMutation.mutate({ businessId: selectedBusiness._id, planId: manualSubForm.planId, billingCycle: manualSubForm.billingCycle, amount: manualSubForm.amount ? Number(manualSubForm.amount) : undefined, currency: manualSubForm.currency || undefined, paymentReference: manualSubForm.paymentReference || undefined, endDate: manualSubForm.endDate || undefined, notes: manualSubForm.notes || undefined }); }} className="space-y-4">
+          <form onSubmit={(e) => { 
+            e.preventDefault(); 
+            if (selectedBusiness) {
+              manualSubMutation.mutate({ 
+                businessId: selectedBusiness._id, 
+                isCustomPlan: true,
+                billingCycle: manualSubForm.billingCycle, 
+                amount: manualSubForm.amount ? Number(manualSubForm.amount) : undefined, 
+                currency: manualSubForm.currency || undefined, 
+                paymentReference: manualSubForm.paymentReference || undefined, 
+                endDate: manualSubForm.endDate || undefined, 
+                notes: manualSubForm.notes || undefined 
+              }); 
+            }
+          }} className="space-y-4">
             <div><p className="text-sm font-semibold">{selectedBusiness?.name}</p></div>
-            <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Plan tier *</label><Select id="manual-plan-id" value={manualSubForm.planId} onValueChange={(v) => setManualSubForm(f => ({ ...f, planId: v }))} options={PLAN_OPTIONS} /></div>
             <div><label className="mb-1 block text-xs font-medium text-muted-foreground">Billing Cycle</label><Select id="manual-cycle" value={manualSubForm.billingCycle} onValueChange={(v) => setManualSubForm(f => ({ ...f, billingCycle: v }))} options={[{ value: "monthly", label: "Monthly" }, { value: "yearly", label: "Yearly" }]} /></div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -439,11 +567,10 @@ export default function AdminBusinessesPage() {
               <div className="relative border-l border-border ml-3 space-y-6">
                 {historyData?.logs?.map((log: any) => (
                   <div key={log._id} className="relative pl-6">
-                    <div className={`absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-background ${
-                      log.action === "admin_plan_change_approved" ? "bg-success" : 
-                      log.action === "admin_plan_change_rejected" ? "bg-destructive" : 
-                      "bg-primary"
-                    }`} />
+                    <div className={`absolute -left-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-background ${log.action === "admin_plan_change_approved" ? "bg-success" :
+                        log.action === "admin_plan_change_rejected" ? "bg-destructive" :
+                          "bg-primary"
+                      }`} />
                     <div className="flex flex-col">
                       <span className="text-xs text-muted-foreground font-mono">
                         {new Date(log.createdAt).toLocaleString()}
@@ -466,6 +593,19 @@ export default function AdminBusinessesPage() {
           </div>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={Boolean(cancelBusiness)}
+        onClose={() => setCancelBusiness(null)}
+        onConfirm={() => {
+          if (cancelBusiness) cancelSubMutation.mutate(cancelBusiness._id);
+        }}
+        title="Cancel Subscription?"
+        message={`Are you sure you want to cancel the subscription for ${cancelBusiness?.name || "this business"}?`}
+        confirmLabel="Cancel Subscription"
+        variant="danger"
+        loading={cancelSubMutation.isPending}
+      />
 
     </div>
   );
