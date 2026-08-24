@@ -48,6 +48,7 @@
     "react-hook-form": "^7.80.0",
     "react-hot-toast": "^2.6.0",
     "react-intersection-observer": "^10.0.3",
+    "react-photo-view": "^1.2.7",
     "react-redux": "^9.1.2",
     "recharts": "^3.8.1",
     "redux-persist": "^6.0.0",

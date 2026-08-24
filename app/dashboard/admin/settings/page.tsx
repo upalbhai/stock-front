@@ -27,6 +27,15 @@ export default function AdminSettingsPage() {
     defaultTrialDays: 14,
     allowNewSignups: true,
     globalAnnouncement: "",
+    bankDetails: {
+      accountName: "",
+      accountNumber: "",
+      ifsc: "",
+      bankName: "",
+      branch: "",
+      upiId: "",
+      notes: ""
+    }
   });
 
   React.useEffect(() => {
@@ -36,6 +45,15 @@ export default function AdminSettingsPage() {
         defaultTrialDays: data.settings.defaultTrialDays ?? 14,
         allowNewSignups: data.settings.allowNewSignups ?? true,
         globalAnnouncement: data.settings.globalAnnouncement ?? "",
+        bankDetails: {
+          accountName: data.settings.bankDetails?.accountName ?? "",
+          accountNumber: data.settings.bankDetails?.accountNumber ?? "",
+          ifsc: data.settings.bankDetails?.ifsc ?? "",
+          bankName: data.settings.bankDetails?.bankName ?? "",
+          branch: data.settings.bankDetails?.branch ?? "",
+          upiId: data.settings.bankDetails?.upiId ?? "",
+          notes: data.settings.bankDetails?.notes ?? ""
+        }
       });
     }
   }, [data]);
@@ -141,6 +159,49 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setForm({ ...form, globalAnnouncement: e.target.value })}
                 rows={3}
                 className="resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 pt-4">
+          <h2 className="text-lg font-semibold border-b border-border pb-2">Bank transfer details</h2>
+          <p className="text-xs text-muted-foreground">
+            Shown to owners on the subscribe page when they pay by NEFT / IMPS / UPI.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Account name</label>
+              <Input value={form.bankDetails.accountName} onChange={(e) => setForm({ ...form, bankDetails: { ...form.bankDetails, accountName: e.target.value } })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Bank name</label>
+              <Input value={form.bankDetails.bankName} onChange={(e) => setForm({ ...form, bankDetails: { ...form.bankDetails, bankName: e.target.value } })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Account number</label>
+              <Input value={form.bankDetails.accountNumber} onChange={(e) => setForm({ ...form, bankDetails: { ...form.bankDetails, accountNumber: e.target.value } })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">IFSC</label>
+              <Input value={form.bankDetails.ifsc} onChange={(e) => setForm({ ...form, bankDetails: { ...form.bankDetails, ifsc: e.target.value } })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Branch</label>
+              <Input value={form.bankDetails.branch} onChange={(e) => setForm({ ...form, bankDetails: { ...form.bankDetails, branch: e.target.value } })} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">UPI ID</label>
+              <Input value={form.bankDetails.upiId} onChange={(e) => setForm({ ...form, bankDetails: { ...form.bankDetails, upiId: e.target.value } })} placeholder="business@upi" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium">Notes for owners</label>
+              <Textarea
+                rows={2}
+                className="resize-none"
+                value={form.bankDetails.notes}
+                onChange={(e) => setForm({ ...form, bankDetails: { ...form.bankDetails, notes: e.target.value } })}
+                placeholder="e.g. Use the business name as the transfer remark"
               />
             </div>
           </div>

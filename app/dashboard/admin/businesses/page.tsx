@@ -42,6 +42,18 @@ const AVAILABLE_FEATURES = [
   { key: "notifications", label: "In-App Notifications" },
 ];
 
+function getBusinessPlanLabel(b: Business & { planId?: Plan | string | null }) {
+  if (b.planId && typeof b.planId === "object") return b.planId.name;
+  if (b.customPlanDetails) {
+    const { price, currency = "INR", billingCycle } = b.customPlanDetails;
+    const cycle = billingCycle === "yearly" ? "/yr" : "/mo";
+    if (price != null) return `Custom · ${currency} ${price}${cycle}`;
+    return "Custom Plan";
+  }
+  if (b.planId) return String(b.planId);
+  return b.plan || "Unknown";
+}
+
 export default function AdminBusinessesPage() {
   const { token, impersonate } = useAuth();
   const qc = useQueryClient();
@@ -77,6 +89,7 @@ export default function AdminBusinessesPage() {
     isCustomPlan: false,
     price: 0,
     currency: "INR",
+    billingCycle: "monthly",
     maxProducts: 50,
     enabledFeatures: [] as string[]
   });
@@ -209,6 +222,7 @@ export default function AdminBusinessesPage() {
       isCustomPlan: isCustom,
       price: customDetails.price || 0,
       currency: customDetails.currency || biz.currency || "INR",
+      billingCycle: customDetails.billingCycle || "monthly",
       maxProducts: customDetails.maxProducts || biz.maxProducts || 50,
       enabledFeatures: customDetails.enabledFeatures || biz.enabledFeatures || AVAILABLE_FEATURES.map(f => f.key)
     });
@@ -268,7 +282,7 @@ export default function AdminBusinessesPage() {
       render: (b: Business) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge variant="soft" className="capitalize text-[10px]">{b.planId && typeof b.planId === "object" ? (b.planId as any).name : b.planId || b.plan || (b.customPlanDetails ? "Custom Plan" : "Unknown")}</Badge>
+            <Badge variant="soft" className="capitalize text-[10px]">{getBusinessPlanLabel(b)}</Badge>
             <Badge variant={b.subscriptionStatus === "active" ? "default" : b.subscriptionStatus === "trial" ? "soft" : "danger"} className="capitalize text-[10px]">{b.subscriptionStatus || "unknown"}</Badge>
           </div>
           {b.subscriptionStatus === "trial" && b.trialEndsAt && <span className="text-[10px] text-muted-foreground">Trial ends: {new Date(b.trialEndsAt).toLocaleDateString()}</span>}
@@ -384,6 +398,7 @@ export default function AdminBusinessesPage() {
                 body.customPlanDetails = {
                   price: Number(planForm.price),
                   currency: planForm.currency,
+                  billingCycle: planForm.billingCycle,
                   maxProducts: Number(planForm.maxProducts),
                   maxOutlets: Number(planForm.maxOutlets),
                   enabledFeatures: planForm.enabledFeatures
@@ -419,6 +434,10 @@ export default function AdminBusinessesPage() {
                     <label className="mb-1 block text-xs font-medium text-muted-foreground">Currency</label>
                     <Select id="custom-currency" value={planForm.currency} onValueChange={(v) => setPlanForm(f => ({ ...f, currency: v }))} options={[{ value: "INR", label: "INR (₹)" }, { value: "USD", label: "USD ($)" }, { value: "EUR", label: "EUR (€)" }, { value: "GBP", label: "GBP (£)" }, { value: "AED", label: "AED (د.إ)" }, { value: "SAR", label: "SAR (ر.س)" }]} />
                   </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Billing cycle</label>
+                  <Select id="custom-cycle" value={planForm.billingCycle} onValueChange={(v) => setPlanForm(f => ({ ...f, billingCycle: v }))} options={[{ value: "monthly", label: "Monthly" }, { value: "yearly", label: "Yearly" }]} />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">Max Products limit</label>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PhotoProvider } from "react-photo-view";
 import { adminService } from "@/services/admin.service";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,8 @@ import { formatCurrency } from "@/lib/format";
 import { DataTable, ColumnDef } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ExternalLink, CheckCircle, Mail, XCircle, Info } from "lucide-react";
+import { CheckCircle, Mail, XCircle, Info } from "lucide-react";
+import { ManualPaymentProof } from "@/components/admin/manual-payment-proof";
 import {
   Dialog,
   DialogContent,
@@ -108,9 +110,21 @@ export default function AdminPaymentsPage() {
     },
     {
       header: "Reference",
-      render: (row) => row.screenshotUrl?.startsWith("TXN:") ? (
-        <span className="text-xs font-mono bg-muted px-2 py-1 rounded">{row.screenshotUrl.replace("TXN:", "")}</span>
-      ) : "-",
+      render: (row) => {
+        const utr = row.utr || (row.screenshotUrl?.startsWith("TXN:") || row.screenshotUrl?.startsWith("UTR:")
+          ? row.screenshotUrl.slice(4)
+          : "");
+        return utr ? <span className="text-xs font-mono bg-muted px-2 py-1 rounded">{utr}</span> : "-";
+      },
+    },
+    {
+      header: "Proof",
+      render: (row) =>
+        row.hasScreenshot ? (
+          <ManualPaymentProof paymentId={row._id} token={token} />
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
     },
     {
       header: "Date",
@@ -136,11 +150,6 @@ export default function AdminPaymentsPage() {
       header: "Actions",
       render: (row) => (
         <div className="flex items-center gap-2">
-          {row.screenshotUrl && (
-            <Button variant="ghost" size="icon" onClick={() => window.open(row.screenshotUrl, "_blank")} title="View Screenshot">
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          )}
           {row.status === "pending_verification" && (
             <>
               <Button variant="ghost" size="icon" onClick={() => setSelectedPayment(row)} title="Verify Payment">
@@ -168,6 +177,7 @@ export default function AdminPaymentsPage() {
   ];
 
   return (
+    <PhotoProvider maskOpacity={0.85}>
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Manual Payment Verifications</h1>
@@ -219,6 +229,17 @@ export default function AdminPaymentsPage() {
             <p className="text-xs text-muted-foreground">
               Verifying this payment will automatically activate their subscription for another cycle and disburse the agent commission (if applicable).
             </p>
+            {selectedPayment?.hasScreenshot ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                <ManualPaymentProof
+                  paymentId={selectedPayment._id}
+                  token={token}
+                  className="h-20 w-20"
+                  thumbnailClassName="object-contain bg-background"
+                />
+                <p className="text-xs text-muted-foreground">Click the screenshot to zoom and inspect before verifying.</p>
+              </div>
+            ) : null}
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setSelectedPayment(null)} disabled={isVerifying}>Cancel</Button>
               <Button onClick={() => handleVerify(selectedPayment._id)} disabled={isVerifying}>
@@ -257,5 +278,6 @@ export default function AdminPaymentsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PhotoProvider>
   );
 }

@@ -87,6 +87,7 @@ export type Business = {
   customPlanDetails?: {
     price?: number;
     currency?: string;
+    billingCycle?: "monthly" | "yearly";
     maxProducts?: number;
     maxOutlets?: number;
     enabledFeatures?: string[];

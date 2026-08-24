@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Script from "next/script";
-import { AlertCircle, FileText, CheckCircle2, CreditCard, Building2 } from "lucide-react";
+import { AlertCircle, FileText, CheckCircle2, CreditCard, Building2, Copy, Upload, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/auth-provider";
-import { apiFetch, getJson } from "@/lib/api-client";
+import { apiFetch, getJson, getJsonWithMeta } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error";
 import { APP_ROUTES } from "@/lib/routes";
 import { businessService } from "@/services/business.service";
@@ -17,14 +17,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Download } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function SubscribePage() {
   const router = useRouter();
   const { user, token, logout } = useAuth();
+  const queryClient = useQueryClient();
   const [transactionId, setTransactionId] = useState("");
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isRazorpayLoading, setIsRazorpayLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit, setHistoryLimit] = useState(10);
 
   const [planRequestForm, setPlanRequestForm] = useState({
     maxOutlets: 1,
@@ -38,9 +44,18 @@ export default function SubscribePage() {
     enabled: !!token
   });
 
-  const { data: historyData } = useQuery({
-    queryKey: ["payment-history"],
-    queryFn: () => getJson<any>("/payments/history", token),
+  const { data: historyResult, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
+    queryKey: ["payment-history", historyPage, historyLimit],
+    queryFn: () => getJsonWithMeta<{ history: any[] }>("/payments/history", token, { page: historyPage, limit: historyLimit }),
+    enabled: !!token
+  });
+
+  const history = historyResult?.data?.history ?? [];
+  const historyMeta = historyResult?.meta?.pagination;
+
+  const { data: bankData } = useQuery({
+    queryKey: ["bank-details"],
+    queryFn: () => getJson<any>("/payments/bank-details", token),
     enabled: !!token
   });
 
@@ -53,8 +68,12 @@ export default function SubscribePage() {
   const uploadMutation = useMutation({
     mutationFn: (data: any) => apiFetch("/payments/manual", { method: "POST", body: data, token }),
     onSuccess: () => {
-      setSuccess("Payment details uploaded successfully. Your account will be activated once verified by an admin.");
+      setSuccess("Payment submitted. We will verify the transfer and activate your plan, usually within 24 hours.");
       setTransactionId("");
+      setScreenshotFile(null);
+      queryClient.invalidateQueries({ queryKey: ["subscription-status"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-history"] });
+      refetchHistory();
     },
     onError: (err) => {
       setError(getErrorMessage(err, "Failed to upload payment details"));
@@ -85,24 +104,51 @@ export default function SubscribePage() {
     }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const copyText = async (label: string, value: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(label);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch {
+      setError("Could not copy. Please copy the details manually.");
+    }
+  };
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      if (file.size > 1.5 * 1024 * 1024) {
+        reject(new Error("Screenshot must be under 1.5 MB"));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Failed to read screenshot"));
+      reader.readAsDataURL(file);
+    });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    const planPrice = statusData?.customPlanDetails?.price || 0;
-    const planCurrency = statusData?.customPlanDetails?.currency || "INR";
-
-    if (!transactionId) {
-      setError("Please fill all required fields");
+    if (!transactionId.trim()) {
+      setError("Please enter the UTR / UPI reference number");
       return;
     }
 
-    uploadMutation.mutate({
-      amount: planPrice,
-      currency: planCurrency,
-      screenshotUrl: `TXN:${transactionId}`
-    });
+    try {
+      let screenshotBase64: string | undefined;
+      if (screenshotFile) {
+        screenshotBase64 = await fileToDataUrl(screenshotFile);
+      }
+      uploadMutation.mutate({
+        utr: transactionId.trim(),
+        screenshotBase64
+      });
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not read the screenshot"));
+    }
   };
 
   const handleDownloadInvoice = (payment: any) => {
@@ -259,6 +305,20 @@ export default function SubscribePage() {
 
   const hasCustomPlan = !!statusData?.customPlanDetails;
   const hasPendingPlan = !!statusData?.pendingCustomPlan;
+  const pendingManual = statusData?.pendingManualPayment;
+  const lastRejected = statusData?.lastRejectedManualPayment;
+  const bank = bankData?.bankDetails || {};
+  const dueAmount = statusData?.customPlanDetails?.price || 0;
+  const dueCurrency = statusData?.customPlanDetails?.currency || "INR";
+  const billingCycle = statusData?.customPlanDetails?.billingCycle === "yearly" ? "yearly" : "monthly";
+
+  const historyStatusVariant = (status: string): "success" | "warning" | "danger" => {
+    if (status === "active" || status === "verified") return "success";
+    if (status === "rejected" || status === "cancelled" || status === "expired") return "danger";
+    return "warning";
+  };
+
+  const formatHistoryStatus = (status: string) => status.replace(/_/g, " ");
 
   return (
     <div className="min-h-screen py-12 px-4 bg-surface">
@@ -455,36 +515,100 @@ export default function SubscribePage() {
                       Manual Bank Transfer
                     </CardTitle>
                     <CardDescription>
-                      Transfer the agreed amount to the company account and enter the transaction ID below. Verification may take up to 24 hours.
+                      Transfer {dueCurrency} {dueAmount} ({billingCycle}) to the account below, then submit your UTR. Verification usually takes up to 24 hours.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Amount Due</label>
-                        <div className="flex items-center gap-2">
-                          <div className="px-4 py-2 bg-muted rounded-md text-foreground font-semibold flex-1 border border-border">
-                            {statusData?.customPlanDetails?.currency || "INR"} {statusData?.customPlanDetails?.price || 0}
+                  <CardContent className="space-y-6">
+                    {(bank.accountNumber || bank.upiId) ? (
+                      <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3 text-sm">
+                        <p className="font-medium text-foreground">Pay to this account</p>
+                        {[
+                          ["Account name", bank.accountName],
+                          ["Bank", bank.bankName],
+                          ["Account number", bank.accountNumber],
+                          ["IFSC", bank.ifsc],
+                          ["Branch", bank.branch],
+                          ["UPI ID", bank.upiId]
+                        ].filter(([, value]) => Boolean(value)).map(([label, value]) => (
+                          <div key={label} className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-xs text-muted-foreground">{label}</p>
+                              <p className="font-semibold font-mono">{value}</p>
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => copyText(label, String(value))}>
+                              <Copy className="h-3.5 w-3.5 mr-1" />
+                              {copiedField === label ? "Copied" : "Copy"}
+                            </Button>
+                          </div>
+                        ))}
+                        {bank.notes ? <p className="text-xs text-muted-foreground pt-1">{bank.notes}</p> : null}
+                        {bank.upiId ? (
+                          <a
+                            className="inline-flex text-sm font-medium text-primary underline"
+                            href={`upi://pay?pa=${encodeURIComponent(bank.upiId)}&pn=${encodeURIComponent(bank.accountName || "Subscription")}&am=${dueAmount}&cu=INR`}
+                          >
+                            Open UPI app
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground rounded-lg border border-dashed p-3">
+                        Bank details are not published yet. Ask support for the account, then submit your UTR here.
+                      </p>
+                    )}
+
+                    {pendingManual ? (
+                      <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 space-y-1">
+                        <p className="font-medium flex items-center gap-2"><Clock className="h-4 w-4" /> Transfer submitted — waiting for verification</p>
+                        <p className="text-sm text-muted-foreground">UTR: <span className="font-mono font-semibold text-foreground">{pendingManual.utr}</span></p>
+                        <p className="text-xs text-muted-foreground">Submitted {new Date(pendingManual.createdAt).toLocaleString()}. You will get access as soon as an admin confirms the credit.</p>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSubmit} className="space-y-6">
+                        {lastRejected ? (
+                          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm">
+                            <p className="font-medium text-danger">Previous transfer was rejected</p>
+                            <p className="text-muted-foreground mt-1">{lastRejected.rejectionReason}</p>
+                            <p className="text-xs mt-1">Submit a new UTR below after you transfer again.</p>
+                          </div>
+                        ) : null}
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Amount to transfer</label>
+                          <div className="px-4 py-2 bg-muted rounded-md text-foreground font-semibold border border-border">
+                            {dueCurrency} {dueAmount}
                           </div>
                         </div>
-                      </div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Transaction ID / Reference Number *</label>
-                        <Input
-                          type="text"
-                          required
-                          value={transactionId}
-                          onChange={(e) => setTransactionId(e.target.value)}
-                          placeholder="e.g. UTR123456789"
-                        />
-                        <p className="text-xs text-muted-foreground">This helps us verify your payment quickly.</p>
-                      </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">UTR / UPI reference *</label>
+                          <Input
+                            type="text"
+                            required
+                            value={transactionId}
+                            onChange={(e) => setTransactionId(e.target.value)}
+                            placeholder="e.g. 123456789012"
+                          />
+                          <p className="text-xs text-muted-foreground">From your bank SMS or UPI app after the transfer.</p>
+                        </div>
 
-                      <Button type="submit" variant="secondary" className="w-full h-12 text-lg" disabled={uploadMutation.isPending}>
-                        {uploadMutation.isPending ? "Submitting..." : "Submit Payment Details"}
-                      </Button>
-                    </form>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Payment screenshot (optional)</label>
+                          <Input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
+                          />
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Upload className="h-3 w-3" /> JPEG, PNG or WebP, max 1.5 MB. Helps us verify faster.
+                          </p>
+                        </div>
+
+                        <Button type="submit" variant="secondary" className="w-full h-12 text-lg" disabled={uploadMutation.isPending}>
+                          {uploadMutation.isPending ? "Submitting..." : "Submit payment for verification"}
+                        </Button>
+                      </form>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -500,28 +624,59 @@ export default function SubscribePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {historyData?.data?.history?.length > 0 ? (
-                      historyData.data.history.map((payment: any) => (
-                        <div key={payment.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-border rounded-xl gap-4">
-                          <div className="space-y-1">
-                            <p className="font-medium text-foreground">{payment.description}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(payment.date).toLocaleDateString()} &middot; Ref: {payment.reference?.replace("TXN:", "") || "N/A"}
-                            </p>
-                          </div>
-                          <div className="flex flex-col sm:items-end gap-2 shrink-0">
-                            <div className="flex items-center gap-3">
-                              <span className="font-bold">{payment.currency} {payment.amount}</span>
-                              <Badge variant={payment.status === 'active' || payment.status === 'verified' ? 'success' : payment.status === 'rejected' ? 'danger' : 'warning'} className="capitalize">
-                                {payment.status.replace("_", " ")}
-                              </Badge>
+                    {historyLoading ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">Loading billing history...</p>
+                    ) : history.length > 0 ? (
+                      <>
+                        {history.map((payment: any) => (
+                          <div key={payment.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-border rounded-xl gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium text-foreground">{payment.description}</p>
+                                <Badge variant="soft" className="capitalize text-[10px]">
+                                  {payment.type === "manual" ? "Bank transfer" : "Online"}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(payment.date).toLocaleString()} &middot; Ref: {payment.reference?.replace(/^(TXN:|UTR:)/, "") || "N/A"}
+                              </p>
+                              {payment.periodStart && payment.periodEnd ? (
+                                <p className="text-xs text-muted-foreground">
+                                  Period: {new Date(payment.periodStart).toLocaleDateString()} – {new Date(payment.periodEnd).toLocaleDateString()}
+                                </p>
+                              ) : null}
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => handleDownloadInvoice(payment)} className="h-8 gap-1.5 text-primary">
-                              <Download className="w-3.5 h-3.5" /> Download Invoice
-                            </Button>
+                            <div className="flex flex-col sm:items-end gap-2 shrink-0">
+                              <div className="flex items-center gap-3">
+                                <span className="font-bold">{payment.currency} {payment.amount}</span>
+                                <Badge variant={historyStatusVariant(payment.status)} className="capitalize">
+                                  {formatHistoryStatus(payment.status)}
+                                </Badge>
+                              </div>
+                              {payment.status === "verified" || payment.status === "active" ? (
+                                <Button variant="ghost" size="sm" onClick={() => handleDownloadInvoice(payment)} className="h-8 gap-1.5 text-primary">
+                                  <Download className="w-3.5 h-3.5" /> Download Invoice
+                                </Button>
+                              ) : payment.status === "rejected" && payment.rejectionReason ? (
+                                <p className="text-xs text-danger max-w-[220px] text-right">{payment.rejectionReason}</p>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))}
+                        {historyMeta && historyMeta.totalPages > 1 ? (
+                          <Pagination
+                            page={historyMeta.page}
+                            totalPages={historyMeta.totalPages}
+                            pageSize={historyMeta.limit}
+                            onPageChange={setHistoryPage}
+                            onPageSizeChange={(size) => {
+                              setHistoryLimit(size);
+                              setHistoryPage(1);
+                            }}
+                            className="pt-2"
+                          />
+                        ) : null}
+                      </>
                     ) : (
                       <p className="text-sm text-muted-foreground text-center py-8">No billing history found.</p>
                     )}
