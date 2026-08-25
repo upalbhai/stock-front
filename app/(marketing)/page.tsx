@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   BarChart3,
@@ -14,6 +15,20 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "Retail Billing & Inventory",
+  description: "A service-first platform for retail owners who need billing, stock, outlets, staff, credit, GST invoices, and reports in one place.",
+  keywords: ["retail billing", "inventory management", "hisab book", "pos system", "gst billing", "retail operations"],
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "MiniHisab | Retail Billing & Inventory",
+    description: "A service-first platform for retail owners who need billing, stock, outlets, staff, credit, GST invoices, and reports in one place.",
+    url: "/",
+    siteName: "MiniHisab",
+    type: "website",
+  },
+};
 
 const services = [
   { title: "Fast counter billing", text: "Create sales, print receipts, track payments, and keep checkout moving.", icon: ReceiptText },

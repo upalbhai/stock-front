@@ -27,7 +27,7 @@ const nextConfig = {
     return dashboardSections.map((section) => ({
       source: `/${section}/:path*`,
       destination: `/dashboard/${section}/:path*`,
-      permanent: false,
+      permanent: true,
     }));
   },
 };

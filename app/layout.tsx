@@ -4,8 +4,10 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { Providers } from "./providers";
 import { ServiceWorkerRegister } from "@/components/service-worker";
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { cn } from "@/lib/utils";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { SITE_URL } from "@/lib/seo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,8 +20,15 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Mini Hisab",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Mini Hisab",
+    template: "%s | MiniHisab",
+  },
   description: "Retail billing, inventory, outlets, staff, and reports in one operations platform.",
+  verification: {
+    google: "3umseRn7qiZzmUpMnvHeAK0_jpjY5JNlMCuhkEjYR8A",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -38,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       >
         <Providers>
+          <GoogleAnalytics />
           <ServiceWorkerRegister />
           <NuqsAdapter>
             {children}

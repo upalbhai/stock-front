@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "Contact",
+  description: "Contact MiniHisab for retail billing, inventory, and operations support.",
+  alternates: { canonical: "/contact" },
+};
 
 const contactCards = [
   { title: "Email", text: "hello@minihisab.in", icon: Mail },

@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Clock3, Store, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "About",
+  description: "Learn how MiniHisab helps retail teams run billing, inventory, outlets, and reporting from one platform.",
+  alternates: { canonical: "/about" },
+};
 
 const values = [
   { title: "Built around the counter", text: "The app is shaped for billing speed, quick stock checks, and repeat daily use.", icon: Store },

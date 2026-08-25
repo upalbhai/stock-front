@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,6 +14,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "Services",
+  description: "Explore MiniHisab services for retail billing, inventory, GST invoices, outlets, staff, and reporting.",
+  alternates: { canonical: "/services" },
+};
 
 const serviceGroups = [
   { title: "Billing and checkout", text: "POS billing, payment tracking, receipt flow, GST invoice generation, and order history.", icon: ReceiptText },

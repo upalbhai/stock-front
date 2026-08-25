@@ -1,25 +1,8 @@
-import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
-
-export const metadata: Metadata = {
-  title: "MiniHisab | Retail Billing & Inventory",
-  description: "A service-first platform for retail owners who need billing, stock, outlets, staff, credit, GST invoices, and reports in one place.",
-  keywords: ["retail billing", "inventory management", "hisab book", "pos system", "gst billing", "retail operations"],
-  alternates: {
-    canonical: "https://minihisab.com/",
-  },
-  openGraph: {
-    title: "MiniHisab | Retail Billing & Inventory",
-    description: "A service-first platform for retail owners who need billing, stock, outlets, staff, credit, GST invoices, and reports in one place.",
-    url: "https://minihisab.com/",
-    siteName: "MiniHisab",
-    type: "website",
-  },
-};
 
 const navItems = [
   { href: APP_ROUTES.SERVICES, label: "Services" },

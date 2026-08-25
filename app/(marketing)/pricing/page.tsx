@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description: "Compare MiniHisab plans for retail billing, inventory, GST invoices, and outlet operations.",
+  alternates: { canonical: "/pricing" },
+};
 
 const plans = [
   {

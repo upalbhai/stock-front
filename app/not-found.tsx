@@ -26,7 +26,7 @@ export default function NotFound() {
         <Button asChild size="lg" className="rounded-xl w-full font-semibold shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all">
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
+            Back to Home
           </Link>
         </Button>
       </div>
