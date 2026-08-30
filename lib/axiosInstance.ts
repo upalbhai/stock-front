@@ -9,12 +9,17 @@ const api = axios.create({
   },
 });
 
-// Add token to each request
+// Add token to each request & handle FormData
 api.interceptors.request.use(
   (config) => {
     const token = store.getState().auth.token; // read token from Redux state
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // When sending FormData, delete the default JSON Content-Type
+    // so the browser auto-sets multipart/form-data with the correct boundary
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
     }
     return config;
   },

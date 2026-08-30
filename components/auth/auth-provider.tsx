@@ -34,6 +34,7 @@ type AuthContextValue = {
   impersonate: (targetUserId: string) => Promise<void>;
   exitImpersonation?: () => Promise<void>;
   isTrialExpired: boolean;
+  hasPermission: (module: string, action: string) => boolean;
 };
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined);
@@ -168,13 +169,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return user?.trialExpired || false;
   }, [user]);
 
+  const hasPermission = React.useCallback((module: string, action: string) => {
+    if (!user) return false;
+    // Superadmin logic
+    if (user.role === "superadmin") {
+      if (!user.customPermissions || user.customPermissions.length === 0) return true;
+      const mod = user.customPermissions.find(p => p.module === module);
+      return mod ? mod.actions.includes(action) : false;
+    }
+    // Tenant logic
+    if (user.role === "owner") return true;
+    const mod = user.permissions?.find(p => p.module === module) || user.customPermissions?.find(p => p.module === module);
+    return mod ? mod.actions.includes(action) : false;
+  }, [user]);
+
   // isMounted tracking will prevent hydration mismatch, but effectively it means 
   // on first render it returns the states from the store which might be persisted.
   return (
     <AuthContext.Provider value={{ 
       user, token, outletId, businessId, isLoading: !isMounted, impersonating, 
       loginWithEmail, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword, 
-      logout, setOutletId, impersonate, exitImpersonation, isTrialExpired
+      logout, setOutletId, impersonate, exitImpersonation, isTrialExpired, hasPermission
     }}>
       {children}
     </AuthContext.Provider>

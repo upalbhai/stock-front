@@ -5,6 +5,7 @@ export const PUBLIC_ROUTES = [
   "/about",
   "/services",
   "/pricing",
+  "/blog",
   "/contact",
   "/login",
 ] as const;

@@ -52,7 +52,7 @@ export default function AdminUsersPage() {
     e.preventDefault();
     const customPermissions = form.allowedModules.map(mod => ({
       module: mod,
-      actions: ["read", "create", "update", "delete"]
+      actions: mod === "blogs" ? ["read", "create", "update", "delete", "publish"] : ["read", "create", "update", "delete"]
     }));
     createMutation.mutate({
       name: form.name,
@@ -73,7 +73,7 @@ export default function AdminUsersPage() {
   };
 
   const allUsers = data?.users ?? [];
-  const SYSTEM_MODULES = ["dashboard", "businesses", "subscriptions", "users", "settings", "audit_logs"];
+  const SYSTEM_MODULES = ["dashboard", "businesses", "subscriptions", "users", "settings", "audit_logs", "blogs"];
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">

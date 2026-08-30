@@ -115,18 +115,6 @@ export default function SubscribePage() {
     }
   };
 
-  const fileToDataUrl = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      if (file.size > 1.5 * 1024 * 1024) {
-        reject(new Error("Screenshot must be under 1.5 MB"));
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Failed to read screenshot"));
-      reader.readAsDataURL(file);
-    });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -138,16 +126,20 @@ export default function SubscribePage() {
     }
 
     try {
-      let screenshotBase64: string | undefined;
+      const formData = new FormData();
+      formData.append("utr", transactionId.trim());
+      
       if (screenshotFile) {
-        screenshotBase64 = await fileToDataUrl(screenshotFile);
+        if (screenshotFile.size > 1.5 * 1024 * 1024) {
+          setError("Screenshot must be under 1.5 MB");
+          return;
+        }
+        formData.append("screenshot", screenshotFile);
       }
-      uploadMutation.mutate({
-        utr: transactionId.trim(),
-        screenshotBase64
-      });
+      
+      uploadMutation.mutate(formData);
     } catch (err) {
-      setError(getErrorMessage(err, "Could not read the screenshot"));
+      setError(getErrorMessage(err, "Could not submit payment"));
     }
   };
 

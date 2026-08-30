@@ -34,6 +34,8 @@ export const APP_ROUTES = {
   SERVICES: "/services",
   PRICING: "/pricing",
   CONTACT: "/contact",
+  BLOG: "/blog",
+  blogPost: (slug: string) => `/blog/${slug}`,
   LOGIN: "/login",
   REGISTER: "/register",
   DASHBOARD: APP_BASE_ROUTE,
@@ -72,6 +74,9 @@ export const APP_ROUTES = {
   AGENT: appRoute("/agent"),
   AGENT_CLIENTS: appRoute("/agent/clients"),
   AGENT_SETTINGS: appRoute("/agent/settings"),
+  ADMIN_BLOGS: appRoute("/admin/blogs"),
+  ADMIN_BLOG_NEW: appRoute("/admin/blogs/new"),
+  adminBlogEdit: (id: string) => appRoute(`/admin/blogs/${id}/edit`),
   customerDetail: (id: string) => appRoute(`/customers/${id}`),
   invoiceDetail: (id: string) => appRoute(`/invoices/${id}`),
 };

@@ -73,6 +73,10 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
 
   if (body !== undefined) {
     config.data = body;
+    if (typeof FormData !== "undefined" && body instanceof FormData) {
+      config.headers = { ...config.headers };
+      delete config.headers["Content-Type"];
+    }
   }
 
   if (token) {

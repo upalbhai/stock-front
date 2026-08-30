@@ -8,6 +8,7 @@ const navItems = [
   { href: APP_ROUTES.SERVICES, label: "Services" },
   { href: APP_ROUTES.ABOUT, label: "About" },
   { href: APP_ROUTES.PRICING, label: "Pricing" },
+  { href: APP_ROUTES.BLOG, label: "Blog" },
   { href: APP_ROUTES.CONTACT, label: "Contact" },
 ];
 
@@ -75,6 +76,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company</p>
             <Link href={APP_ROUTES.ABOUT} className="hover:text-primary">About</Link>
             <Link href={APP_ROUTES.SERVICES} className="hover:text-primary">Services</Link>
+            <Link href={APP_ROUTES.BLOG} className="hover:text-primary">Blog</Link>
             <Link href={APP_ROUTES.CONTACT} className="hover:text-primary">Contact</Link>
           </div>
           <div className="grid gap-2 text-sm">

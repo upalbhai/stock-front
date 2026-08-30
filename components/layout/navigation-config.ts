@@ -231,6 +231,14 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         feature: "businesses"
       },
       {
+        title: "Blogs",
+        path: APP_ROUTES.ADMIN_BLOGS,
+        icon: FileText,
+        keywords: ["blogs", "posts", "cms", "seo"],
+        roles: ["superadmin"],
+        feature: "blogs"
+      },
+      {
         title: "Agents",
         path: APP_ROUTES.ADMIN_AGENTS,
         icon: UserCheck,

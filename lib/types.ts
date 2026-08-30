@@ -352,3 +352,25 @@ export type StockTransfer = {
   requestedBy?: { name: string };
   createdAt: string;
 };
+
+export type BlogPost = {
+  _id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content?: string;
+  coverImage?: string;
+  status: "draft" | "published" | "archived";
+  publishedAt?: string;
+  authorId?: { _id: string; name: string; email?: string } | string;
+  createdBy?: { _id: string; name: string; email?: string } | string;
+  updatedBy?: { _id: string; name: string; email?: string } | string;
+  seoTitle?: string;
+  seoDescription?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  tags?: string[];
+  noindex?: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
