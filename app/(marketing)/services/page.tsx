@@ -13,7 +13,9 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { APP_ROUTES } from "@/lib/routes";
+import { serviceListSchema } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Services",
@@ -33,8 +35,13 @@ const serviceGroups = [
 export default function ServicesPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceListSchema(serviceGroups)) }}
+      />
       <section className="border-b border-border bg-muted/25">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: "Services", url: "/services" }]} />
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-primary">Services</p>
           <h1 className="mt-3 max-w-3xl font-heading text-4xl font-extrabold tracking-tight sm:text-5xl">
             Everything the retail team touches in a normal working day.

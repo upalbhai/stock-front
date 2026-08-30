@@ -1,20 +1,44 @@
 import { Metadata, ResolvingMetadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { BlogPost } from "@/lib/types";
 import { APP_ROUTES } from "@/lib/routes";
+import { breadcrumbSchema } from "@/lib/jsonld";
+import { getAbsoluteApiUrl } from "@/lib/seo";
 
 interface Props {
   params: { slug: string };
 }
 
 async function getBlogPost(slug: string): Promise<BlogPost | null> {
-  const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/blogs/${slug}`;
-  const res = await fetch(url, { next: { revalidate: 60 } });
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.data?.post || null;
+  try {
+    const url = getAbsoluteApiUrl(`/blogs/${slug}`);
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data?.post || null;
+  } catch (error) {
+    console.error(`Failed to fetch blog post (${slug}):`, error);
+    return null;
+  }
+}
+
+export async function generateStaticParams() {
+  try {
+    const url = getAbsoluteApiUrl("/blogs?limit=100");
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const json = await res.json();
+    const posts = json.data?.posts || [];
+    return posts.map((post: any) => ({
+      slug: post.slug,
+    }));
+  } catch (error) {
+    console.error("Error generating static params for blog:", error);
+    return [];
+  }
 }
 
 export async function generateMetadata(
@@ -89,14 +113,24 @@ export default async function BlogPostPage({ params }: Props) {
         "@type": "ImageObject",
         url: "https://minihisab.com/logo.webp"
       }
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `https://minihisab.com/blog/${post.slug}`
     }
   };
+
+  const breadcrumbs = breadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Blog", url: "/blog" },
+    { name: post.title, url: `/blog/${post.slug}` },
+  ]);
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([jsonLd, breadcrumbs]) }}
       />
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-8">
@@ -139,11 +173,13 @@ export default async function BlogPostPage({ params }: Props) {
           </header>
 
           {post.coverImage && (
-            <div className="mb-12 overflow-hidden rounded-2xl shadow-lg">
-              <img 
+            <div className="mb-12 overflow-hidden rounded-2xl shadow-lg relative w-full aspect-[2/1]">
+              <Image 
                 src={post.coverImage} 
-                alt={post.title}
-                className="w-full object-cover aspect-[2/1]"
+                alt={`${post.title} cover image`}
+                fill
+                priority
+                className="object-cover"
               />
             </div>
           )}

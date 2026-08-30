@@ -32,6 +32,7 @@ export const APP_ROUTES = {
   HOME: "/",
   ABOUT: "/about",
   SERVICES: "/services",
+  FEATURES: "/features",
   PRICING: "/pricing",
   CONTACT: "/contact",
   BLOG: "/blog",

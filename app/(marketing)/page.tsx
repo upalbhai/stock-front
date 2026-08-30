@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { organizationSchema, websiteSchema, softwareApplicationSchema } from "@/lib/jsonld";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
@@ -49,6 +50,16 @@ const proofPoints = [
 export default function LandingPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            organizationSchema(),
+            websiteSchema(),
+            softwareApplicationSchema(),
+          ]),
+        }}
+      />
       <section className="relative isolate flex h-[calc(100svh-9rem)] min-h-[430px] max-h-[720px] items-center overflow-hidden">
         <Image
           src="/images/retail-operations-hero.png"
@@ -71,7 +82,15 @@ export default function LandingPage() {
                 alt="MiniHisab Logo"
                 width={400}
                 height={160}
-                className="h-auto w-full max-w-[280px] sm:max-w-[360px] md:max-w-[400px] object-contain dark:brightness-110"
+                className="h-auto w-full max-w-[280px] sm:max-w-[360px] md:max-w-[400px] object-contain dark:hidden"
+                priority
+              />
+              <Image
+                src="/logo-dark.webp"
+                alt="MiniHisab Logo"
+                width={400}
+                height={160}
+                className="h-auto w-full max-w-[280px] sm:max-w-[360px] md:max-w-[400px] object-contain hidden dark:block"
                 priority
               />
             </h1>

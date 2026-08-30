@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { APP_ROUTES } from "@/lib/routes";
+import { softwareApplicationSchema } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -30,8 +32,14 @@ const plans = [
 
 export default function PricingPage() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema()) }}
+      />
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="max-w-3xl">
+        <Breadcrumbs items={[{ name: "Pricing", url: "/pricing" }]} />
         <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-primary">Pricing</p>
         <h1 className="mt-3 font-heading text-4xl font-extrabold tracking-tight sm:text-5xl">
           Choose the service level that fits your retail workflow.
@@ -69,6 +77,19 @@ export default function PricingPage() {
           </Link>
         </Button>
       </div>
+
+      <div className="mt-6 flex flex-col gap-3 rounded-[8px] border border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-heading text-xl font-bold">Have custom requirements?</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Talk to our team for enterprise setups and custom billing configurations.</p>
+        </div>
+        <Button asChild variant="outline" className="rounded-[8px]">
+          <Link href={APP_ROUTES.CONTACT}>
+            Contact Sales <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      </div>
     </section>
+    </>
   );
 }

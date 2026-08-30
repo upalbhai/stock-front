@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Clock3, Store, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { APP_ROUTES } from "@/lib/routes";
+import { organizationSchema } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "About",
@@ -19,7 +21,13 @@ const values = [
 
 export default function AboutPage() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema()) }}
+      />
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <Breadcrumbs items={[{ name: "About", url: "/about" }]} />
       <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-primary">About</p>
@@ -55,5 +63,6 @@ export default function AboutPage() {
         </div>
       </div>
     </section>
+    </>
   );
 }

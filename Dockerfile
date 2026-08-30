@@ -3,7 +3,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # ─── Stage 2: Build the Next.js app ───
 FROM node:22-alpine AS builder
@@ -11,6 +11,9 @@ WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Run postinstall assets copy manually since npm ci was run with --ignore-scripts
+RUN node scripts/copy-tinymce.mjs
 
 # Build arguments injected at docker build time
 ARG NEXT_PUBLIC_API_URL

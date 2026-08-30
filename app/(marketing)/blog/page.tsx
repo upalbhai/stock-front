@@ -1,7 +1,10 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { BlogPost } from "@/lib/types";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { APP_ROUTES } from "@/lib/routes";
+import { getAbsoluteApiUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Blog - MiniHisab",
@@ -18,19 +21,46 @@ export const metadata: Metadata = {
 };
 
 async function getBlogs(): Promise<BlogPost[]> {
-  const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/blogs?limit=50`;
-  const res = await fetch(url, { next: { revalidate: 60 } });
-  if (!res.ok) return [];
-  const json = await res.json();
-  return json.data?.posts || [];
+  try {
+    const url = getAbsoluteApiUrl("/blogs?limit=50");
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data?.posts || [];
+  } catch (error) {
+    console.error("Failed to fetch blogs:", error);
+    return [];
+  }
 }
 
 export default async function BlogIndexPage() {
   const posts = await getBlogs();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "MiniHisab Blog",
+    description: "Latest news, business tips, and updates from MiniHisab.",
+    url: "https://minihisab.com/blog",
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: posts.map((post, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: `https://minihisab.com/blog/${post.slug}`,
+      })),
+    },
+  };
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl text-center">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <Breadcrumbs items={[{ name: "Blog", url: "/blog" }]} />
+        <div className="mx-auto max-w-2xl text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Our Blog</h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
           Latest news, business tips, and updates from MiniHisab.
@@ -47,11 +77,15 @@ export default async function BlogIndexPage() {
             <article key={post._id} className="flex flex-col items-start justify-between">
               <div className="relative w-full">
                 {post.coverImage ? (
-                  <img
-                    src={post.coverImage}
-                    alt={post.title}
-                    className="aspect-[16/9] w-full rounded-2xl bg-gray-100 object-cover sm:aspect-[2/1] lg:aspect-[3/2]"
-                  />
+                  <div className="relative aspect-[16/9] w-full sm:aspect-[2/1] lg:aspect-[3/2] rounded-2xl overflow-hidden bg-gray-100">
+                    <Image
+                      src={post.coverImage}
+                      alt={post.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </div>
                 ) : (
                   <div className="aspect-[16/9] w-full rounded-2xl bg-muted/30 flex items-center justify-center sm:aspect-[2/1] lg:aspect-[3/2]">
                     <span className="text-muted-foreground font-medium">No Image</span>
@@ -91,6 +125,7 @@ export default async function BlogIndexPage() {
           ))
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

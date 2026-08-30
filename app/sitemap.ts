@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { absoluteUrl, PUBLIC_ROUTES } from "@/lib/seo";
+import { absoluteUrl, PUBLIC_ROUTES, getAbsoluteApiUrl } from "@/lib/seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
@@ -7,12 +7,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((path) => ({
     url: absoluteUrl(path),
     lastModified,
-    changeFrequency: path === "/" ? "weekly" : "monthly",
-    priority: path === "/" ? 1 : 0.7,
+    changeFrequency: path === "/" || path === "/blog" ? "weekly" : "monthly",
+    priority: path === "/" ? 1 : (path === "/blog" ? 0.9 : 0.7),
   }));
 
   try {
-    const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/blogs?limit=100`;
+    const url = getAbsoluteApiUrl("/blogs?limit=100");
     const res = await fetch(url, { next: { revalidate: 3600 } });
     if (res.ok) {
       const json = await res.json();

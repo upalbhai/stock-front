@@ -1,5 +1,5 @@
 const CACHE_NAME = "outlet-cache-v1";
-const STATIC_ASSETS = ["/", "/billing", "/stock", "/reports", "/settings"];
+const STATIC_ASSETS = ["/"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

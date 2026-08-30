@@ -7,6 +7,7 @@ import { APP_ROUTES } from "@/lib/routes";
 
 const navItems = [
   { href: APP_ROUTES.SERVICES, label: "Services" },
+  { href: APP_ROUTES.FEATURES, label: "Features" },
   { href: APP_ROUTES.ABOUT, label: "About" },
   { href: APP_ROUTES.PRICING, label: "Pricing" },
   { href: APP_ROUTES.BLOG, label: "Blog" },
@@ -24,7 +25,14 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               alt="MiniHisab Logo"
               width={144}
               height={144}
-              className="shrink-0 rounded-[8px] object-cover"
+              className="shrink-0 rounded-[8px] object-cover dark:hidden"
+            />
+            <Image
+              src="/logo-dark.webp"
+              alt="MiniHisab Logo"
+              width={144}
+              height={144}
+              className="shrink-0 rounded-[8px] object-cover hidden dark:block"
             />
           </Link>
 
@@ -60,15 +68,22 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <main>{children}</main>
 
       <footer className="border-t border-border bg-muted/25">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr] lg:px-8">
-          <div>
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4 lg:px-8">
+          <div className="md:col-span-1">
             <div className="flex items-center gap-2.5">
               <Image
                 src="/logo.webp"
                 alt="MiniHisab Logo"
                 width={144}
                 height={144}
-                className=" shrink-0 rounded-[8px] object-cover"
+                className="shrink-0 rounded-[8px] object-cover dark:hidden"
+              />
+              <Image
+                src="/logo-dark.webp"
+                alt="MiniHisab Logo"
+                width={144}
+                height={144}
+                className="shrink-0 rounded-[8px] object-cover hidden dark:block"
               />
 
             </div>
@@ -80,6 +95,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company</p>
             <Link href={APP_ROUTES.ABOUT} className="hover:text-primary">About</Link>
             <Link href={APP_ROUTES.SERVICES} className="hover:text-primary">Services</Link>
+            <Link href={APP_ROUTES.FEATURES} className="hover:text-primary">Features</Link>
             <Link href={APP_ROUTES.BLOG} className="hover:text-primary">Blog</Link>
             <Link href={APP_ROUTES.CONTACT} className="hover:text-primary">Contact</Link>
           </div>
@@ -88,6 +104,11 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href={APP_ROUTES.PRICING} className="hover:text-primary">Pricing</Link>
             <Link href={APP_ROUTES.LOGIN} className="hover:text-primary">Login</Link>
             <Link href={APP_ROUTES.DASHBOARD} className="hover:text-primary">Dashboard</Link>
+          </div>
+          <div className="grid gap-2 text-sm">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Legal</p>
+            <Link href="/privacy" className="hover:text-primary">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-primary">Terms of Service</Link>
           </div>
         </div>
       </footer>

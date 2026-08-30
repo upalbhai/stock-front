@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Mail, MapPin, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { APP_ROUTES } from "@/lib/routes";
 import { CONTACT_EMAIL } from "@/lib/constants";
+import { contactPageSchema } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -18,9 +20,15 @@ const contactCards = [
 
 export default function ContactPage() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(contactPageSchema()) }}
+      />
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
+          <Breadcrumbs items={[{ name: "Contact", url: "/contact" }]} />
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-primary">Contact</p>
           <h1 className="mt-3 font-heading text-4xl font-extrabold tracking-tight sm:text-5xl">
             Talk to us about your outlet workflow.
@@ -65,5 +73,6 @@ export default function ContactPage() {
         </div>
       </div>
     </section>
+    </>
   );
 }
