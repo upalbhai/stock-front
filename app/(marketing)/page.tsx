@@ -64,8 +64,16 @@ export default function LandingPage() {
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-primary">
               Retail operations platform
             </p>
-            <h1 className="mt-4 font-heading text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              MiniHisab
+            <h1 className="mt-4">
+              <span className="sr-only">MiniHisab</span>
+              <Image
+                src="/logo.webp"
+                alt="MiniHisab Logo"
+                width={400}
+                height={160}
+                className="h-auto w-full max-w-[280px] sm:max-w-[360px] md:max-w-[400px] object-contain dark:brightness-110"
+                priority
+              />
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
               A service-first platform for retail owners who need billing, stock, outlets, staff, credit, GST invoices, and reports in one place.

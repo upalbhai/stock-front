@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -18,12 +19,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link href={APP_ROUTES.HOME} className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-primary text-xs font-extrabold text-primary-foreground">
-              MH
-            </span>
-            <span className="truncate font-heading text-sm font-extrabold uppercase tracking-wide">
-              MiniHisab
-            </span>
+            <Image
+              src="/logo.webp"
+              alt="MiniHisab Logo"
+              width={144}
+              height={144}
+              className="shrink-0 rounded-[8px] object-cover"
+            />
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-semibold text-muted-foreground md:flex">
@@ -61,12 +63,14 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr] lg:px-8">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-primary text-xs font-extrabold text-primary-foreground">
-                MH
-              </span>
-              <span className="font-heading text-sm font-extrabold uppercase tracking-wide">
-                MiniHisab
-              </span>
+              <Image
+                src="/logo.webp"
+                alt="MiniHisab Logo"
+                width={144}
+                height={144}
+                className=" shrink-0 rounded-[8px] object-cover"
+              />
+
             </div>
             <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
               Retail billing, inventory, outlet control, and reporting for teams that need the workday to move quickly.

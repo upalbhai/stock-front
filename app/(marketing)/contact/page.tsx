@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
+import { ArrowRight, Mail, MapPin, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
+import { CONTACT_EMAIL } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -11,8 +12,7 @@ export const metadata: Metadata = {
 };
 
 const contactCards = [
-  { title: "Email", text: "hello@minihisab.in", icon: Mail },
-  { title: "Phone", text: "+91 90000 00000", icon: Phone },
+  { title: "Email", text: CONTACT_EMAIL, icon: Mail },
   { title: "Location", text: "Built for retail teams in India", icon: MapPin },
 ];
 
