@@ -13,4 +13,11 @@ export const userService = {
   deleteUser: async (id: string, token?: string | null) => {
     return apiFetch(`/users/${id}`, { method: "DELETE", token });
   },
+  changeUserPassword: async (id: string, newPassword: string, token?: string | null) => {
+    return apiFetch(`/users/${id}/change-password`, {
+      method: "POST",
+      body: { newPassword },
+      token
+    });
+  }
 };

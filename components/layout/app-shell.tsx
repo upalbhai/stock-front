@@ -113,6 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       !impersonating &&
       pathname !== APP_ROUTES.ADMIN &&
       !pathname.startsWith(`${APP_ROUTES.ADMIN}/`) &&
+      pathname !== APP_ROUTES.PROFILE &&
       !isAuthRoute
     ) {
       router.push(APP_ROUTES.ADMIN);
@@ -123,6 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       !impersonating &&
       pathname !== APP_ROUTES.AGENT &&
       !pathname.startsWith(`${APP_ROUTES.AGENT}/`) &&
+      pathname !== APP_ROUTES.PROFILE &&
       !isAuthRoute
     ) {
       router.push(APP_ROUTES.AGENT);

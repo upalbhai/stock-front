@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Drawer } from "@/components/ui/drawer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ChangePasswordDialog } from "@/components/users/change-password-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
@@ -51,6 +52,10 @@ export default function StaffPage() {
   const [showModal, setShowModal] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  
+  // Password change states
+  const [showPasswordModal, setShowPasswordModal] = React.useState(false);
+  const [passwordUser, setPasswordUser] = React.useState<any | null>(null);
 
   const {
     register,
@@ -120,6 +125,10 @@ export default function StaffPage() {
     },
     onError: (err: any) => toast.error(getErrorMessage(err, "Failed to delete staff"))
   });
+
+  const handleChangePassword = async (userId: string, newPassword: string) => {
+    await userService.changeUserPassword(userId, newPassword, token);
+  };
 
   const users = staffData?.users ?? [];
   const roles = rolesData?.roles ?? [];
@@ -200,10 +209,13 @@ export default function StaffPage() {
             header: "",
             render: (u) => (
               <div className="flex gap-2">
-                <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                <Button variant="ghost" size="icon" onClick={() => openEdit(u)} title="Edit staff">
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(u._id)}>
+                <Button variant="ghost" size="icon" className="text-blue-500" onClick={() => { setPasswordUser(u); setShowPasswordModal(true); }} title="Change password">
+                  <Key className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="text-danger" onClick={() => setDeleteId(u._id)} title="Deactivate staff">
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -363,6 +375,16 @@ export default function StaffPage() {
         confirmLabel="Deactivate"
         loading={deleteMutation.isPending}
       />
+
+      {passwordUser && (
+        <ChangePasswordDialog
+          isOpen={showPasswordModal}
+          onClose={() => { setShowPasswordModal(false); setPasswordUser(null); }}
+          userId={passwordUser._id}
+          userName={passwordUser.name}
+          onChangePassword={handleChangePassword}
+        />
+      )}
     </div>
   );
 }

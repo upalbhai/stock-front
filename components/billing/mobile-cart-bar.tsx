@@ -4,6 +4,7 @@ import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/auth-provider";
 
 type MobileCartBarProps = {
   itemCount: number;
@@ -13,6 +14,9 @@ type MobileCartBarProps = {
 };
 
 export function MobileCartBar({ itemCount, total, hidden, onOpenCheckout }: MobileCartBarProps) {
+  const { user } = useAuth();
+  const currency = user?.currency || "INR";
+
   return (
     <div
       className={cn(
@@ -31,7 +35,7 @@ export function MobileCartBar({ itemCount, total, hidden, onOpenCheckout }: Mobi
         <span className="flex-1 text-left">
           {itemCount === 0 ? "Cart is empty" : `${itemCount} item${itemCount === 1 ? "" : "s"}`}
         </span>
-        <span className="font-bold">{formatCurrency(total)}</span>
+        <span className="font-bold">{formatCurrency(total, currency)}</span>
         <span className="rounded-lg bg-white/20 px-2 py-0.5 text-xs">Review & Pay</span>
       </Button>
     </div>

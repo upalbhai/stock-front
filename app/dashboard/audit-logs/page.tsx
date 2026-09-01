@@ -38,7 +38,7 @@ export default function AuditLogsPage() {
     enabled: Boolean(token)
   });
 
-  const logs = data?.logs ?? data ?? []; // Adjust depending on response format
+  const logs = data?.data ?? (data as any)?.logs ?? (Array.isArray(data) ? data : []);
 
   return (
     <div className="space-y-6">

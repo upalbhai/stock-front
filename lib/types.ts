@@ -41,6 +41,10 @@ export type AuthUser = {
   currency?: string;
   outlets?: Outlet[];
   maintenanceMode?: boolean;
+  email?: string;
+  phone?: string;
+  businessName?: string;
+  emailVerified?: boolean;
 };
 
 export type Plan = {

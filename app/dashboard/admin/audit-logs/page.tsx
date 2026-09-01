@@ -17,7 +17,7 @@ export default function AdminAuditLogsPage() {
 
   const [query, setQuery] = useQueryStates({
     page: parseAsInteger.withDefault(1),
-    limit: parseAsInteger.withDefault(50),
+    limit: parseAsInteger.withDefault(20),
     from: parseAsString.withDefault(""),
     to: parseAsString.withDefault("")
   });
@@ -33,7 +33,7 @@ export default function AdminAuditLogsPage() {
     enabled: Boolean(token)
   });
 
-  const auditLogs = auditData?.logs ?? auditData ?? []; // Handle potential structure differences
+  const auditLogs = auditData?.data ?? (auditData as any)?.logs ?? (Array.isArray(auditData) ? auditData : []);
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -42,15 +42,15 @@ export default function AdminAuditLogsPage() {
           <h1 className="text-xl font-bold">Platform Audit Logs</h1>
           <p className="text-xs text-muted">Track superadmin actions</p>
         </div>
-        <JollyDateRangePicker 
+        <JollyDateRangePicker
           label="Date Filter"
           value={(query.from && query.to) ? { start: parseDate(query.from.split('T')[0]), end: parseDate(query.to.split('T')[0]) } : null}
           onChange={(val) => {
             if (val) {
-              setQuery({ 
-                from: val.start.toString() + "T00:00:00.000Z", 
-                to: val.end.toString() + "T23:59:59.999Z", 
-                page: 1 
+              setQuery({
+                from: val.start.toString() + "T00:00:00.000Z",
+                to: val.end.toString() + "T23:59:59.999Z",
+                page: 1
               });
             } else {
               setQuery({ from: "", to: "", page: 1 });

@@ -122,7 +122,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <RoleGate allowed={["owner", "manager"]}>
+    <RoleGate allowed={["owner", "manager", "superadmin"]}>
       <div className="space-y-8 max-w-6xl mx-auto px-4 py-2 sm:px-6">
         {/* Header Block */}
         <div className="flex flex-col gap-1 border-b border-border/40 pb-5">

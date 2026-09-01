@@ -1,12 +1,12 @@
 import { apiFetch, getJson, getJsonWithMeta } from "@/lib/api-client";
-import { Business, AuditLog } from "@/lib/types";
+import { Business, AuditLog, ApiResponse } from "@/lib/types";
 
 export const adminService = {
   getDashboardStats: async (token?: string | null) => {
     return getJson<{ totalBusinesses: number; activeBusinesses: number; totalUsers: number; activeSubscriptions: number; mrrByCurrency: {currency: string, mrr: number, grossMrr: number}[]; recentBusinesses: any[] }>("/admin/stats", token);
   },
   getAuditLogs: async (token?: string | null, params?: Record<string, any>) => {
-    return getJson<{ logs?: AuditLog[]; data?: AuditLog[]; total?: number; meta?: any }>("/audit-logs", token, params);
+    return getJsonWithMeta<AuditLog[]>("/audit-logs", token, params);
   },
   getAdminOutlets: async (token?: string | null, params?: { search?: string; status?: string }) => {
     return getJson<{ outlets: any[] }>("/admin/outlets", token, params);
@@ -50,6 +50,13 @@ export const adminService = {
   createSystemAdmin: async (data: unknown, token?: string | null) => {
     return apiFetch("/admin/system-users", { method: "POST", body: data, token });
   },
+  purgeUserTestData: async (userId: string, token?: string | null) => {
+    return apiFetch<{
+      purgedUser: { id: string; name: string; email?: string; role: string };
+      totalDocumentsDeleted: number;
+      deletedCounts: Record<string, number>;
+    }>(`/admin/users/${userId}/purge`, { method: "DELETE", token });
+  },
   getSettings: async (token?: string | null) => {
     return getJson<{ settings: any }>("/admin/settings", token);
   },
@@ -83,7 +90,6 @@ export const adminService = {
   resendManualPaymentInvoice: async (paymentId: string, token?: string | null) => {
     return apiFetch(`/admin/payments/manual/${paymentId}/resend-invoice`, { method: "POST", token });
   },
-
   rejectManualPayment: async (paymentId: string, rejectionReason: string, notes: string, token?: string | null) => {
     return apiFetch(`/admin/payments/manual/${paymentId}/reject`, { 
       method: "PUT", 
@@ -97,7 +103,17 @@ export const adminService = {
   approvePlanRequest: async (businessId: string, reason: string, token?: string | null) => {
     return apiFetch(`/admin/businesses/${businessId}/approve-plan`, { method: "POST", body: { reason }, token });
   },
-  rejectPlanRequest: async (businessId: string, reason: string, token?: string | null) => {
+  rejectPlanRequest(businessId: string, reason: string, token: string) {
     return apiFetch(`/admin/businesses/${businessId}/reject-plan`, { method: "POST", body: { reason }, token });
+  },
+  getOtpLogs(token: string, page: number = 1, limit: number = 10) {
+    return apiFetch<ApiResponse<{ logs: any[], total: number }>>(`/admin/otp-logs?page=${page}&limit=${limit}`, { token });
+  },
+  changeUserPassword: async (userId: string, newPassword: string, token?: string | null) => {
+    return apiFetch(`/admin/users/${userId}/change-password`, {
+      method: "POST",
+      body: { newPassword },
+      token
+    });
   }
 };

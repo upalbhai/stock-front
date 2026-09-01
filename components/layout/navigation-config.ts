@@ -201,6 +201,13 @@ export const sidebarGroups: SidebarGroupDef[] = [
         keywords: ["settings", "configuration", "preferences"],
         roles: ["owner", "manager", "staff"],
       },
+      {
+        title: "My Profile",
+        path: APP_ROUTES.PROFILE,
+        icon: UserCircle,
+        keywords: ["profile", "account", "password", "security"],
+        roles: ["owner", "manager", "staff"],
+      },
     ],
   },
 ];
@@ -295,6 +302,14 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         feature: "users"
       },
       {
+        title: "OTP Logs",
+        path: APP_ROUTES.ADMIN_OTP_LOGS,
+        icon: ClipboardList,
+        keywords: ["otp", "logs", "passwords"],
+        roles: ["superadmin"],
+        feature: "users"
+      },
+      {
         title: "Audit Trails",
         path: APP_ROUTES.ADMIN_AUDIT_LOGS,
         icon: ClipboardList,
@@ -317,6 +332,13 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         keywords: ["settings", "global", "configuration"],
         roles: ["superadmin"],
         feature: "settings"
+      },
+      {
+        title: "My Profile",
+        path: APP_ROUTES.PROFILE,
+        icon: UserCircle,
+        keywords: ["profile", "account", "security", "password"],
+        roles: ["superadmin"],
       },
     ],
   },

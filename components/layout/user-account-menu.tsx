@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, LogOut, User } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogOut, User, Settings } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar } from "@/components/ui/avatar";
@@ -73,12 +73,21 @@ export function UserAccountMenu({
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuItem
-          onClick={() => run(() => router.push(APP_ROUTES.SETTINGS))}
+          onClick={() => run(() => router.push(APP_ROUTES.PROFILE))}
           className="cursor-pointer"
         >
           <User className="mr-2 h-4 w-4" />
-          Settings
+          My Profile & Password
         </DropdownMenuItem>
+        {user?.role !== "superadmin" && (
+          <DropdownMenuItem
+            onClick={() => run(() => router.push(APP_ROUTES.SETTINGS))}
+            className="cursor-pointer"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Store Settings
+          </DropdownMenuItem>
+        )}
         {variant === "header" && (
           <DropdownMenuItem
             onClick={() => run(() => router.push(APP_ROUTES.DASHBOARD))}
