@@ -12,9 +12,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Run postinstall assets copy manually since npm ci was run with --ignore-scripts
-RUN node scripts/copy-tinymce.mjs
-
 # Build arguments injected at docker build time
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_DEFAULT_OUTLET

@@ -1,7 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Editor } from "@tinymce/tinymce-react";
+import dynamic from "next/dynamic";
+
+const Editor = dynamic(() => import("./tinymce-editor"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[600px] w-full flex items-center justify-center bg-muted/20 border rounded-md text-sm text-muted-foreground">
+      Loading Editor...
+    </div>
+  ),
+});
+
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -118,7 +128,6 @@ export function BlogEditor({ initialData, onSave, isSaving, canPublish }: BlogEd
             <div className="border rounded-md overflow-hidden" style={{ minHeight: 600 }}>
               <Editor
                 key={isDark ? "dark" : "light"} // force remount when theme changes for TinyMCE
-                tinymceScriptSrc="/tinymce/tinymce.min.js"
                 licenseKey="gpl"
                 value={form.content}
                 onEditorChange={(content) => setForm(f => ({ ...f, content }))}
