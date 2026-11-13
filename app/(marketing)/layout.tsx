@@ -1,114 +1,105 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { MarketingHeader } from "@/components/layout/marketing-header";
 import { APP_ROUTES } from "@/lib/routes";
-
-const navItems = [
-  { href: APP_ROUTES.SERVICES, label: "Services" },
-  { href: APP_ROUTES.FEATURES, label: "Features" },
-  { href: APP_ROUTES.ABOUT, label: "About" },
-  { href: APP_ROUTES.PRICING, label: "Pricing" },
-  { href: APP_ROUTES.BLOG, label: "Blog" },
-  { href: APP_ROUTES.CONTACT, label: "Contact" },
-];
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-svh bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href={APP_ROUTES.HOME} className="flex min-w-0 items-center gap-2.5">
-            <Image
-              src="/logo.webp"
-              alt="MiniHisab Logo"
-              width={144}
-              height={144}
-              className="shrink-0 rounded-[8px] object-cover dark:hidden"
-            />
-            <Image
-              src="/logo-dark.webp"
-              alt="MiniHisab Logo"
-              width={144}
-              height={144}
-              className="shrink-0 rounded-[8px] object-cover hidden dark:block"
-            />
-          </Link>
+    <div className="min-h-svh flex flex-col bg-background text-foreground antialiased selection:bg-primary/15 selection:text-foreground">
+      <MarketingHeader />
 
-          <nav className="hidden items-center gap-6 text-sm font-semibold text-muted-foreground md:flex">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="transition hover:text-foreground">
-                {item.label}
+      <main className="flex-1">{children}</main>
+
+      <footer className="border-t border-border/80 bg-muted/20">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
+            {/* Brand column */}
+            <div className="lg:col-span-2">
+              <Link href={APP_ROUTES.HOME} className="flex items-center gap-2.5">
+                <Image
+                  src="/logo-desktop.webp"
+                  alt="MiniHisab Logo"
+                  width={160}
+                  height={50}
+                  className="h-9 w-auto shrink-0 object-contain dark:hidden"
+                />
+                <Image
+                  src="/logo-desktop-dark.webp"
+                  alt="MiniHisab Logo"
+                  width={160}
+                  height={50}
+                  className="h-9 w-auto shrink-0 object-contain hidden dark:block"
+                />
               </Link>
-            ))}
-          </nav>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <ThemeToggle />
-            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
-              <Link href={APP_ROUTES.LOGIN}>Login</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href={APP_ROUTES.DASHBOARD}>
-                Dashboard <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-        <nav className="flex gap-4 overflow-x-auto px-4 pb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground md:hidden">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="shrink-0 transition hover:text-foreground">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </header>
-
-      <main>{children}</main>
-
-      <footer className="border-t border-border bg-muted/25">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4 lg:px-8">
-          <div className="md:col-span-1">
-            <div className="flex items-center gap-2.5">
-              <Image
-                src="/logo.webp"
-                alt="MiniHisab Logo"
-                width={144}
-                height={144}
-                className="shrink-0 rounded-[8px] object-cover dark:hidden"
-              />
-              <Image
-                src="/logo-dark.webp"
-                alt="MiniHisab Logo"
-                width={144}
-                height={144}
-                className="shrink-0 rounded-[8px] object-cover hidden dark:block"
-              />
-
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
+                Retail billing, multi-outlet inventory, GST tax invoices, and customer credit tracking.
+              </p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Works on desktop PCs, laptops, Android tablets, and mobile browsers.
+              </p>
             </div>
-            <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-              Retail billing, inventory, outlet control, and reporting for teams that need the workday to move quickly.
-            </p>
+
+            {/* Links column 1: Solutions */}
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground">Solutions</p>
+              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
+                Fast Counter Billing
+              </Link>
+              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
+                Inventory &amp; Low Stock
+              </Link>
+              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
+                Customer Udhar Khata
+              </Link>
+              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
+                GST Tax Invoices
+              </Link>
+              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
+                Multi-Outlet Sync
+              </Link>
+            </div>
+
+            {/* Links column 2: Product */}
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground">Product</p>
+              <Link href={APP_ROUTES.SERVICES} className="text-muted-foreground hover:text-primary transition-colors">
+                Services Overview
+              </Link>
+              <Link href={APP_ROUTES.PRICING} className="text-muted-foreground hover:text-primary transition-colors">
+                Pricing Plans
+              </Link>
+              <Link href={APP_ROUTES.LOGIN} className="text-muted-foreground hover:text-primary transition-colors">
+                Sign In
+              </Link>
+              <Link href={APP_ROUTES.DASHBOARD} className="text-muted-foreground hover:text-primary transition-colors">
+                Live Dashboard
+              </Link>
+              <Link href={APP_ROUTES.BLOG} className="text-muted-foreground hover:text-primary transition-colors">
+                Retail Guide &amp; Blog
+              </Link>
+            </div>
+
+            {/* Links column 3: Company & Legal */}
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground">Company &amp; Legal</p>
+              <Link href={APP_ROUTES.ABOUT} className="text-muted-foreground hover:text-primary transition-colors">
+                About MiniHisab
+              </Link>
+              <Link href={APP_ROUTES.CONTACT} className="text-muted-foreground hover:text-primary transition-colors">
+                Contact &amp; Support
+              </Link>
+              <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+                Terms of Service
+              </Link>
+            </div>
           </div>
-          <div className="grid gap-2 text-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company</p>
-            <Link href={APP_ROUTES.ABOUT} className="hover:text-primary">About</Link>
-            <Link href={APP_ROUTES.SERVICES} className="hover:text-primary">Services</Link>
-            <Link href={APP_ROUTES.FEATURES} className="hover:text-primary">Features</Link>
-            <Link href={APP_ROUTES.BLOG} className="hover:text-primary">Blog</Link>
-            <Link href={APP_ROUTES.CONTACT} className="hover:text-primary">Contact</Link>
-          </div>
-          <div className="grid gap-2 text-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Product</p>
-            <Link href={APP_ROUTES.PRICING} className="hover:text-primary">Pricing</Link>
-            <Link href={APP_ROUTES.LOGIN} className="hover:text-primary">Login</Link>
-            <Link href={APP_ROUTES.DASHBOARD} className="hover:text-primary">Dashboard</Link>
-          </div>
-          <div className="grid gap-2 text-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Legal</p>
-            <Link href="/privacy" className="hover:text-primary">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-primary">Terms of Service</Link>
+
+          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/70 pt-6 text-xs text-muted-foreground sm:flex-row">
+            <p>© {new Date().getFullYear()} MiniHisab. All rights reserved.</p>
+            <p>Retail &amp; Wholesale Inventory Management</p>
           </div>
         </div>
       </footer>
