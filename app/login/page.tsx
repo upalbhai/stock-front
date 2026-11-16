@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Lock,
+  Eye,
+  EyeOff,
   Mail,
   Store,
   User,
@@ -52,6 +54,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -617,13 +621,22 @@ export default function LoginPage() {
                         <Lock className="h-4 w-4 absolute left-3 top-3.5 text-muted-foreground" />
                         <Input
                           required
-                          type="password"
+                          type={showPassword ? "text" : "password"}
                           value={form.password}
                           onChange={(e) => handleChange("password", e.target.value)}
                           placeholder="Enter your password"
-                          className="h-11 pl-9 text-sm rounded-md"
+                          className="h-11 pl-9 pr-10 text-sm rounded-md"
                           autoFocus
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors p-0.5 cursor-pointer focus:outline-hidden"
+                          tabIndex={-1}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -738,30 +751,52 @@ export default function LoginPage() {
                       <label className="mb-1.5 block text-xs font-semibold text-foreground">
                         New Password <span className="text-red-500">*</span>
                       </label>
-                      <Input
-                        required
-                        type="password"
-                        value={form.password}
-                        onChange={(e) => handleChange("password", e.target.value)}
-                        placeholder="At least 6 characters"
-                        className="h-11 text-sm rounded-md"
-                        minLength={6}
-                      />
+                      <div className="relative">
+                        <Input
+                          required
+                          type={showPassword ? "text" : "password"}
+                          value={form.password}
+                          onChange={(e) => handleChange("password", e.target.value)}
+                          placeholder="At least 6 characters"
+                          className="h-11 pr-10 text-sm rounded-md"
+                          minLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors p-0.5 cursor-pointer focus:outline-hidden"
+                          tabIndex={-1}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
 
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-foreground">
                         Confirm New Password <span className="text-red-500">*</span>
                       </label>
-                      <Input
-                        required
-                        type="password"
-                        value={form.confirmPassword}
-                        onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                        placeholder="Re-enter your password"
-                        className="h-11 text-sm rounded-md"
-                        minLength={6}
-                      />
+                      <div className="relative">
+                        <Input
+                          required
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={form.confirmPassword}
+                          onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                          placeholder="Re-enter your password"
+                          className="h-11 pr-10 text-sm rounded-md"
+                          minLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((prev) => !prev)}
+                          className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors p-0.5 cursor-pointer focus:outline-hidden"
+                          tabIndex={-1}
+                          aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { ShieldCheck, Search, ChevronRight } from "lucide-react";
 import {
   Sidebar,
@@ -51,20 +52,28 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" variant="sidebar" className="border-sidebar-border transition-all duration-300">
       {/* ── SIDEBAR HEADER ──────────────────────────────────────────────── */}
       <SidebarHeader className="border-b border-sidebar-border p-3">
-        <div className="flex items-center gap-3 px-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <div
-            className={cn(
-              "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold shadow-xs transition-all duration-300",
-              isSuperAdmin
-                ? "bg-gradient-to-br from-primary via-primary/95 to-primary/80 text-primary-foreground shadow-[0_2px_10px_rgba(0,102,204,0.25)] ring-1 ring-primary/30 hover:scale-105"
-                : "bg-sidebar-primary text-sidebar-primary-foreground"
-            )}
-          >
-            {isSuperAdmin ? (
-              <ShieldCheck className="h-5 w-5" />
-            ) : (
-              <span className="text-xs font-black tracking-wider">MH</span>
-            )}
+        <Link
+          href={isSuperAdmin ? APP_ROUTES.ADMIN : APP_ROUTES.DASHBOARD}
+          onClick={closeMobileSidebar}
+          className="group flex items-center gap-3 px-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 transition-opacity hover:opacity-90 cursor-pointer"
+        >
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center transition-transform duration-200 group-hover:scale-105">
+            <Image
+              src="/logo-mobile.webp"
+              alt="MiniHisab Logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0 object-contain dark:hidden"
+              priority
+            />
+            <Image
+              src="/logo-mobile-dark.webp"
+              alt="MiniHisab Logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0 object-contain hidden dark:block"
+              priority
+            />
           </div>
           <div className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
             <div className="flex items-center justify-between gap-1.5">
@@ -82,7 +91,7 @@ export function AppSidebar() {
               {isSuperAdmin ? "Platform Console" : "Operations Hub"}
             </span>
           </div>
-        </div>
+        </Link>
 
         {/* Quick Command Trigger in Sidebar */}
         <button

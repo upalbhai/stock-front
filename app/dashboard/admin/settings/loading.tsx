@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminSettingsLoading() {
   return (
-    <div className="space-y-4 animate-pulse max-w-5xl">
+    <div className="space-y-4 animate-pulse w-full">
       {/* Compact Section Header & Metric Strip Skeleton */}
       <div className="flex flex-col gap-3 rounded-xl border border-border/80 bg-card p-3.5 shadow-2xs">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

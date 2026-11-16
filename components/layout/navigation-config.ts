@@ -253,10 +253,10 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         feature: "businesses",
       },
       {
-        title: "Users Registry",
+        title: "Users & RBAC",
         path: APP_ROUTES.ADMIN_USERS,
         icon: Users,
-        keywords: ["users", "accounts", "registry", "members"],
+        keywords: ["users", "accounts", "registry", "members", "roles", "rbac", "permissions"],
         roles: ["superadmin"],
         feature: "users",
       },

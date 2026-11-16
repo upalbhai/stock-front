@@ -50,6 +50,18 @@ export const adminService = {
   createSystemAdmin: async (data: unknown, token?: string | null) => {
     return apiFetch("/admin/system-users", { method: "POST", body: data, token });
   },
+  getAdminRoles: async (token?: string | null) => {
+    return getJson<{ roles: any[]; availableModules: string[]; availableActions: string[] }>("/admin/roles", token);
+  },
+  createAdminRole: async (data: unknown, token?: string | null) => {
+    return apiFetch("/admin/roles", { method: "POST", body: data, token });
+  },
+  updateAdminRole: async (id: string, data: unknown, token?: string | null) => {
+    return apiFetch(`/admin/roles/${id}`, { method: "PATCH", body: data, token });
+  },
+  deleteAdminRole: async (id: string, token?: string | null) => {
+    return apiFetch(`/admin/roles/${id}`, { method: "DELETE", token });
+  },
   purgeUserTestData: async (userId: string, token?: string | null) => {
     return apiFetch<{
       purgedUser: { id: string; name: string; email?: string; role: string };
@@ -62,6 +74,13 @@ export const adminService = {
   },
   updateSettings: async (data: unknown, token?: string | null) => {
     return apiFetch("/admin/settings", { method: "PUT", body: data, token });
+  },
+  sendTestEmail: async (data: { targetEmail: string; provider?: string }, token?: string | null) => {
+    return apiFetch<{ message: string; data: any }>("/admin/settings/test-email", {
+      method: "POST",
+      body: data,
+      token,
+    });
   },
   getAgents: async (token?: string | null) => {
     return getJson<{ agents: any[] }>("/admin/agents", token);
