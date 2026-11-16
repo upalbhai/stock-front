@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BarcodeScanner } from "@/components/ui/barcode-scanner";
 import { PrinterSettingsModal } from "@/components/billing/printer-settings-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -20,6 +20,20 @@ export default function BillingPage() {
 
   // Enable global physical barcode scanner listening on the entire billing page
   useGlobalBarcodeScanner(b.handleBarcodeScanned, !b.showScanner);
+
+  // POS hotkey: F8 to proceed to payment settlement
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "F8") {
+        e.preventDefault();
+        if (b.billing.items.length > 0) {
+          b.setShowPaymentView(true);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [b.billing.items.length, b.setShowPaymentView]);
 
   const cartDispatch = {
     setBillingMode: (mode: Parameters<typeof b.setBillingMode>[0]) =>

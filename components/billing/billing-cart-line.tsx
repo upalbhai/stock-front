@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import * as React from "react";
 import { toast } from "react-hot-toast";
-import { Plus, Minus, Trash2 } from "lucide-react";
+import { Plus, Minus, Trash2, Edit2, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { LineItem } from "@/store/billingSlice";
@@ -35,130 +35,154 @@ export function BillingCartLine({
   const lineQty = item.soldQty ?? item.qty;
   const lineTotal = item.price * lineQty;
 
-  const [qtyInput, setQtyInput] = useState(item.qty.toString());
+  const [qtyInput, setQtyInput] = React.useState(item.qty.toString());
 
-  useEffect(() => {
+  React.useEffect(() => {
     setQtyInput(item.qty.toString());
   }, [item.qty]);
 
-  return (
-    <div className="flex flex-col gap-2.5 rounded-2xl border border-border/60 bg-card p-3 shadow-sm">
-      {/* Top Row: Full Product Name */}
-      <div className="w-full">
-        <p className="text-[15px] font-bold leading-snug text-foreground/90 line-clamp-2 break-words" title={item.name}>
-          {item.name}
-        </p>
-      </div>
+  const isMaxStockReached = item.onHandQty !== undefined && item.qty >= item.onHandQty;
 
-      {/* Bottom Row: Price/Unit & Controls */}
-      <div className="flex items-center justify-between mt-0.5">
-        {/* Left: Price Per Unit */}
-        <div className="flex items-center">
-          {isWholesale && isEditing ? (
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              autoFocus
-              value={editPriceValue}
-              onChange={(e) => onEditPriceValue(e.target.value)}
-              onBlur={() => onCommitEdit(Number(editPriceValue) || item.price)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onCommitEdit(Number(editPriceValue) || item.price);
-                if (e.key === "Escape") onCancelEdit();
-              }}
-              className="w-20 rounded border border-primary bg-card px-1.5 py-0.5 text-[12px]"
-            />
-          ) : (
-            <button
-              type="button"
-              className={cn(
-                "text-[13px] text-muted-foreground font-medium",
-                isWholesale && "underline decoration-dotted hover:text-primary"
-              )}
-              onClick={() => {
-                if (!isWholesale) return;
-                onStartEdit();
-              }}
-            >
-              {formatCurrency(item.price)}/{item.soldUnit ?? item.unit}
-              {item.priceOverride && "*"}
-            </button>
-          )}
+  return (
+    <div className="group relative flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-2.5 shadow-2xs transition-all duration-150 hover:border-border hover:shadow-xs">
+      {/* Top Row: Product Name & Delete */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p
+            className="text-xs font-bold leading-snug text-foreground/90 group-hover:text-foreground line-clamp-2 break-words"
+            title={item.name}
+          >
+            {item.name}
+          </p>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {isWholesale && isEditing ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  autoFocus
+                  value={editPriceValue}
+                  onChange={(e) => onEditPriceValue(e.target.value)}
+                  onBlur={() => onCommitEdit(Number(editPriceValue) || item.price)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onCommitEdit(Number(editPriceValue) || item.price);
+                    if (e.key === "Escape") onCancelEdit();
+                  }}
+                  className="w-20 rounded-md border border-primary bg-background px-1.5 py-0.5 text-xs font-semibold text-foreground focus:outline-hidden"
+                />
+                <span className="text-[10px] text-muted-foreground">/{item.soldUnit ?? item.unit}</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={cn(
+                  "flex items-center gap-1 text-[11px] font-medium transition-colors cursor-pointer",
+                  isWholesale
+                    ? "text-primary hover:underline hover:text-primary/80"
+                    : "text-muted-foreground"
+                )}
+                onClick={() => {
+                  if (!isWholesale) return;
+                  onStartEdit();
+                }}
+                title={isWholesale ? "Click to edit unit price" : undefined}
+              >
+                <span>
+                  {formatCurrency(item.price)}/{item.soldUnit ?? item.unit}
+                </span>
+                {item.priceOverride && (
+                  <span className="rounded bg-amber-500/10 px-1 text-[9px] font-bold text-amber-600">
+                    custom
+                  </span>
+                )}
+                {isWholesale && <Edit2 className="h-2.5 w-2.5 text-muted-foreground" />}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Right: Controls & Total */}
-        <div className="flex shrink-0 items-center gap-2">
-          {/* Quantity */}
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={() => onUpdateQty(item.qty - 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-muted hover:bg-muted/80 active:scale-95 transition-all"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <input
-              type="number"
-              min={1}
-              value={qtyInput}
-              onChange={(e) => {
-                setQtyInput(e.target.value);
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val) && val > 0) {
-                  if (item.onHandQty !== undefined && val > item.onHandQty) {
-                    onUpdateQty(item.onHandQty);
-                    setQtyInput(item.onHandQty.toString());
-                    toast.error(`Only ${item.onHandQty} available`, { id: 'stock-limit' });
-                  } else {
-                    onUpdateQty(val);
-                  }
-                }
-              }}
-              onBlur={() => {
-                const val = parseInt(qtyInput, 10);
-                if (isNaN(val) || val <= 0) {
-                  setQtyInput(item.qty.toString());
-                } else if (item.onHandQty !== undefined && val > item.onHandQty) {
-                  setQtyInput(item.onHandQty.toString());
-                }
-              }}
-              className="h-8 w-8 bg-transparent text-center text-[15px] font-bold outline-none focus:ring-2 focus:ring-primary/50 rounded-md [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
-            />
-            <button
-              type="button"
-              disabled={item.onHandQty !== undefined && item.qty >= item.onHandQty}
-              onClick={() => {
-                if (item.onHandQty !== undefined && item.qty >= item.onHandQty) {
-                  toast.error(`Only ${item.onHandQty} available`, { id: 'stock-limit' });
-                } else {
-                  onUpdateQty(item.qty + 1);
-                }
-              }}
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full bg-muted transition-all",
-                item.onHandQty !== undefined && item.qty >= item.onHandQty 
-                  ? "opacity-50 cursor-not-allowed" 
-                  : "hover:bg-muted/80 active:scale-95"
-              )}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
+        {/* Remove Button */}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer shrink-0"
+          title="Remove item"
+          aria-label="Remove item"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
-          {/* Line Total */}
-          <span className="text-[15px] font-black min-w-[4rem] text-right tracking-tight">
-            {formatCurrency(lineTotal)}
-          </span>
-
-          {/* Delete Button */}
+      {/* Bottom Row: Quantity Stepper & Line Total */}
+      <div className="flex items-center justify-between border-t border-border/40 pt-2">
+        {/* Quantity Controls */}
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5">
           <button
             type="button"
-            onClick={onRemove}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/60 border border-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 hover:border-transparent transition-all ml-1"
+            onClick={() => onUpdateQty(item.qty - 1)}
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-card hover:bg-muted active:scale-95 text-foreground transition-all cursor-pointer shadow-2xs"
+            aria-label="Decrease quantity"
           >
-            <Trash2 className="h-4 w-4" />
+            <Minus className="h-3 w-3" />
           </button>
+
+          <input
+            type="number"
+            min={1}
+            value={qtyInput}
+            onChange={(e) => {
+              setQtyInput(e.target.value);
+              const val = parseInt(e.target.value, 10);
+              if (!isNaN(val) && val > 0) {
+                if (item.onHandQty !== undefined && val > item.onHandQty) {
+                  onUpdateQty(item.onHandQty);
+                  setQtyInput(item.onHandQty.toString());
+                  toast.error(`Only ${item.onHandQty} available in stock`, { id: "stock-limit" });
+                } else {
+                  onUpdateQty(val);
+                }
+              }
+            }}
+            onBlur={() => {
+              const val = parseInt(qtyInput, 10);
+              if (isNaN(val) || val <= 0) {
+                setQtyInput(item.qty.toString());
+              } else if (item.onHandQty !== undefined && val > item.onHandQty) {
+                setQtyInput(item.onHandQty.toString());
+              }
+            }}
+            className="h-7 w-9 bg-transparent text-center font-mono text-xs font-bold text-foreground outline-hidden [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            aria-label="Quantity"
+          />
+
+          <button
+            type="button"
+            disabled={isMaxStockReached}
+            onClick={() => {
+              if (isMaxStockReached) {
+                toast.error(`Only ${item.onHandQty} available in stock`, { id: "stock-limit" });
+              } else {
+                onUpdateQty(item.qty + 1);
+              }
+            }}
+            className={cn(
+              "flex h-7 w-7 items-center justify-center rounded-md bg-card text-foreground transition-all shadow-2xs",
+              isMaxStockReached
+                ? "opacity-40 cursor-not-allowed"
+                : "hover:bg-muted active:scale-95 cursor-pointer"
+            )}
+            aria-label="Increase quantity"
+          >
+            <Plus className="h-3 w-3" />
+          </button>
+        </div>
+
+        {/* Line Total */}
+        <div className="text-right">
+          <span className="font-mono text-sm font-black tracking-tight text-foreground">
+            {formatCurrency(lineTotal)}
+          </span>
         </div>
       </div>
     </div>

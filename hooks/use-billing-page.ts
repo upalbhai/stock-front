@@ -72,9 +72,8 @@ export function useBillingPage() {
   const isKhataPayment =
     billing.paymentMethod === "credit" || billing.creditSale;
   const showCustomerSection =
-    (hasCustomers || hasCreditKhata) &&
-    (isWholesale || isKhataPayment || billing.generateGstInvoice);
-  const paymentMethods = hasCreditKhata
+    hasCustomers || hasCreditKhata || isKhataPayment || isWholesale || billing.generateGstInvoice;
+  const paymentMethods = hasCreditKhata || billing.creditSale || isKhataPayment
     ? PAYMENT_METHODS
     : PAYMENT_METHODS.filter((m) => m.value !== "credit");
 
@@ -139,6 +138,9 @@ export function useBillingPage() {
         limit: prodLimit,
       }),
     enabled: Boolean(token),
+    staleTime: 5_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const { data: bizData } = useQuery({
@@ -336,6 +338,8 @@ export function useBillingPage() {
   const handleProdRefetch = () => {
     setProdIsRefetching(true);
     setProdCooldownSeconds(15);
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["categories"] });
     refetchProducts();
     let seconds = 15;
     timeoutRef.current = setInterval(() => {
@@ -440,7 +444,7 @@ export function useBillingPage() {
     const amountDue = Math.max(0, total - amountReceived);
 
     if ((amountDue > 0 || isKhataPayment) && !billing.customerId) {
-      toast.error("Select a customer — required for khata / partial payment");
+      toast.error("Select a customer: required for khata / partial payment");
       return;
     }
 

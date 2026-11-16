@@ -50,16 +50,34 @@ export function GlobalSocketListener() {
       }
     };
 
+    const handleProductsUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    };
+
+    const handleCategoriesUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    };
+
+    const handleBrandsUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ["brands"] });
+    };
+
     socket.on("subscriptionUpdated", handleSubscriptionUpdated);
     socket.on("maintenanceUpdated", handleSubscriptionUpdated);
     socket.on("notification:unread-count", handleUnreadCount);
     socket.on("notification:new", handleNewNotification);
+    socket.on("products:updated", handleProductsUpdated);
+    socket.on("categories:updated", handleCategoriesUpdated);
+    socket.on("brands:updated", handleBrandsUpdated);
 
     return () => {
       socket.off("subscriptionUpdated", handleSubscriptionUpdated);
       socket.off("maintenanceUpdated", handleSubscriptionUpdated);
       socket.off("notification:unread-count", handleUnreadCount);
       socket.off("notification:new", handleNewNotification);
+      socket.off("products:updated", handleProductsUpdated);
+      socket.off("categories:updated", handleCategoriesUpdated);
+      socket.off("brands:updated", handleBrandsUpdated);
     };
   }, [socket, isConnected, dispatch, queryClient, user?.id]);
 

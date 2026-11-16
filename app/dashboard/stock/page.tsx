@@ -16,7 +16,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { StatsCard } from "@/components/ui/stats-card";
-import { CardSwiper } from "@/components/ui/card-swiper";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useFeature } from "@/hooks/useFeature";
@@ -155,9 +155,9 @@ function buildHistoryColumns(currency: string, onDelete?: (e: StockHistoryEntry)
       header: "Potential margin",
       render: (e: StockHistoryEntry) =>
         e.qty > 0 && e.expectedProfit != null ? (
-          <span className="text-xs text-muted">{formatCurrency(e.expectedProfit, currency)}</span>
+          <span className="text-xs text-muted-foreground">{formatCurrency(e.expectedProfit, currency)}</span>
         ) : (
-          <span className="text-xs text-muted">—</span>
+          <span className="text-xs text-muted-foreground">None</span>
         )
     },
     {
@@ -167,7 +167,7 @@ function buildHistoryColumns(currency: string, onDelete?: (e: StockHistoryEntry)
         e.qty > 0 && e.costLoss != null && e.costLoss > 0 ? (
           <span className="text-xs font-semibold text-danger">{formatCurrency(e.costLoss, currency)}</span>
         ) : (
-          <span className="text-xs text-muted">—</span>
+          <span className="text-xs text-muted-foreground">None</span>
         )
     },
     {
@@ -179,7 +179,7 @@ function buildHistoryColumns(currency: string, onDelete?: (e: StockHistoryEntry)
             {formatCurrency(e.realizedProfit, currency)}
           </span>
         ) : (
-          <span className="text-xs text-muted">—</span>
+          <span className="text-xs text-muted-foreground">None</span>
         )
     },
     {
@@ -187,26 +187,26 @@ function buildHistoryColumns(currency: string, onDelete?: (e: StockHistoryEntry)
       header: "Cost / Sell",
       render: (e: StockHistoryEntry) =>
         e.qty > 0 && (e.costValue != null || e.sellValue != null) ? (
-          <span className="text-[10px] text-muted whitespace-nowrap">
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
             {formatCurrency(e.costValue ?? 0, currency)} → {formatCurrency(e.sellValue ?? 0, currency)}
           </span>
         ) : (
-          <span className="text-xs text-muted">—</span>
+          <span className="text-xs text-muted-foreground">None</span>
         )
     },
     {
       key: "by",
       header: "By",
       render: (e: StockHistoryEntry) => (
-        <span className="text-xs text-muted">{e.createdBy?.name || (e.referenceType === "Order" ? "Billing" : "—")}</span>
+        <span className="text-xs text-muted-foreground">{e.createdBy?.name || (e.referenceType === "Order" ? "Billing" : "System")}</span>
       )
     },
     {
       key: "note",
       header: "Note",
       render: (e: StockHistoryEntry) => (
-        <span className="text-xs text-muted truncate max-w-[180px] block" title={e.note || ""}>
-          {e.note || "—"}
+        <span className="text-xs text-muted-foreground truncate max-w-[180px] block" title={e.note || ""}>
+          {e.note || "No note"}
         </span>
       )
     }
@@ -548,7 +548,7 @@ export default function StockPage() {
         outletId: outletId ?? undefined,
         qty: apiQty,
         type: apiType,
-        note: adjustNote || `${adjustEntryType === "purchase" ? "Stock received" : adjustEntryType === "wastage" ? "Stock removed" : "Stock count set"}${selectedAdjustUnit.key !== "base" ? ` — ${adjustCount} ${selectedAdjustUnit.soldUnit}` : ""}`,
+        note: adjustNote || `${adjustEntryType === "purchase" ? "Stock received" : adjustEntryType === "wastage" ? "Stock removed" : "Stock count set"}${selectedAdjustUnit.key !== "base" ? ` (${adjustCount} ${selectedAdjustUnit.soldUnit})` : ""}`,
         ...packagingMeta,
         ...buildPricePayload()
       });
@@ -587,47 +587,81 @@ export default function StockPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Inventory</h1>
-          <p className="text-sm text-muted">Monitor stock levels, adjustments, and transfers</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Inventory & Stock Management
+            </h1>
+            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-xs">
+              Live Stock
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Monitor real-time stock balances, inventory transfers, batch purchases, and shrinkage logs.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push("/dashboard/stock/transfers")}>
-            <ArrowLeftRight className="h-4 w-4 mr-2" /> View Transfers
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-10 px-3.5 text-xs font-semibold gap-1.5 cursor-pointer"
+            onClick={() => router.push("/dashboard/stock/transfers")}
+          >
+            <ArrowLeftRight className="h-4 w-4" />
+            <span>Inter-Outlet Transfers</span>
           </Button>
         </div>
       </div>
 
       {/* Tabs Menu */}
-      <div className="flex gap-1.5 rounded-2xl border border-border bg-surface/60 p-1 backdrop-blur max-w-lg">
-        {[
-          { id: "overview", label: "Overview", icon: Package },
-          { id: "start-of-day", label: "Start of Day", icon: Play },
-          { id: "history", label: "History", icon: History }
-        ].map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setQuery({ tab: tab.id })}
-              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition ${activeTab === tab.id ? "bg-primary text-white shadow-soft" : "text-muted hover:text-text"}`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setQuery({ tab: v })}>
+        <TabsList className="h-10 bg-muted/60 p-0.5 border border-border/40 max-w-md">
+          <TabsTrigger
+            value="overview"
+            className="text-xs px-3.5 py-1.5 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-all gap-1.5 cursor-pointer"
+          >
+            <Package className="h-3.5 w-3.5" />
+            <span>Stock Levels</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="history"
+            className="text-xs px-3.5 py-1.5 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-all gap-1.5 cursor-pointer"
+          >
+            <History className="h-3.5 w-3.5" />
+            <span>Movement History</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="start-of-day"
+            className="text-xs px-3.5 py-1.5 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-all gap-1.5 cursor-pointer"
+          >
+            <Play className="h-3.5 w-3.5" />
+            <span>Start of Day Count</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* TAB CONTENT: Overview */}
       {activeTab === "overview" && (
         <div className="space-y-6 animate-rise">
-          <CardSwiper>
-            <StatsCard label="Total SKUs" value={formatNumber(summary?.totalSkus || 0)} icon={<Package className="h-5 w-5" />} />
-            <StatsCard label="On Hand Total" value={formatNumber(summary?.onHandTotal || 0)} />
-            <StatsCard label="Low Stock Items" value={summary?.lowStock || 0} color={summary?.lowStock ? "danger" : "default"} icon={<AlertTriangle className="h-5 w-5" />} />
-          </CardSwiper>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <StatsCard
+              label="Total Catalog SKUs"
+              value={formatNumber(summary?.totalSkus || 0)}
+              icon={<Package className="h-5 w-5" />}
+              color="primary"
+            />
+            <StatsCard
+              label="On-Hand Total Quantity"
+              value={formatNumber(summary?.onHandTotal || 0)}
+              icon={<Package className="h-5 w-5" />}
+            />
+            <StatsCard
+              label="Low Stock Alerts"
+              value={summary?.lowStock || 0}
+              color={summary?.lowStock ? "danger" : "default"}
+              icon={<AlertTriangle className="h-5 w-5" />}
+            />
+          </div>
 
           <DataTable
             isLoading={loadingProds}
@@ -648,8 +682,8 @@ export default function StockPage() {
                 key: "name", header: "Item Details",
                 render: (p) => (
                   <div>
-                    <p className="font-semibold">{p.name}</p>
-                    <p className="text-xs text-muted">SKU: {p.sku || "—"}</p>
+                    <p className="font-semibold text-sm text-foreground">{p.name}</p>
+                    <p className="text-xs text-muted-foreground font-mono">SKU: {p.sku || "N/A"}</p>
                   </div>
                 )
               },
@@ -756,7 +790,7 @@ export default function StockPage() {
           </div>
 
           {/* Summary cards for filtered period */}
-          <CardSwiper slidesPerViewTablet={2.2} slidesPerViewDesktop={3.2}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
             <StatsCard
               label="Stock In"
               value={formatNumber(historySummary?.totalInQty ?? 0)}
@@ -774,28 +808,28 @@ export default function StockPage() {
             <StatsCard
               label="Net Movement"
               value={formatNumber((historySummary?.totalInQty ?? 0) - (historySummary?.totalOutQty ?? 0))}
-              hint={query.from || query.to ? `Stock impact from ${query.from.split('T')[0]} to ${query.to.split('T')[0]}` : "All time in filter"}
+              hint={query.from || query.to ? `Stock impact for period` : "All time in filter"}
               icon={<History className="h-5 w-5" />}
             />
             <StatsCard
               label="Stock Cost"
               value={formatCurrency(historySummary?.totalCostValue ?? 0, currency)}
-              hint="Money spent on stock in"
+              hint="Spent on stock in"
               color="warning"
             />
             <StatsCard
               label="Expected Revenue"
               value={formatCurrency(historySummary?.totalSellValue ?? 0, currency)}
-              hint="If all stock in sells at entry price"
+              hint="If sold at retail"
               color="primary"
             />
             <StatsCard
               label="Potential margin"
               value={formatCurrency(historySummary?.totalExpectedProfit ?? 0, currency)}
-              hint="If stock-in sells at entry price — NOT profit yet"
+              hint="Unrealized gross markup"
               color={(historySummary?.totalExpectedProfit ?? 0) >= 0 ? "success" : "danger"}
             />
-          </CardSwiper>
+          </div>
 
           <DataTable
             isLoading={loadingHistory}
@@ -930,7 +964,7 @@ export default function StockPage() {
               <div>
                 <p className="text-xs font-semibold text-text">Pricing for this stock batch</p>
                 <p className="text-[10px] text-muted mt-0.5">
-                  Prefilled from product defaults — change if supplier rates went up or down.
+                  Prefilled from product defaults (change if supplier rates went up or down).
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1020,7 +1054,7 @@ export default function StockPage() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted">
-                  Cost per {adjustPriceUnit} ({currency}) — for loss calculation
+                  Cost per {adjustPriceUnit} ({currency}) (for loss calculation)
                 </label>
                 <Input
                   type="number"

@@ -35,7 +35,7 @@ function buildUnitOptions(product: Product): UnitPickOption[] {
       soldUnit: baseUnit,
       conversionFactor: 1,
       price: product.price,
-      description: `Loose — ${formatCurrency(product.price)} per ${baseUnit}`
+      description: `Loose: ${formatCurrency(product.price)} per ${baseUnit}`
     }
   ];
 
@@ -55,7 +55,7 @@ function buildUnitOptions(product: Product): UnitPickOption[] {
       conversionFactor: pkg.qtyPerUnit,
       packagingUnitId: typeof pkg.unitId === "object" ? pkg.unitId._id : pkg.unitId,
       price,
-      description: `1 ${abbr} = ${pkg.qtyPerUnit} ${baseUnit} — ${formatCurrency(price)}${costNote}${marginNote}`
+      description: `1 ${abbr} = ${pkg.qtyPerUnit} ${baseUnit} (${formatCurrency(price)}${costNote}${marginNote})`
     });
   }
 
@@ -151,7 +151,7 @@ export function UnitPickerModal({ open, product, onClose, onConfirm }: UnitPicke
             </div>
             {!stockOk && (
               <p className="text-[11px] text-danger pt-1">
-                Not enough stock — need {baseNeeded} {baseUnit}, only {product.onHandQty} available
+                Not enough stock: need {baseNeeded} {baseUnit}, only {product.onHandQty} available
               </p>
             )}
           </div>

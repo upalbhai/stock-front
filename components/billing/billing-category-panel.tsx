@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Search, Layers, X } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Search, Layers, X, FolderTree, Tag } from "lucide-react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -25,15 +25,9 @@ export function BillingCategoryPanel({
   onSelectCategory,
 }: BillingCategoryPanelProps) {
   const { token } = useAuth();
-  const qc = useQueryClient();
 
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [categories, setCategories] = React.useState<CategoryOption[]>([]);
-  const [page, setPage] = React.useState(1);
-  const [hasMore, setHasMore] = React.useState(true);
-  const [loading, setLoading] = React.useState(false);
-  const [initialLoaded, setInitialLoaded] = React.useState(false);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const desktopSentinelRef = React.useRef<HTMLDivElement>(null);
@@ -46,57 +40,39 @@ export function BillingCategoryPanel({
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Reset list when search changes
-  React.useEffect(() => {
-    setCategories([]);
-    setPage(1);
-    setHasMore(true);
-    setInitialLoaded(false);
-  }, [debouncedSearch]);
-
-  // Fetch categories
-  const fetchCategories = React.useCallback(
-    async (pageNum: number) => {
-      if (loading) return;
-      setLoading(true);
-      try {
-        const res = await qc.fetchQuery({
-          queryKey: ["categories", "billing-panel", pageNum, PAGE_SIZE, debouncedSearch],
-          queryFn: () =>
-            categoryService.getCategoriesWithMeta(token, {
-              flat: "true",
-              page: pageNum,
-              limit: PAGE_SIZE,
-              search: debouncedSearch || undefined,
-            }),
-          staleTime: 1000 * 60 * 5,
-        });
-
-        // res.data is a flat Category[] when flat=true is passed
-        const rawData = res.data;
-        const newItems: CategoryOption[] = Array.isArray(rawData) ? rawData : [];
-        const meta = res.meta?.pagination;
-        const totalPages = meta?.totalPages || 1;
-
-        setCategories((prev) => (pageNum === 1 ? newItems : [...prev, ...newItems]));
-        setHasMore(pageNum < totalPages);
-        setPage(pageNum);
-        setInitialLoaded(true);
-      } catch (err) {
-        console.error("Failed to load categories", err);
-      } finally {
-        setLoading(false);
-      }
+  // Reactive infinite query for categories
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ["categories", "billing-panel", debouncedSearch],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await categoryService.getCategoriesWithMeta(token, {
+        flat: "true",
+        page: pageParam,
+        limit: PAGE_SIZE,
+        search: debouncedSearch || undefined,
+      });
+      return res;
     },
-    [loading, debouncedSearch, token, qc]
-  );
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const meta = lastPage?.meta?.pagination;
+      if (!meta) return undefined;
+      return meta.page < meta.totalPages ? meta.page + 1 : undefined;
+    },
+    staleTime: 5_000,
+    refetchOnMount: "always",
+    enabled: Boolean(token),
+  });
 
-  // Load first page
-  React.useEffect(() => {
-    if (!initialLoaded) {
-      fetchCategories(1);
-    }
-  }, [initialLoaded, fetchCategories]);
+  const categories = React.useMemo(() => {
+    if (!data?.pages) return [];
+    return data.pages.flatMap((page) => (Array.isArray(page?.data) ? page.data : []));
+  }, [data]);
 
   // Infinite scroll via IntersectionObserver
   React.useEffect(() => {
@@ -107,39 +83,54 @@ export function BillingCategoryPanel({
     const observer = new IntersectionObserver(
       (entries) => {
         const isIntersecting = entries.some((entry) => entry.isIntersecting);
-        if (isIntersecting && hasMore && !loading) {
-          fetchCategories(page + 1);
+        if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
         }
       },
-      { root: null, rootMargin: "100px" } // Use viewport as root for both mobile and desktop
+      { root: null, rootMargin: "100px" }
     );
 
     if (desktopSentinel) observer.observe(desktopSentinel);
     if (mobileSentinel) observer.observe(mobileSentinel);
 
     return () => observer.disconnect();
-  }, [hasMore, loading, page, fetchCategories]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const isAllSelected = selectedCategoryIds.length === 0;
 
   return (
     <>
       {/* ─── DESKTOP: Vertical sidebar panel ─── */}
-      <div className="hidden lg:flex w-[210px] shrink-0 flex-col rounded-lg border border-border bg-card shadow-sm overflow-hidden">
+      <aside className="hidden lg:flex w-[220px] shrink-0 flex-col rounded-xl border border-border/70 bg-card shadow-xs overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border/60 px-3.5 py-2.5 bg-muted/20">
+          <div className="flex items-center gap-1.5">
+            <FolderTree className="h-4 w-4 text-primary" />
+            <span className="text-xs font-bold tracking-tight text-foreground">Categories</span>
+          </div>
+          {categories.length > 0 && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              {categories.length}
+            </span>
+          )}
+        </div>
+
         {/* Search */}
-        <div className="p-3 border-b border-border/50">
+        <div className="p-2.5 border-b border-border/50">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="h-8 pl-8 pr-7 text-xs"
-              placeholder="Search categories..."
+              className="h-8.5 pl-8 pr-7 text-xs bg-background/80 rounded-lg border-border/80 focus:border-primary"
+              placeholder="Filter categories..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
               <button
+                type="button"
                 onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
+                aria-label="Clear category search"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -148,25 +139,30 @@ export function BillingCategoryPanel({
         </div>
 
         {/* Category list */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin p-1.5 space-y-0.5">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-1.5 space-y-1 scrollbar-thin">
           {/* All Categories */}
           <button
             type="button"
             onClick={() => onSelectCategory(null, null)}
             className={cn(
-              "flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium transition-all rounded-md",
+              "group relative flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold rounded-lg transition-all duration-150 cursor-pointer",
               isAllSelected
-                ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-                : "text-foreground/80 hover:bg-accent hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                : "text-foreground/80 hover:bg-muted/80 hover:text-foreground"
             )}
           >
-            <Layers className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">All Categories</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <Layers className={cn("h-3.5 w-3.5 shrink-0", isAllSelected ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+              <span className="truncate">All Products</span>
+            </div>
+            {isAllSelected && (
+              <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+            )}
           </button>
 
           {/* Individual categories */}
           {categories.map((cat) => {
-            const catId = cat._id || cat.id || "";
+            const catId = cat._id || (cat as any).id || "";
             const isActive = selectedCategoryIds.includes(catId);
             return (
               <button
@@ -175,20 +171,27 @@ export function BillingCategoryPanel({
                 onClick={() =>
                   onSelectCategory(catId, { ...cat, id: catId })
                 }
+                title={cat.name}
                 className={cn(
-                  "flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium transition-all rounded-md",
+                  "group relative flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs font-medium rounded-lg transition-all duration-150 cursor-pointer",
                   isActive
-                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-                    : "text-foreground/80 hover:bg-accent hover:text-foreground"
+                    ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                    : "text-foreground/80 hover:bg-muted/80 hover:text-foreground"
                 )}
               >
-                <span className="truncate">{cat.name}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Tag className={cn("h-3 w-3 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground/60 group-hover:text-foreground")} />
+                  <span className="truncate">{cat.name}</span>
+                </div>
+                {isActive && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground shrink-0" />
+                )}
               </button>
             );
           })}
 
           {/* Loading indicator */}
-          {loading && (
+          {(isLoading || isFetchingNextPage) && (
             <div className="flex justify-center py-3">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
@@ -198,33 +201,33 @@ export function BillingCategoryPanel({
           <div ref={desktopSentinelRef} className="h-1" />
 
           {/* Empty state */}
-          {!loading && initialLoaded && categories.length === 0 && (
+          {!isLoading && categories.length === 0 && (
             <div className="px-3 py-6 text-center text-xs text-muted-foreground">
               No categories found
             </div>
           )}
         </div>
-      </div>
+      </aside>
 
       {/* ─── MOBILE/TABLET: Horizontal pill bar ─── */}
-      <div className="flex lg:hidden shrink-0 gap-2 overflow-x-auto p-1 scrollbar-none">
+      <div className="flex lg:hidden shrink-0 gap-1.5 overflow-x-auto p-1.5 scrollbar-none items-center">
         {/* All pill */}
         <button
           type="button"
           onClick={() => onSelectCategory(null, null)}
           className={cn(
-            "shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-all whitespace-nowrap",
+            "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 whitespace-nowrap cursor-pointer",
             isAllSelected
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted text-foreground/70 hover:bg-accent hover:text-foreground"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "bg-muted/80 text-foreground/80 border border-border/60 hover:bg-muted hover:text-foreground"
           )}
         >
-          All
+          All Items
         </button>
 
         {/* Category pills */}
         {categories.map((cat) => {
-          const catId = cat._id || cat.id || "";
+          const catId = cat._id || (cat as any).id || "";
           const isActive = selectedCategoryIds.includes(catId);
           return (
             <button
@@ -234,10 +237,10 @@ export function BillingCategoryPanel({
                 onSelectCategory(catId, { ...cat, id: catId })
               }
               className={cn(
-                "shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-all whitespace-nowrap",
+                "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-150 whitespace-nowrap cursor-pointer",
                 isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted text-foreground/70 hover:bg-accent hover:text-foreground"
+                  ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                  : "bg-muted/80 text-foreground/80 border border-border/60 hover:bg-muted hover:text-foreground"
               )}
             >
               {cat.name}
@@ -246,7 +249,7 @@ export function BillingCategoryPanel({
         })}
 
         {/* Load more sentinel for mobile */}
-        {hasMore && <div ref={mobileSentinelRef} className="w-1 shrink-0" />}
+        {hasNextPage && <div ref={mobileSentinelRef} className="w-1 shrink-0" />}
       </div>
     </>
   );

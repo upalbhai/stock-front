@@ -4,8 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Printer, Download } from "lucide-react";
+import { ArrowLeft, Printer, Download, FileText, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getJson } from "@/lib/api-client";
 import { GstInvoicePrint, printGstInvoice } from "@/components/invoices/gst-invoice-print";
@@ -29,32 +30,58 @@ export default function InvoiceDetailPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["invoice", id],
     queryFn: () => getJson<InvoicePayload>(`/invoices/${id}`, token),
-    enabled: Boolean(token && id)
+    enabled: Boolean(token && id),
   });
 
-  if (isLoading) return <p className="text-sm text-muted">Loading invoice...</p>;
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-sm text-muted-foreground animate-pulse">Loading GST invoice details...</p>
+      </div>
+    );
+  }
 
   if (!data?.order) {
     return (
-      <div className="space-y-4">
-        <Link href={APP_ROUTES.INVOICES} className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
-          <ArrowLeft className="h-4 w-4" /> Invoices
+      <div className="space-y-4 max-w-lg mx-auto my-12 text-center p-8 rounded-2xl border border-border/70 bg-card">
+        <Link
+          href={APP_ROUTES.INVOICES}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline mb-2"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Invoices
         </Link>
-        <p className="text-muted">Invoice not found.</p>
+        <h2 className="text-lg font-bold text-foreground">Invoice Not Found</h2>
+        <p className="text-xs text-muted-foreground">The requested tax invoice could not be located.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 no-print">
-        <Link href={APP_ROUTES.INVOICES} className="inline-flex items-center gap-1 text-sm text-muted hover:text-text">
-          <ArrowLeft className="h-4 w-4" /> Back to invoices
-        </Link>
-        <div className="flex gap-2">
+    <div className="space-y-5">
+      {/* Action Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print border-b border-border/60 pb-4">
+        <div>
+          <Link
+            href={APP_ROUTES.INVOICES}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mb-2"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to Invoices Directory</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-foreground">
+              {data.order.invoiceNumber}
+            </h1>
+            <Badge variant="soft" className="text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+              Tax Invoice
+            </Badge>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
           <Button
             variant="outline"
-            className="gap-1"
+            className="h-10 px-4 text-xs font-semibold gap-1.5 cursor-pointer"
             disabled={exporting}
             onClick={async () => {
               setExporting(true);
@@ -65,15 +92,22 @@ export default function InvoiceDetailPage() {
               }
             }}
           >
-            <Download className="h-4 w-4" /> {exporting ? "Exporting…" : "Download PDF"}
+            <Download className="h-4 w-4" />
+            <span>{exporting ? "Generating PDF..." : "Download PDF"}</span>
           </Button>
-          <Button className="gap-1" onClick={() => printGstInvoice()}>
-            <Printer className="h-4 w-4" /> Print Invoice
+
+          <Button
+            className="h-10 px-4 text-xs font-bold gap-1.5 shadow-xs cursor-pointer"
+            onClick={() => printGstInvoice()}
+          >
+            <Printer className="h-4 w-4" />
+            <span>Print Invoice</span>
           </Button>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/70 bg-white shadow-soft overflow-hidden">
+      {/* Invoice Document Paper Container */}
+      <div className="rounded-2xl border border-border/80 bg-white shadow-soft overflow-hidden p-2 sm:p-4">
         <GstInvoicePrint
           printRef={printRef}
           order={data.order}

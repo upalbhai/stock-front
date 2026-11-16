@@ -14,6 +14,12 @@ export const customerService = {
   createCustomer: async (data: unknown, token?: string | null) => {
     return apiFetchData<{ customer: Customer }>("/customers", { method: "POST", body: data, token });
   },
+  updateCustomer: async (id: string, data: unknown, token?: string | null) => {
+    return apiFetchData<{ customer: Customer }>(`/customers/${id}`, { method: "PATCH", body: data, token });
+  },
+  deleteCustomer: async (id: string, token?: string | null) => {
+    return apiFetchData<{ customerId: string }>(`/customers/${id}`, { method: "DELETE", token });
+  },
   addPayment: async (id: string, data: unknown, token?: string | null) => {
     return apiFetchData<{ payment: any }>(`/customers/${id}/payments`, { method: "POST", body: data, token });
   },

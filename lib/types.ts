@@ -135,6 +135,8 @@ export type Category = {
   icon: string;
   color: string;
   image?: string;
+  description?: string;
+  productCount?: number;
   sortOrder: number;
   isActive: boolean;
   children?: Category[];
@@ -146,6 +148,7 @@ export type Brand = {
   name: string;
   slug: string;
   logo?: string;
+  productCount?: number;
   isActive: boolean;
 };
 
@@ -330,6 +333,7 @@ export type Expense = {
   voidedAt?: string;
   voidReason?: string;
   createdBy?: { name: string };
+  createdAt?: string;
 };
 
 export type AuditLog = {
