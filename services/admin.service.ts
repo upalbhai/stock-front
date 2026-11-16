@@ -8,8 +8,8 @@ export const adminService = {
   getAuditLogs: async (token?: string | null, params?: Record<string, any>) => {
     return getJsonWithMeta<AuditLog[]>("/audit-logs", token, params);
   },
-  getAdminOutlets: async (token?: string | null, params?: { search?: string; status?: string }) => {
-    return getJson<{ outlets: any[] }>("/admin/outlets", token, params);
+  getAdminOutlets: async (token?: string | null, params?: { search?: string; status?: string; page?: number; limit?: number }) => {
+    return getJson<{ outlets: any[]; total?: number }>("/admin/outlets", token, params);
   },
   getAdminBusinesses: async (token?: string | null, params?: { search?: string; status?: string; page?: number; limit?: number }) => {
     return getJson<{ businesses: (Business & { ownerId?: { name: string; phone: string; email?: string } })[], total: number }>("/admin/businesses", token, params);
@@ -97,11 +97,19 @@ export const adminService = {
       token 
     });
   },
-  getPendingPlanRequests: async (token?: string | null, params?: { search?: string; page?: number; limit?: number }) => {
-    return getJsonWithMeta<{ requests: any[] }>("/admin/businesses/pending-plans", token, params);
+  getPendingPlanRequests: async (
+    token?: string | null,
+    params?: { search?: string; page?: number; limit?: number; status?: string }
+  ) => {
+    return getJsonWithMeta<{ requests: any[]; counts?: { pending: number; history: number; all: number } }>(
+      "/admin/businesses/pending-plans",
+      token,
+      params
+    );
   },
-  approvePlanRequest: async (businessId: string, reason: string, token?: string | null) => {
-    return apiFetch(`/admin/businesses/${businessId}/approve-plan`, { method: "POST", body: { reason }, token });
+  approvePlanRequest: async (businessId: string, payload: { reason?: string; price?: number; currency?: string; billingCycle?: string } | string, token?: string | null) => {
+    const body = typeof payload === "string" ? { reason: payload } : payload;
+    return apiFetch(`/admin/businesses/${businessId}/approve-plan`, { method: "POST", body, token });
   },
   rejectPlanRequest(businessId: string, reason: string, token: string) {
     return apiFetch(`/admin/businesses/${businessId}/reject-plan`, { method: "POST", body: { reason }, token });

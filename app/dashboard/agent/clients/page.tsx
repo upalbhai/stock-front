@@ -161,7 +161,9 @@ export default function AgentClientsPage() {
             <div className="text-xs space-y-0.5">
               <Badge variant="warning" className="mb-1">Pending Approval</Badge>
               <div className="font-semibold text-foreground mt-1">
-                Requested: {formatCurrency(client.pendingCustomPlan.price, client.pendingCustomPlan.currency || "INR")} / mo
+                {client.pendingCustomPlan.price != null && client.pendingCustomPlan.price > 0
+                  ? `Requested: ${formatCurrency(client.pendingCustomPlan.price, client.pendingCustomPlan.currency || "INR")} / mo`
+                  : "Upgrade Requested (Quote Pending)"}
               </div>
               <div className="text-muted-foreground">
                 {client.pendingCustomPlan.maxProducts || 50} Products • {client.pendingCustomPlan.maxOutlets || 1} Outlet(s)

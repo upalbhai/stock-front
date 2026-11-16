@@ -19,10 +19,13 @@ import {
   FileText,
   TrendingUp,
   CreditCard,
-  Sparkles,
   UserCheck,
   Banknote,
   Award,
+  Building2,
+  KeyRound,
+  ShieldCheck,
+  Layers,
 } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { APP_ROUTES } from "@/lib/routes";
@@ -34,6 +37,8 @@ export type SidebarItem = {
   keywords: string[];
   roles: UserRole[];
   feature?: string;
+  badge?: string;
+  badgeVariant?: "primary" | "warning" | "success" | "neutral";
 };
 
 export type SidebarGroupDef = {
@@ -219,55 +224,54 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
       {
         title: "Platform Dashboard",
         path: APP_ROUTES.ADMIN,
-        icon: Sparkles,
+        icon: LayoutDashboard,
         keywords: ["dashboard", "stats", "overview", "platform"],
         roles: ["superadmin"],
-        feature: "dashboard"
+        feature: "dashboard",
+        badge: "Live",
+        badgeVariant: "success",
       },
     ],
   },
   {
-    label: "Platform",
+    label: "Tenants & Accounts",
     items: [
       {
         title: "Businesses",
         path: APP_ROUTES.ADMIN_BUSINESSES,
+        icon: Building2,
+        keywords: ["businesses", "clients", "accounts", "tenants"],
+        roles: ["superadmin"],
+        feature: "businesses",
+      },
+      {
+        title: "Outlets Registry",
+        path: APP_ROUTES.ADMIN_OUTLETS,
         icon: Store,
-        keywords: ["businesses", "clients", "accounts"],
+        keywords: ["outlets", "branches", "locations"],
         roles: ["superadmin"],
-        feature: "businesses"
+        feature: "businesses",
       },
       {
-        title: "Blogs",
-        path: APP_ROUTES.ADMIN_BLOGS,
-        icon: FileText,
-        keywords: ["blogs", "posts", "cms", "seo"],
+        title: "Users Registry",
+        path: APP_ROUTES.ADMIN_USERS,
+        icon: Users,
+        keywords: ["users", "accounts", "registry", "members"],
         roles: ["superadmin"],
-        feature: "blogs"
+        feature: "users",
       },
+    ],
+  },
+  {
+    label: "Billing & Plans",
+    items: [
       {
-        title: "Agents",
-        path: APP_ROUTES.ADMIN_AGENTS,
-        icon: UserCheck,
-        keywords: ["agents", "sales", "partners", "commission"],
+        title: "Subscriptions",
+        path: APP_ROUTES.ADMIN_SUBSCRIPTIONS,
+        icon: CreditCard,
+        keywords: ["subscriptions", "billing", "plans"],
         roles: ["superadmin"],
-        feature: "agents"
-      },
-      {
-        title: "Agent Performance",
-        path: APP_ROUTES.ADMIN_AGENTS_PERFORMANCE,
-        icon: TrendingUp,
-        keywords: ["agents", "performance", "commission", "sales", "stats"],
-        roles: ["superadmin"],
-        feature: "agents"
-      },
-      {
-        title: "Manual Payments",
-        path: APP_ROUTES.ADMIN_PAYMENTS,
-        icon: Banknote,
-        keywords: ["payments", "verification", "manual", "proofs"],
-        roles: ["superadmin"],
-        feature: "payments"
+        feature: "subscriptions",
       },
       {
         title: "Plan Requests",
@@ -275,55 +279,79 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         icon: Receipt,
         keywords: ["plan", "requests", "custom", "approval"],
         roles: ["superadmin"],
-        feature: "plans"
+        feature: "plans",
+        badge: "Review",
+        badgeVariant: "warning",
       },
       {
-        title: "Subscriptions",
-        path: APP_ROUTES.ADMIN_SUBSCRIPTIONS,
-        icon: Receipt,
-        keywords: ["subscriptions", "billing"],
+        title: "Manual Payments",
+        path: APP_ROUTES.ADMIN_PAYMENTS,
+        icon: Banknote,
+        keywords: ["payments", "verification", "manual", "proofs"],
         roles: ["superadmin"],
-        feature: "subscriptions"
+        feature: "payments",
+        badge: "Verify",
+        badgeVariant: "primary",
       },
       {
-        title: "Outlets",
-        path: APP_ROUTES.ADMIN_OUTLETS,
-        icon: Store,
-        keywords: ["outlets", "branches"],
+        title: "Pricing Plans",
+        path: APP_ROUTES.ADMIN_PLANS,
+        icon: Layers,
+        keywords: ["plans", "subscriptions", "pricing", "packages"],
         roles: ["superadmin"],
-        feature: "businesses"
+        feature: "plans",
+      },
+    ],
+  },
+  {
+    label: "Growth & Marketing",
+    items: [
+      {
+        title: "Partner Agents",
+        path: APP_ROUTES.ADMIN_AGENTS,
+        icon: UserCheck,
+        keywords: ["agents", "sales", "partners", "commission"],
+        roles: ["superadmin"],
+        feature: "agents",
       },
       {
-        title: "Users Registry",
-        path: APP_ROUTES.ADMIN_USERS,
-        icon: Users,
-        keywords: ["users", "accounts", "registry"],
+        title: "Agent Performance",
+        path: APP_ROUTES.ADMIN_AGENTS_PERFORMANCE,
+        icon: TrendingUp,
+        keywords: ["agents", "performance", "commission", "sales", "stats"],
         roles: ["superadmin"],
-        feature: "users"
+        feature: "agents",
+      },
+      {
+        title: "Blog CMS",
+        path: APP_ROUTES.ADMIN_BLOGS,
+        icon: FileText,
+        keywords: ["blogs", "posts", "cms", "seo", "articles"],
+        roles: ["superadmin"],
+        feature: "blogs",
+      },
+    ],
+  },
+  {
+    label: "System & Security",
+    items: [
+      {
+        title: "Audit Trails",
+        path: APP_ROUTES.ADMIN_AUDIT_LOGS,
+        icon: ShieldCheck,
+        keywords: ["audit", "logs", "trails", "security"],
+        roles: ["superadmin"],
+        feature: "audit_logs",
+        badge: "Logs",
+        badgeVariant: "neutral",
       },
       {
         title: "OTP Logs",
         path: APP_ROUTES.ADMIN_OTP_LOGS,
-        icon: ClipboardList,
-        keywords: ["otp", "logs", "passwords"],
+        icon: KeyRound,
+        keywords: ["otp", "logs", "passwords", "verification"],
         roles: ["superadmin"],
-        feature: "users"
-      },
-      {
-        title: "Audit Trails",
-        path: APP_ROUTES.ADMIN_AUDIT_LOGS,
-        icon: ClipboardList,
-        keywords: ["audit", "logs", "trails"],
-        roles: ["superadmin"],
-        feature: "audit_logs"
-      },
-      {
-        title: "Plans",
-        path: APP_ROUTES.ADMIN_PLANS,
-        icon: CreditCard,
-        keywords: ["plans", "subscriptions", "pricing"],
-        roles: ["superadmin"],
-        feature: "plans"
+        feature: "users",
       },
       {
         title: "Platform Settings",
@@ -331,7 +359,7 @@ export const adminSidebarGroups: SidebarGroupDef[] = [
         icon: Settings,
         keywords: ["settings", "global", "configuration"],
         roles: ["superadmin"],
-        feature: "settings"
+        feature: "settings",
       },
       {
         title: "My Profile",

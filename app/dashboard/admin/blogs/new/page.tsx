@@ -18,7 +18,7 @@ export default function NewBlogPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<BlogPost>) => {
-      // Gap #1/8: Always create as draft first — backend also enforces this
+      // Gap #1/8: Always create as draft first: backend also enforces this
       const { status, ...draftData } = data;
       const createRes = await blogService.createBlog(draftData, token);
       const postId = createRes.data?.post?._id;
@@ -43,12 +43,7 @@ export default function NewBlogPage() {
   });
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Blog Post</h1>
-        <p className="text-sm text-muted-foreground mt-1">Write a new SEO marketing post.</p>
-      </div>
-
+    <div className="space-y-4 animate-in fade-in duration-300">
       <BlogEditor 
         onSave={async (data) => {
           await createMutation.mutateAsync(data);

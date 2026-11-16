@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { Providers } from "./providers";
 import { ServiceWorkerRegister } from "@/components/service-worker";
 import { GoogleAnalytics } from "@/components/google-analytics";
+import { NavigationLoader } from "@/components/navigation-loader";
 import { cn } from "@/lib/utils";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/seo";
@@ -70,6 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       >
         <Providers>
+          <NavigationLoader />
           <GoogleAnalytics />
           <ServiceWorkerRegister />
           <NuqsAdapter>

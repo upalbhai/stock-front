@@ -183,13 +183,13 @@ export function DataTable<T>({
               </div>
             </div>
           ) : (
-            <div className="flex flex-row items-center gap-2 md:gap-4 flex-1">
+            <div className="flex flex-row items-center gap-2 md:gap-4 flex-1 min-w-0">
               {/* Main Search Input */}
               {onSearchChange && (
-                <div className="relative flex-1 min-w-[120px] sm:min-w-[200px]">
+                <div className="relative flex-1 min-w-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
-                    className="pl-9 h-9 text-sm bg-background border-border focus-visible:ring-offset-0 w-full"
+                    className="pl-9 h-9 text-xs sm:text-sm bg-background border-border focus-visible:ring-offset-0 w-full"
                     placeholder={placeholderText}
                     value={localSearch}
                     onChange={handleSearchChange}
@@ -285,7 +285,7 @@ export function DataTable<T>({
 
       {/* Table Content */}
       <div className="overflow-auto max-h-[calc(100vh-250px)] w-full relative">
-        <Table>
+        <Table className="min-w-[650px] w-full">
           <TableHeader className="bg-[#F8FAFC] dark:bg-zinc-900 sticky top-0 z-10 shadow-sm">
             <TableRow className="border-border hover:bg-transparent">
               {expandable && <TableHead className="w-10 px-2" />}

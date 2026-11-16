@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CreditCard, Check, ArrowLeft, Send, ShieldCheck, Clock } from "lucide-react";
+import { ArrowRight, CreditCard, Check, ArrowLeft, FileText, ShieldCheck, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { APP_ROUTES } from "@/lib/routes";
@@ -10,7 +10,7 @@ import { CustomerKhataPreview } from "@/components/marketing/feature-previews";
 export const metadata: Metadata = {
   title: "Digital Customer Khata & Credit Ledger Software - MiniHisab",
   description:
-    "Digital udhar bahi khata for retail shops and wholesale buyers: track customer balances, apply 30-day credit terms, record partial payments, and send WhatsApp reminders.",
+    "Digital udhar bahi khata for retail shops and wholesale buyers: track customer balances, apply credit limits, record partial payments, and view detailed transaction statements.",
   alternates: { canonical: "/features/customer-khata" },
 };
 
@@ -21,8 +21,8 @@ export default function CustomerKhataFeaturePage() {
       text: "Track customer credit sales, repayments, and outstanding balances with zero paper errors.",
     },
     {
-      title: "Payment Reminders",
-      text: "Send structured ledger balance statements directly to customers via WhatsApp or SMS.",
+      title: "Statement Records",
+      text: "View structured ledger balance statements and filter transactions by date range.",
     },
     {
       title: "Credit Risk Limits",
@@ -80,7 +80,7 @@ export default function CustomerKhataFeaturePage() {
                   <Check className="h-3.5 w-3.5 text-primary shrink-0" /> Automated debit/credit entries
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-primary shrink-0" /> 1-click WhatsApp statement
+                  <Check className="h-3.5 w-3.5 text-primary shrink-0" /> Detailed transaction ledgers
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5 text-primary shrink-0" /> Credit limits per customer
@@ -118,17 +118,17 @@ export default function CustomerKhataFeaturePage() {
               </div>
               <h3 className="font-heading text-lg font-bold text-foreground">Payment Aging &amp; Due Dates</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                See overdue balances grouped by aging brackets (e.g. 0-15 days, 16-30 days, 30+ days). Know exactly when to follow up before extending further credit.
+                See overdue balances grouped by aging brackets. Know exactly when to follow up before extending further credit.
               </p>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-6 shadow-xs space-y-3">
               <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Send className="h-5 w-5" />
+                <FileText className="h-5 w-5" />
               </div>
-              <h3 className="font-heading text-lg font-bold text-foreground">WhatsApp Statement Sharing</h3>
+              <h3 className="font-heading text-lg font-bold text-foreground">Ledger Statement Summaries</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Send professional statement summaries with invoice numbers, payment receipts, and net due balances directly to the customer's phone in one click.
+                Track full transaction histories with bill numbers, partial payment receipts, credit notes, and running balance totals.
               </p>
             </div>
 

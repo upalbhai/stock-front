@@ -7,6 +7,7 @@ import {
   Boxes,
   CreditCard,
   FileSpreadsheet,
+  FileText,
   Store,
   Building2,
   Check,
@@ -357,7 +358,7 @@ export function CustomerKhataPreview() {
           />
           <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between rounded-lg border border-border/80 bg-background/90 px-3 py-1.5 backdrop-blur-xs text-[11px]">
             <span className="font-semibold text-foreground">Digital Udhar Bahi Khata</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-semibold">1-Click WhatsApp Reminders</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-semibold">Real-time Running Balance</span>
           </div>
         </div>
       ) : (
@@ -406,7 +407,7 @@ export function CustomerKhataPreview() {
 
           <div className="grid grid-cols-2 gap-2 pt-1">
             <Button size="sm" variant="outline" className="h-8 text-[11px] font-semibold">
-              <Send className="h-3 w-3 mr-1" /> WhatsApp Summary
+              <FileText className="h-3 w-3 mr-1" /> Ledger Statement
             </Button>
             <Button size="sm" className="h-8 text-[11px] font-semibold">
               + Record Payment
