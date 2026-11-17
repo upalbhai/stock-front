@@ -365,6 +365,19 @@ export function useBillingPage() {
     option?: UnitPickOption,
     qty = 1,
   ) => {
+    const currentInCartBaseQty = billing.items
+      .filter((i) => i.id === product._id)
+      .reduce((s, i) => s + (i.baseQty ?? (i.soldQty ?? i.qty)), 0);
+    const addingBaseQty = option ? qty * option.conversionFactor : qty;
+
+    if (product.onHandQty !== undefined && currentInCartBaseQty + addingBaseQty > product.onHandQty) {
+      toast.error(
+        `Cannot add more. Only ${product.onHandQty} in stock (${currentInCartBaseQty} already in cart).`,
+        { id: "stock-limit" }
+      );
+      return;
+    }
+
     const taxRate = product.gstRate || product.taxRate || 0;
     if (option) {
       dispatch(
@@ -420,6 +433,18 @@ export function useBillingPage() {
     if (!outletId) {
       toast.error("Please select an outlet before placing an order");
       return;
+    }
+
+    // Pre-checkout stock verification
+    for (const item of billing.items) {
+      const itemBaseQty = item.baseQty ?? (item.soldQty ?? item.qty);
+      if (item.onHandQty !== undefined && itemBaseQty > item.onHandQty) {
+        toast.error(
+          `Insufficient stock for "${item.name}". Only ${item.onHandQty} available, but ${itemBaseQty} in cart. Please adjust quantity before checkout.`,
+          { id: "stock-insufficient" }
+        );
+        return;
+      }
     }
 
     const paymentSplit =

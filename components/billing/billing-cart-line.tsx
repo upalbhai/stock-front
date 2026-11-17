@@ -41,7 +41,9 @@ export function BillingCartLine({
     setQtyInput(item.qty.toString());
   }, [item.qty]);
 
-  const isMaxStockReached = item.onHandQty !== undefined && item.qty >= item.onHandQty;
+  const conversion = item.conversionFactor ?? 1;
+  const maxAllowed = item.onHandQty !== undefined ? Math.floor(item.onHandQty / conversion) : Infinity;
+  const isMaxStockReached = item.onHandQty !== undefined && lineQty >= maxAllowed;
 
   return (
     <div className="group relative flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-2.5 shadow-2xs transition-all duration-150 hover:border-border hover:shadow-xs">
@@ -135,10 +137,10 @@ export function BillingCartLine({
               setQtyInput(e.target.value);
               const val = parseInt(e.target.value, 10);
               if (!isNaN(val) && val > 0) {
-                if (item.onHandQty !== undefined && val > item.onHandQty) {
-                  onUpdateQty(item.onHandQty);
-                  setQtyInput(item.onHandQty.toString());
-                  toast.error(`Only ${item.onHandQty} available in stock`, { id: "stock-limit" });
+                if (item.onHandQty !== undefined && val > maxAllowed) {
+                  onUpdateQty(maxAllowed);
+                  setQtyInput(maxAllowed.toString());
+                  toast.error(`Only ${item.onHandQty} available in stock (max ${maxAllowed} ${item.soldUnit ?? item.unit})`, { id: "stock-limit" });
                 } else {
                   onUpdateQty(val);
                 }
@@ -148,8 +150,8 @@ export function BillingCartLine({
               const val = parseInt(qtyInput, 10);
               if (isNaN(val) || val <= 0) {
                 setQtyInput(item.qty.toString());
-              } else if (item.onHandQty !== undefined && val > item.onHandQty) {
-                setQtyInput(item.onHandQty.toString());
+              } else if (item.onHandQty !== undefined && val > maxAllowed) {
+                setQtyInput(maxAllowed.toString());
               }
             }}
             className="h-7 w-9 bg-transparent text-center font-mono text-xs font-bold text-foreground outline-hidden [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -161,7 +163,7 @@ export function BillingCartLine({
             disabled={isMaxStockReached}
             onClick={() => {
               if (isMaxStockReached) {
-                toast.error(`Only ${item.onHandQty} available in stock`, { id: "stock-limit" });
+                toast.error(`Only ${item.onHandQty} available in stock (max ${maxAllowed} ${item.soldUnit ?? item.unit})`, { id: "stock-limit" });
               } else {
                 onUpdateQty(item.qty + 1);
               }

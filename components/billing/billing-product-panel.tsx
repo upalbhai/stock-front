@@ -218,11 +218,13 @@ export function BillingProductPanel({
             {products.map((product) => {
               const cartQty = cartItems
                 .filter((i) => i.id === product._id)
-                .reduce((s, i) => s + (i.soldQty ?? i.qty), 0);
+                .reduce((s, i) => s + (i.baseQty ?? (i.soldQty ?? i.qty)), 0);
               const unitLabel = getProductUnitLabel(product);
               const packHint = isWholesale ? getWholesalePriceHint(product, currency) : null;
               const hasPackaging = getActivePackagingUnits(product).length > 0;
-              const isDisabled = product.onHandQty <= 0;
+              const isOutOfStock = (product.onHandQty ?? 0) <= 0;
+              const isMaxInCart = (product.onHandQty !== undefined) && cartQty >= product.onHandQty;
+              const isDisabled = isOutOfStock || isMaxInCart;
               const isLowStock = product.onHandQty > 0 && product.onHandQty <= (product.lowStockThreshold || 10);
               const inCart = cartQty > 0;
 
@@ -289,19 +291,24 @@ export function BillingProductPanel({
                   <div className="mt-2.5 w-full space-y-1.5 border-t border-border/50 pt-2">
                     {/* Stock pill */}
                     <div className="flex items-center justify-between text-[11px]">
-                      {isDisabled ? (
+                      {isOutOfStock ? (
                         <span className="font-semibold text-destructive flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3" />
                           Out of Stock
                         </span>
+                      ) : isMaxInCart ? (
+                        <span className="font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Max in cart ({product.onHandQty} {unitLabel})
+                        </span>
                       ) : isLowStock ? (
                         <span className="font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3" />
-                          {product.onHandQty} {unitLabel} left
+                          {product.onHandQty - cartQty} {unitLabel} left
                         </span>
                       ) : (
                         <span className="text-muted-foreground font-medium">
-                          {product.onHandQty} {unitLabel} in stock
+                          {product.onHandQty - cartQty} {unitLabel} in stock
                         </span>
                       )}
                     </div>

@@ -102,19 +102,30 @@ const billingSlice = createSlice({
       const lineId = cartLineId(action.payload.id, action.payload.packagingUnitId, price);
       const existing = state.items.find((item) => item.cartLineId === lineId);
       const qty = action.payload.qty ?? 1;
+      const conversionFactor = action.payload.conversionFactor ?? 1;
+      const onHandQty = action.payload.onHandQty;
+
       if (existing) {
+        const currentBase = existing.baseQty ?? existing.qty;
+        const addBase = qty * (existing.conversionFactor ?? 1);
+        if (existing.onHandQty !== undefined && currentBase + addBase > existing.onHandQty) {
+          return;
+        }
         existing.qty += qty;
         existing.soldQty = (existing.soldQty ?? existing.qty) + qty;
-        existing.baseQty = (existing.baseQty ?? existing.qty) + qty * (existing.conversionFactor ?? 1);
+        existing.baseQty = currentBase + addBase;
       } else {
         const soldQty = action.payload.soldQty ?? qty;
-        const conversionFactor = action.payload.conversionFactor ?? 1;
+        const baseQty = action.payload.baseQty ?? soldQty * conversionFactor;
+        if (onHandQty !== undefined && baseQty > onHandQty) {
+          return;
+        }
         state.items.push({
           ...action.payload,
           cartLineId: lineId,
           qty: soldQty,
           soldQty,
-          baseQty: action.payload.baseQty ?? soldQty * conversionFactor,
+          baseQty,
           conversionFactor
         });
       }
@@ -125,10 +136,14 @@ const billingSlice = createSlice({
     updateQty: (state, action: PayloadAction<{ cartLineId: string; qty: number }>) => {
       const item = state.items.find((e) => e.cartLineId === action.payload.cartLineId);
       if (item) {
-        const qty = Math.max(0, action.payload.qty);
+        let qty = Math.max(0, action.payload.qty);
+        const conversion = item.conversionFactor ?? 1;
+        if (item.onHandQty !== undefined && qty * conversion > item.onHandQty) {
+          qty = Math.floor(item.onHandQty / conversion);
+        }
         item.qty = qty;
         item.soldQty = qty;
-        item.baseQty = qty * (item.conversionFactor ?? 1);
+        item.baseQty = qty * conversion;
         if (qty === 0) {
           state.items = state.items.filter((e) => e.cartLineId !== item.cartLineId);
         }
