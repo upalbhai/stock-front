@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   TrendingUp,
   TrendingDown,
@@ -171,6 +171,22 @@ export default function ProfitPage() {
     limit: parseAsInteger.withDefault(10),
   });
 
+  const [searchTerm, setSearchTerm] = React.useState(query.ledgerSearch);
+
+  // Sync internal search input when query changes externally
+  React.useEffect(() => {
+    setSearchTerm(query.ledgerSearch);
+  }, [query.ledgerSearch]);
+
+  // Debounce search so keystrokes do not spam requests
+  React.useEffect(() => {
+    if (searchTerm === query.ledgerSearch) return;
+    const timer = setTimeout(() => {
+      setQuery({ ledgerSearch: searchTerm, page: 1 });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm, query.ledgerSearch, setQuery]);
+
   const [activeTab, setActiveTab] = React.useState<"all" | "sales" | "losses" | "inflow">("all");
   const [showIssueModal, setShowIssueModal] = React.useState(false);
   const [prodSearch, setProdSearch] = React.useState("");
@@ -207,6 +223,8 @@ export default function ProfitPage() {
         page: query.page,
         limit: query.limit,
       }),
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
     enabled: Boolean(token),
   });
 
@@ -602,8 +620,8 @@ export default function ProfitPage() {
         data={movements}
         keyExtractor={(m) => m._id}
         onRefetch={() => refetch()}
-        searchQuery={query.ledgerSearch}
-        onSearchChange={(v) => setQuery({ ledgerSearch: v, page: 1 })}
+        searchQuery={searchTerm}
+        onSearchChange={setSearchTerm}
         placeholderText="Search product name, note, reason..."
         totalItems={data?.meta?.pagination?.total ?? 0}
         page={query.page}
