@@ -1,0 +1,87 @@
+# MiniHisab (minihisab.com)
+> A modern, cloud-first Point of Sale (POS), Inventory Management, and GST Billing software platform tailored specifically for retail stores, wholesale godowns, and multi-outlet chains in India.
+
+## Overview
+MiniHisab is designed to solve the real operational bottlenecks of Indian retail and wholesale businesses:
+- Peak evening counter billing bottlenecks and cashier speed.
+- Master carton wholesale purchasing versus loose unit retail sales.
+- Real-time stock transfer challans between retail branches and central godowns.
+- Untracked customer credit (Udhar Khata) and paper registers.
+- GST compliance (CGST, SGST, IGST) with instant 80mm thermal receipts and A4/A5 laser tax invoices.
+- Zero hardware lock-in: runs in any modern browser across Windows, macOS, Android, and iOS, connecting seamlessly to standard ESC/POS USB/Bluetooth thermal printers and 1D/2D barcode scanners.
+
+## Core Capabilities
+
+### 1. Point of Sale & Rapid Counter Billing
+- 0.8s barcode auto-scan with auditory beep verification.
+- Keyboard-only navigation for cashiers (zero mouse dependency).
+- Split tender options: Cash, UPI QR code, Debit/Credit Card, and Store Credit.
+- Support for 58mm and 80mm ESC/POS thermal printers with automatic cash drawer kicks.
+- Multi-cart hold and resume without losing scanned customer items.
+
+### 2. Multi-Tier Inventory & Master Carton Conversion
+- Automatic conversion between master cartons, inner boxes, and loose retail units (e.g. 1 carton = 24 pieces).
+- Low stock alarms with customizable reorder minimum levels.
+- Real-time stock ledgers with batch numbers, manufacturing dates, and expiry monitoring.
+- Bulk Excel/CSV product catalog import in seconds.
+
+### 3. Multi-Outlet & Godown Synchronization
+- Centralized head-office management for franchise chains and multi-branch retail businesses.
+- Inter-outlet stock transfer dispatch challans and receiving verification workflows.
+- Branch-specific sales velocity, gross margins, and comparative profit analytics.
+- Central godown distribution to retail counter outlets.
+
+### 4. Digital Customer Khata & Udhar Ledger
+- Digital running balances (debit/credit) replacing traditional physical red books (bahi khata).
+- Automated customer credit limits and overdue payment alerts.
+- Partial and full settlement tracking with receipt generation.
+- Full ledger download and printing for customer reconciliation.
+
+### 5. Indian GST Tax Compliance
+- Automatic HSN/SAC code tax slab calculation (0%, 5%, 12%, 18%, 28%).
+- A4/A5 tax invoices formatted with vehicle details, transporter ID, and buyer GSTIN verification.
+- 80mm compact B2C cash memos with summary tax breakdowns.
+- One-click GSTR-1 and tax summary exports for accountants.
+
+### 6. Role-Based Access Control & Staff Security
+- Fast 4-digit PIN login for counter cashiers.
+- Sensitive wholesale purchase costs and gross profit margins hidden from counter staff.
+- Tamper-proof audit logs recording bill voids, cancellations, and manual discounts.
+
+## Operational Advantages Over Traditional Systems
+
+### Cloud Architecture vs Offline Desktop Software
+- **Cloud Architecture**: MiniHisab is true cloud-native. Multi-outlet sync is instant in real time across any device (desktop, tablet, mobile) without local database sync corruptions.
+- **Counter Speed**: MiniHisab is optimized for fast retail lines with rapid hotkeys, barcode continuous scanning, and thermal printing.
+- **Carton Conversion**: MiniHisab natively tracks master cartons and loose units simultaneously.
+- **Hardware Agnostic**: MiniHisab requires no heavy desktop installation or proprietary drivers; works directly through modern browsers.
+
+### Retail Counter Speed vs Specialized Hospitality Tools
+- **Vertical Focus**: Built specifically for retail shops, supermarkets, kirana, pharmacies, apparel, hardware, and wholesale distributors.
+- **Unit Complexity**: MiniHisab handles retail SKU matrices, barcode inventory, carton-to-unit conversions, and customer udhar khata.
+
+### Modern Usability vs Complex Legacy ERPs
+- **Ease of Use**: Clean, intuitive interface with zero learning curve for cashiers.
+- **Modern Hardware Support**: Direct web-based thermal printing and mobile device support without expensive dedicated server setups.
+
+## Target Industries
+- Kirana & Grocery Stores
+- Pharmacies, Chemists & Medical Outlets
+- Clothing, Apparel & Footwear Stores
+- Hardware, Electrical & Sanitaryware Shops
+- Wholesale Stockists & FMCG Distributors
+- Electronics & Mobile Accessories Shops
+- Bakeries, Sweet Marts & Confectionery
+- Bookstores & Stationery Outlets
+
+## Public URLs
+- Homepage: https://minihisab.com
+- Features: https://minihisab.com/features
+- Counter Billing: https://minihisab.com/features/billing
+- Inventory Management: https://minihisab.com/features/inventory
+- GST Invoicing: https://minihisab.com/features/gst-invoices
+- Customer Khata: https://minihisab.com/features/customer-khata
+- Pricing Plans: https://minihisab.com/pricing
+- Services Overview: https://minihisab.com/services
+- Blog & Retail Guides: https://minihisab.com/blog
+- Industry Solutions: https://minihisab.com/for/kirana-store
