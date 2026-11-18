@@ -54,7 +54,7 @@ const AVAILABLE_FEATURES = [
 
 export default function SubscribePage() {
   const router = useRouter();
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [transactionId, setTransactionId] = useState("");
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
@@ -169,7 +169,11 @@ export default function SubscribePage() {
         body: { notes: typeof notes === "string" ? notes : "Store owner requested 3-day grace period to complete payment" },
         token,
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription-status"] });
+      if (refreshUser) {
+        await refreshUser();
+      }
       window.location.href = APP_ROUTES.DASHBOARD;
     },
     onError: (err) => {
@@ -337,9 +341,14 @@ export default function SubscribePage() {
             });
 
             setSuccess("Payment successful! Your subscription is now active.");
+            queryClient.invalidateQueries({ queryKey: ["subscription-status"] });
+            refetchStatus();
+            if (refreshUser) {
+              await refreshUser();
+            }
             setTimeout(() => {
               window.location.href = APP_ROUTES.DASHBOARD;
-            }, 2000);
+            }, 1500);
           } catch (err) {
             setError(getErrorMessage(err, "Payment verification failed. Please contact support."));
           } finally {

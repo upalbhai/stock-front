@@ -40,6 +40,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { APP_BASE_ROUTE, APP_ROUTES, appRoute } from "@/lib/routes";
+import { useQuery } from "@tanstack/react-query";
+import { getJson } from "@/lib/api-client";
+import { useAppDispatch } from "@/store/hooks";
+import { updateUser } from "@/store/authSlice";
 
 function useBreadcrumbs(pathname: string) {
   return useMemo(() => {
@@ -95,7 +99,25 @@ function LastUpdated() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, impersonating, exitImpersonation, logout } = useAuth();
+  const { user, token, impersonating, exitImpersonation, logout } = useAuth();
+  const dispatch = useAppDispatch();
+
+  const { data: subStatus } = useQuery({
+    queryKey: ["subscription-status"],
+    queryFn: () => getJson<any>("/payments/status", token),
+    enabled: !!token && user?.role !== "superadmin",
+    staleTime: 30 * 1000,
+  });
+
+  const currentSubscriptionStatus = subStatus?.subscriptionStatus ?? user?.subscriptionStatus;
+  const currentTrialEndsAt = subStatus?.trialEndsAt ?? user?.trialEndsAt;
+
+  useEffect(() => {
+    if (subStatus?.subscriptionStatus && user && subStatus.subscriptionStatus !== user.subscriptionStatus) {
+      dispatch(updateUser({ ...user, subscriptionStatus: subStatus.subscriptionStatus }));
+    }
+  }, [subStatus?.subscriptionStatus, user, dispatch]);
+
   const isAuthRoute = pathname.startsWith(APP_ROUTES.LOGIN);
   const isOnline = useOnlineStatus();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -212,14 +234,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {!isBillingRoute && <AppSidebar />}
 
         <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {user?.subscriptionStatus === "trial" && user.trialEndsAt && (
+          {currentSubscriptionStatus === "trial" && currentTrialEndsAt && (
             <div className="flex shrink-0 animate-fade flex-row items-center justify-center gap-3 border-b border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
               <span className="leading-none">
                 Free Trial Active:{" "}
                 {Math.max(
                   0,
                   Math.ceil(
-                    (new Date(user.trialEndsAt).getTime() - Date.now()) / (1000 * 3600 * 24)
+                    (new Date(currentTrialEndsAt).getTime() - Date.now()) / (1000 * 3600 * 24)
                   )
                 )}{" "}
                 days remaining
@@ -230,7 +252,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
 
-          {user?.subscriptionStatus === "grace_period" && (
+          {currentSubscriptionStatus === "grace_period" && (
             <div className="flex shrink-0 animate-fade flex-row items-center justify-center gap-3 border-b border-warning/30 bg-warning/20 px-4 py-2 text-xs font-semibold text-warning-foreground">
               <span className="leading-none flex items-center gap-2">
                 <span className="bg-warning w-2 h-2 rounded-full animate-pulse" />

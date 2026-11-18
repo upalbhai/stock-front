@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api-client";
 import { flushOfflineQueue } from "@/lib/offline-queue";
 import type { AuthUser, UserRole, ApiResponse } from "@/lib/types";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setAuth, setOutlet as setOutletAction, clearAuth } from "@/store/authSlice";
+import { setAuth, setOutlet as setOutletAction, clearAuth, updateUser } from "@/store/authSlice";
 import { APP_ROUTES } from "@/lib/routes";
 
 export type { AuthUser, UserRole } from "@/lib/types";
@@ -47,6 +47,7 @@ type AuthContextValue = {
   exitImpersonation?: () => Promise<void>;
   isTrialExpired: boolean;
   hasPermission: (module: string, action: string) => boolean;
+  refreshUser: () => Promise<AuthUser | null>;
 };
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined);
@@ -75,6 +76,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setOutletId = React.useCallback((selected: string | null) => {
     dispatch(setOutletAction(selected));
   }, [dispatch]);
+
+  const refreshUser = React.useCallback(async () => {
+    if (!token) return null;
+    try {
+      const res = await apiFetch<ApiResponse<{ user: AuthUser }>>("/auth/me", { token });
+      if (res?.data?.user) {
+        dispatch(updateUser(res.data.user));
+        return res.data.user;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }, [token, dispatch]);
+
+  React.useEffect(() => {
+    if (!token) return;
+    refreshUser();
+  }, [token, refreshUser]);
 
   const setAuthState = React.useCallback((data: AuthResponse) => {
     dispatch(setAuth({ user: data.user, token: data.token }));
@@ -201,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{ 
       user, token, outletId, businessId, isLoading: !isMounted, impersonating, 
       loginWithEmail, checkEmail, register, sendOtp, verifyOtp, forgotPassword, resetPassword, 
-      logout, setOutletId, impersonate, exitImpersonation, isTrialExpired, hasPermission
+      logout, setOutletId, impersonate, exitImpersonation, isTrialExpired, hasPermission, refreshUser
     }}>
       {children}
     </AuthContext.Provider>
