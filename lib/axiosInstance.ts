@@ -2,16 +2,28 @@ import axios from "axios";
 import { store } from "@/store/store";
 import { clearAuth } from "@/store/authSlice";
 
+const getBaseUrl = () => {
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
+    return "/api";
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+};
+
 const api = axios.create({
-  baseURL: (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090/api'),
+  baseURL: getBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Add token to each request & handle FormData
+// Add token to each request & handle FormData & ensure browser calls current origin /api
 api.interceptors.request.use(
   (config) => {
+    if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
+      if (!config.baseURL || config.baseURL.includes("localhost") || config.baseURL.includes("127.0.0.1")) {
+        config.baseURL = "/api";
+      }
+    }
     const token = store.getState().auth.token; // read token from Redux state
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
