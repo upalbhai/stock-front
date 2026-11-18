@@ -35,6 +35,7 @@ import { businessService } from "@/services/business.service";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { Download } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -65,6 +66,9 @@ export default function SubscribePage() {
   const [historyLimit, setHistoryLimit] = useState(10);
 
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [preferredCurrency, setPreferredCurrency] = useState<string>("INR");
+  const [preferredBillingCycle, setPreferredBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const [planRequestForm, setPlanRequestForm] = useState({
     maxOutlets: 1,
     maxProducts: 50,
@@ -109,6 +113,20 @@ export default function SubscribePage() {
         maxOutlets: statusData.maxOutlets || 1,
         maxProducts: statusData.maxProducts != null ? statusData.maxProducts : 50,
       }));
+      if (statusData.currency) {
+        setPreferredCurrency(statusData.currency);
+      } else if (statusData.isInternational) {
+        setPreferredCurrency("USD");
+      }
+      if (statusData.customPlanDetails?.billingCycle) {
+        setPreferredBillingCycle(
+          statusData.customPlanDetails.billingCycle === "yearly" ? "yearly" : "monthly"
+        );
+      } else if (statusData.pendingCustomPlan?.billingCycle) {
+        setPreferredBillingCycle(
+          statusData.pendingCustomPlan.billingCycle === "yearly" ? "yearly" : "monthly"
+        );
+      }
       if (Array.isArray(statusData.customPlanDetails?.enabledFeatures)) {
         setSelectedFeatures(statusData.customPlanDetails.enabledFeatures);
       } else if (Array.isArray(statusData.pendingCustomPlan?.enabledFeatures)) {
@@ -361,21 +379,31 @@ export default function SubscribePage() {
     requestPlanMutation.mutate({
       ...planRequestForm,
       features: selectedFeatures,
+      currency: preferredCurrency,
+      billingCycle: preferredBillingCycle,
     });
   };
 
   const isTrialExpired = user?.trialExpired;
   const isLocked = user?.subscriptionStatus === "payment_locked";
+  const isActive = statusData?.subscriptionStatus === "active";
+  const isTrial = statusData?.subscriptionStatus === "trial";
 
-  const hasCustomPlan = Boolean(statusData?.customPlanDetails);
-  const hasPendingPlan = Boolean(statusData?.pendingCustomPlan);
+  const hasCustomPlan = Boolean(
+    statusData?.customPlanDetails &&
+    typeof statusData.customPlanDetails.price === "number"
+  );
+  const hasPendingPlan = Boolean(statusData?.pendingCustomPlan?.requestedAt);
   const pendingManual = statusData?.pendingManualPayment;
   const lastRejected = statusData?.lastRejectedManualPayment;
   const bank = bankData?.bankDetails || {};
-  const dueAmount = statusData?.customPlanDetails?.price || 0;
-  const dueCurrency = statusData?.customPlanDetails?.currency || "INR";
+  const dueAmount = statusData?.customPlanDetails?.price ?? 0;
+  const dueCurrency =
+    statusData?.customPlanDetails?.currency || statusData?.currency || "INR";
   const billingCycle =
     statusData?.customPlanDetails?.billingCycle === "yearly" ? "yearly" : "monthly";
+  const isComplimentary = dueAmount === 0;
+  const isPaymentDue = !isActive && dueAmount > 0;
 
   const assignedAgent = statusData?.agent;
   const agentPhoneClean = assignedAgent?.phone
@@ -421,9 +449,65 @@ export default function SubscribePage() {
             </Badge>
           )}
         </div>
+        {isTrial && !hasCustomPlan && (
+          <div className="mt-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 flex items-center gap-2.5 text-xs text-blue-700 dark:text-blue-300">
+            <Sparkles className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+            <span>
+              <strong>Free Trial Active:</strong> You have full free trial access
+              {statusData?.trialEndsAt ? ` until ${new Date(statusData.trialEndsAt).toLocaleDateString()}` : ""}.
+              Submit your requirements below when you are ready to configure your tailored permanent plan.
+            </span>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <form onSubmit={handleRequestPlan} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <CreditCard className="h-4 w-4 text-primary" />
+                <span>Store Billing Currency</span>
+              </label>
+              <Select
+                className="w-full"
+                value={preferredCurrency}
+                onValueChange={setPreferredCurrency}
+                options={[
+                  { value: "INR", label: "₹ INR (India - Domestic)" },
+                  { value: "USD", label: "$ USD (US & Global)" },
+                  { value: "AED", label: "د.إ AED (UAE)" },
+                  { value: "EUR", label: "€ EUR (Eurozone)" },
+                  { value: "GBP", label: "£ GBP (UK)" },
+                  { value: "CAD", label: "$ CAD (Canada)" },
+                  { value: "AUD", label: "$ AUD (Australia)" },
+                  { value: "SGD", label: "$ SGD (Singapore)" },
+                ]}
+              />
+              <p className="text-xs text-muted-foreground">
+                Quotes and invoices will be issued in this currency.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-primary" />
+                <span>Preferred Billing Frequency</span>
+              </label>
+              <Select
+                className="w-full"
+                value={preferredBillingCycle}
+                onValueChange={(v) => setPreferredBillingCycle(v as "monthly" | "yearly")}
+                options={[
+                  { value: "monthly", label: "Monthly Cycle" },
+                  { value: "yearly", label: "Yearly Cycle (Annual Savings)" },
+                ]}
+              />
+              <p className="text-xs text-muted-foreground">
+                Choose your desired renewal term.
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-1.5">
@@ -713,7 +797,7 @@ export default function SubscribePage() {
 
         {/* ── EXISTING SUBSCRIBED STORE TABS ──────────────────────────────── */}
         {!success && hasCustomPlan && (
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="overview">Overview & Renew</TabsTrigger>
               <TabsTrigger value="upgrade">Upgrade Plan</TabsTrigger>
@@ -731,9 +815,9 @@ export default function SubscribePage() {
                     <span className="font-medium text-muted-foreground">Status</span>
                     <Badge
                       variant={
-                        statusData?.subscriptionStatus === "active"
+                        isActive
                           ? "success"
-                          : statusData?.subscriptionStatus === "trial"
+                          : isTrial
                           ? "warning"
                           : "danger"
                       }
@@ -743,7 +827,7 @@ export default function SubscribePage() {
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border">
-                    <span className="font-medium text-muted-foreground">Plan Expiry</span>
+                    <span className="font-medium text-muted-foreground">Plan Expiry / Renewal</span>
                     <span className="font-semibold text-foreground">
                       {statusData?.currentPeriodEnd
                         ? new Date(statusData.currentPeriodEnd).toLocaleDateString()
@@ -753,201 +837,289 @@ export default function SubscribePage() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border">
-                    <span className="font-medium text-muted-foreground">Max Outlets</span>
+                    <span className="font-medium text-muted-foreground">Store Outlets</span>
                     <span className="font-semibold text-foreground">
-                      {statusData?.maxOutlets || "-"}
+                      {statusData?.maxOutlets || "-"} outlet(s)
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border">
-                    <span className="font-medium text-muted-foreground">Max Products</span>
+                    <span className="font-medium text-muted-foreground">Product Catalog Capacity</span>
                     <span className="font-semibold text-foreground">
                       {statusData?.maxProducts === 0
                         ? "Unlimited"
                         : statusData?.maxProducts || "-"}
                     </span>
                   </div>
+                  <div className="flex justify-between items-center py-2 border-b border-border">
+                    <span className="font-medium text-muted-foreground">Approved Plan Price</span>
+                    <span className="font-semibold text-foreground">
+                      {isComplimentary
+                        ? "Complimentary (₹0 / $0 Free)"
+                        : `${dueCurrency} ${dueAmount} / ${billingCycle}`}
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
 
-              <div className="space-y-6">
-                <Card className="shadow-lg border-border/50 bg-primary/5 border-primary/20">
+              {/* State A: Subscription is Active (No payment due!) */}
+              {isActive && (
+                <Card className="shadow-lg border-emerald-500/30 bg-emerald-500/5">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-primary">
-                      <CreditCard className="h-5 w-5" />
-                      Pay Online Instantly
-                    </CardTitle>
-                    <CardDescription>
-                      Pay {statusData?.customPlanDetails?.currency || "INR"}{" "}
-                      {statusData?.customPlanDetails?.price || 0} securely via Razorpay to activate
-                      your subscription immediately.
-                    </CardDescription>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-emerald-500/15 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <ShieldCheck className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">
+                          {isComplimentary ? "Complimentary Subscription Active" : "Store Subscription Active"}
+                        </CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                          Your account is active with full access to all requested features and capacity.
+                        </CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
+                    <p className="text-xs text-muted-foreground">
+                      No payments are required at this time. If you need to add more branches or product capacity, you can submit an upgrade request anytime.
+                    </p>
+                    <div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setActiveTab("upgrade")}
+                        className="cursor-pointer text-xs font-semibold"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                        Request Capacity Upgrade
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* State B: Inactive but Complimentary (Free) */}
+              {!isActive && isComplimentary && (
+                <Card className="shadow-lg border-emerald-500/30 bg-emerald-500/5">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-emerald-500/15 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <CheckCircle2 className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">
+                          Complimentary Plan Approved
+                        </CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                          Your customized store plan has been approved with zero billing fees.
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
                     <Button
-                      onClick={handleRazorpayCheckout}
-                      className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg transition-all cursor-pointer"
-                      disabled={isRazorpayLoading}
+                      onClick={() => {
+                        refetchStatus();
+                        window.location.href = APP_ROUTES.DASHBOARD;
+                      }}
+                      className="w-full h-12 text-sm font-semibold cursor-pointer shadow-sm"
                     >
-                      {isRazorpayLoading ? "Processing..." : "Pay with Razorpay"}
+                      Enter Store Dashboard
                     </Button>
                   </CardContent>
                 </Card>
+              )}
 
-                <div className="relative flex items-center py-4">
-                  <div className="flex-grow border-t border-border"></div>
-                  <span className="flex-shrink-0 mx-4 text-muted-foreground text-sm font-medium uppercase tracking-wider">
-                    Or
-                  </span>
-                  <div className="flex-grow border-t border-border"></div>
-                </div>
-
-                <Card className="shadow border-border/50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-muted-foreground" />
-                      Manual Bank Transfer
-                    </CardTitle>
-                    <CardDescription>
-                      Transfer {dueCurrency} {dueAmount} ({billingCycle}) to the account below, then
-                      submit your UTR. Verification usually takes up to 24 hours.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {bank.accountNumber || bank.upiId ? (
-                      <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3 text-sm">
-                        <p className="font-medium text-foreground">Pay to this account</p>
-                        {[
-                          ["Account name", bank.accountName],
-                          ["Bank", bank.bankName],
-                          ["Account number", bank.accountNumber],
-                          ["IFSC", bank.ifsc],
-                          ["Branch", bank.branch],
-                          ["UPI ID", bank.upiId],
-                        ]
-                          .filter(([, value]) => Boolean(value))
-                          .map(([label, value]) => (
-                            <div key={label} className="flex items-center justify-between gap-3">
-                              <div>
-                                <p className="text-xs text-muted-foreground">{label}</p>
-                                <p className="font-semibold font-mono">{value}</p>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyText(label, String(value))}
-                                className="cursor-pointer"
-                              >
-                                <Copy className="h-3.5 w-3.5 mr-1" />
-                                {copiedField === label ? "Copied" : "Copy"}
-                              </Button>
-                            </div>
-                          ))}
-                        {bank.notes ? (
-                          <p className="text-xs text-muted-foreground pt-1">{bank.notes}</p>
-                        ) : null}
-                        {bank.upiId ? (
-                          <a
-                            className="inline-flex text-sm font-medium text-primary underline"
-                            href={`upi://pay?pa=${encodeURIComponent(
-                              bank.upiId
-                            )}&pn=${encodeURIComponent(
-                              bank.accountName || "Subscription"
-                            )}&am=${dueAmount}&cu=INR`}
-                          >
-                            Open UPI app
-                          </a>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground rounded-lg border border-dashed p-3">
-                        Bank details are not published yet. Ask support for the account, then
-                        submit your UTR here.
+              {/* State C: Payment is Required (Price > 0 and not active) */}
+              {isPaymentDue && (
+                <div className="space-y-6">
+                  <Card className="shadow-lg border-primary/30 bg-primary/5">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-primary">
+                        <CreditCard className="h-5 w-5" />
+                        Pay Online to Activate
+                      </CardTitle>
+                      <CardDescription>
+                        Pay {dueCurrency} {dueAmount} securely via Card / Razorpay to activate your {billingCycle} subscription immediately.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Button
+                        onClick={handleRazorpayCheckout}
+                        className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg transition-all cursor-pointer font-semibold"
+                        disabled={isRazorpayLoading}
+                      >
+                        {isRazorpayLoading ? "Processing..." : `Pay ${dueCurrency} ${dueAmount} with Razorpay`}
+                      </Button>
+                      <p className="text-center text-[11px] text-muted-foreground">
+                        {dueCurrency === "INR"
+                          ? "Secure checkout with UPI, Credit/Debit Cards, Netbanking & Wallets."
+                          : "International Credit/Debit Cards (Visa, Mastercard, AMEX) accepted worldwide."}
                       </p>
-                    )}
+                    </CardContent>
+                  </Card>
 
-                    {pendingManual ? (
-                      <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 space-y-1">
-                        <p className="font-medium flex items-center gap-2">
-                          <Clock className="h-4 w-4" /> Transfer submitted: waiting for
-                          verification
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          UTR:{" "}
-                          <span className="font-mono font-semibold text-foreground">
-                            {pendingManual.utr}
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Submitted {new Date(pendingManual.createdAt).toLocaleString()}. You will
-                          get access as soon as an admin confirms the credit.
-                        </p>
+                  {/* Manual Bank Transfer: Only show for INR domestic payments */}
+                  {dueCurrency === "INR" && (
+                    <>
+                      <div className="relative flex items-center py-4">
+                        <div className="flex-grow border-t border-border"></div>
+                        <span className="flex-shrink-0 mx-4 text-muted-foreground text-sm font-medium uppercase tracking-wider">
+                          Or
+                        </span>
+                        <div className="flex-grow border-t border-border"></div>
                       </div>
-                    ) : (
-                      <form onSubmit={handleSubmit} className="space-y-6">
-                        {lastRejected ? (
-                          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm">
-                            <p className="font-medium text-danger">
-                              Previous transfer was rejected
+
+                      <Card className="shadow border-border/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-muted-foreground" />
+                            Manual Bank Transfer (NEFT / UPI)
+                          </CardTitle>
+                          <CardDescription>
+                            Transfer {dueCurrency} {dueAmount} ({billingCycle}) to the account below, then
+                            submit your UTR. Verification usually takes up to 24 hours.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {bank.accountNumber || bank.upiId ? (
+                            <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3 text-sm">
+                              <p className="font-medium text-foreground">Pay to this account</p>
+                              {[
+                                ["Account name", bank.accountName],
+                                ["Bank", bank.bankName],
+                                ["Account number", bank.accountNumber],
+                                ["IFSC", bank.ifsc],
+                                ["Branch", bank.branch],
+                                ["UPI ID", bank.upiId],
+                              ]
+                                .filter(([, value]) => Boolean(value))
+                                .map(([label, value]) => (
+                                  <div key={label} className="flex items-center justify-between gap-3">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">{label}</p>
+                                      <p className="font-semibold font-mono">{value}</p>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => copyText(label, String(value))}
+                                      className="cursor-pointer"
+                                    >
+                                      <Copy className="h-3.5 w-3.5 mr-1" />
+                                      {copiedField === label ? "Copied" : "Copy"}
+                                    </Button>
+                                  </div>
+                                ))}
+                              {bank.notes ? (
+                                <p className="text-xs text-muted-foreground pt-1">{bank.notes}</p>
+                              ) : null}
+                              {bank.upiId ? (
+                                <a
+                                  className="inline-flex text-sm font-medium text-primary underline"
+                                  href={`upi://pay?pa=${encodeURIComponent(
+                                    bank.upiId
+                                  )}&pn=${encodeURIComponent(
+                                    bank.accountName || "Subscription"
+                                  )}&am=${dueAmount}&cu=INR`}
+                                >
+                                  Open UPI app
+                                </a>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground rounded-lg border border-dashed p-3">
+                              Bank details are not published yet. Ask support for the account, then
+                              submit your UTR here.
                             </p>
-                            <p className="text-muted-foreground mt-1">
-                              {lastRejected.rejectionReason}
-                            </p>
-                            <p className="text-xs mt-1">
-                              Submit a new UTR below after you transfer again.
-                            </p>
-                          </div>
-                        ) : null}
+                          )}
 
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Amount to transfer</label>
-                          <div className="px-4 py-2 bg-muted rounded-md text-foreground font-semibold border border-border">
-                            {dueCurrency} {dueAmount}
-                          </div>
-                        </div>
+                          {pendingManual ? (
+                            <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 space-y-1">
+                              <p className="font-medium flex items-center gap-2">
+                                <Clock className="h-4 w-4" /> Transfer submitted: waiting for
+                                verification
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                UTR:{" "}
+                                <span className="font-mono font-semibold text-foreground">
+                                  {pendingManual.utr}
+                                </span>
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Submitted {new Date(pendingManual.createdAt).toLocaleString()}. You will
+                                get access as soon as an admin confirms the credit.
+                              </p>
+                            </div>
+                          ) : (
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                              {lastRejected ? (
+                                <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm">
+                                  <p className="font-medium text-danger">
+                                    Previous transfer was rejected
+                                  </p>
+                                  <p className="text-muted-foreground mt-1">
+                                    {lastRejected.rejectionReason}
+                                  </p>
+                                  <p className="text-xs mt-1">
+                                    Submit a new UTR below after you transfer again.
+                                  </p>
+                                </div>
+                              ) : null}
 
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">UTR / UPI reference *</label>
-                          <Input
-                            type="text"
-                            required
-                            value={transactionId}
-                            onChange={(e) => setTransactionId(e.target.value)}
-                            placeholder="e.g. 123456789012"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            From your bank SMS or UPI app after the transfer.
-                          </p>
-                        </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">Amount to transfer</label>
+                                <div className="px-4 py-2 bg-muted rounded-md text-foreground font-semibold border border-border">
+                                  {dueCurrency} {dueAmount}
+                                </div>
+                              </div>
 
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Payment screenshot (optional)</label>
-                          <Input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
-                          />
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Upload className="h-3 w-3" /> JPEG, PNG or WebP, max 1.5 MB. Helps us
-                            verify faster.
-                          </p>
-                        </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">UTR / UPI reference *</label>
+                                <Input
+                                  type="text"
+                                  required
+                                  value={transactionId}
+                                  onChange={(e) => setTransactionId(e.target.value)}
+                                  placeholder="e.g. 123456789012"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  From your bank SMS or UPI app after the transfer.
+                                </p>
+                              </div>
 
-                        <Button
-                          type="submit"
-                          variant="secondary"
-                          className="w-full h-12 text-lg cursor-pointer"
-                          disabled={uploadMutation.isPending}
-                        >
-                          {uploadMutation.isPending
-                            ? "Submitting..."
-                            : "Submit payment for verification"}
-                        </Button>
-                      </form>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">Payment screenshot (optional)</label>
+                                <Input
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
+                                />
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Upload className="h-3 w-3" /> JPEG, PNG or WebP, max 1.5 MB. Helps us
+                                  verify faster.
+                                </p>
+                              </div>
+
+                              <Button
+                                type="submit"
+                                variant="secondary"
+                                className="w-full h-12 text-lg cursor-pointer"
+                                disabled={uploadMutation.isPending}
+                              >
+                                {uploadMutation.isPending
+                                  ? "Submitting..."
+                                  : "Submit payment for verification"}
+                              </Button>
+                            </form>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="upgrade" className="mt-6">

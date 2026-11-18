@@ -349,6 +349,93 @@ export default function FeaturesPage() {
         </div>
       </section>
 
+      {/* ── OPERATIONAL ADVANTAGE CALLOUT ────────────────────────────── */}
+      <section className="py-12 md:py-16 bg-muted/20 border-t border-border/70">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="max-w-2xl mb-8">
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                The MiniHisab Advantage
+              </span>
+              <h2 className="mt-1.5 font-heading text-2xl font-bold tracking-tight sm:text-3xl text-foreground">
+                Engineered specifically for Indian retail shops and wholesale godowns.
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                See why store owners choose MiniHisab&apos;s cloud-native retail engine over pen-and-paper diaries and complex accounting setups.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between">
+              <div>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border border-primary/20 bg-primary/5 text-primary">
+                  Cloud Mobility
+                </span>
+                <h3 className="mt-3 font-heading text-base font-bold text-foreground">
+                  Real-Time Cloud without Sync Headaches
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  No local backup files to corrupt, no manual sync delays. Check your store turnover, godown stock, and profit margins from your phone anywhere in real time.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/70">
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+                >
+                  View plans and pricing <ArrowRight className="h-3 w-3 ml-1" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between">
+              <div>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border border-primary/20 bg-primary/5 text-primary">
+                  Counter Speed
+                </span>
+                <h3 className="mt-3 font-heading text-base font-bold text-foreground">
+                  Retail Counter Speed for Peak Rushes
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Optimized for continuous barcode gun scanning, packaged FMCG matrices, dual carton-piece conversions, and neighborhood customer udhar khata.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/70">
+                <Link
+                  href="/for/grocery-store"
+                  className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+                >
+                  Explore grocery &amp; retail solutions <ArrowRight className="h-3 w-3 ml-1" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between">
+              <div>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border border-primary/20 bg-primary/5 text-primary">
+                  Zero Learning Curve
+                </span>
+                <h3 className="mt-3 font-heading text-base font-bold text-foreground">
+                  5-Minute Cashier Onboarding
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Cashiers start billing accurately on their very first shift. Clean screens, keyboard shortcuts, and zero expensive technician fees.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/70">
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+                >
+                  Get started today <ArrowRight className="h-3 w-3 ml-1" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── GROUNDED CALL TO ACTION ──────────────────────────────────────── */}
       <section className="border-t border-border/70 bg-card py-14 md:py-20">
         <ScrollReveal distance={26} duration={900}>

@@ -37,6 +37,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+
+const COUNTRY_MAP: Record<string, { name: string; flag: string; defaultCurrency: string }> = {
+  IN: { name: "India", flag: "🇮🇳", defaultCurrency: "INR" },
+  US: { name: "United States", flag: "🇺🇸", defaultCurrency: "USD" },
+  AE: { name: "UAE", flag: "🇦🇪", defaultCurrency: "AED" },
+  GB: { name: "UK", flag: "🇬🇧", defaultCurrency: "GBP" },
+  EU: { name: "Europe", flag: "🇪🇺", defaultCurrency: "EUR" },
+  CA: { name: "Canada", flag: "🇨🇦", defaultCurrency: "CAD" },
+  AU: { name: "Australia", flag: "🇦🇺", defaultCurrency: "AUD" },
+  SG: { name: "Singapore", flag: "🇸🇬", defaultCurrency: "SGD" },
+  SA: { name: "Saudi Arabia", flag: "🇸🇦", defaultCurrency: "SAR" },
+  QA: { name: "Qatar", flag: "🇶🇦", defaultCurrency: "QAR" },
+  OM: { name: "Oman", flag: "🇴🇲", defaultCurrency: "OMR" },
+  KW: { name: "Kuwait", flag: "🇰🇼", defaultCurrency: "KWD" },
+  BH: { name: "Bahrain", flag: "🇧🇭", defaultCurrency: "BHD" },
+};
 
 export default function AdminPlanRequestsPage() {
   const { token } = useAuth();
@@ -51,8 +68,30 @@ export default function AdminPlanRequestsPage() {
 
   const [reason, setReason] = useState("");
   const [approvalPrice, setApprovalPrice] = useState("");
+  const [approvalCurrency, setApprovalCurrency] = useState("INR");
+  const [approvalCycle, setApprovalCycle] = useState<"monthly" | "yearly">("monthly");
   const [historyBusiness, setHistoryBusiness] = useState<any | null>(null);
   const [statusFilter, setStatusFilter] = useState<"pending" | "history" | "all">("pending");
+
+  React.useEffect(() => {
+    if (selectedRequest) {
+      const cur =
+        selectedRequest.pendingCustomPlan?.currency ||
+        selectedRequest.currency ||
+        (selectedRequest.isInternational ? "USD" : "INR");
+      setApprovalCurrency(cur);
+      setApprovalCycle(
+        selectedRequest.pendingCustomPlan?.billingCycle === "yearly" ? "yearly" : "monthly"
+      );
+      setApprovalPrice(
+        selectedRequest.pendingCustomPlan?.price != null
+          ? String(selectedRequest.pendingCustomPlan.price)
+          : selectedRequest.customPlanDetails?.price != null
+          ? String(selectedRequest.customPlanDetails.price)
+          : "0"
+      );
+    }
+  }, [selectedRequest]);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-plan-requests", page, limit, searchQuery, statusFilter],
@@ -90,10 +129,21 @@ export default function AdminPlanRequestsPage() {
   };
 
   const approveMutation = useMutation({
-    mutationFn: (param: { businessId: string; reason: string; price?: number; currency?: string }) =>
+    mutationFn: (param: {
+      businessId: string;
+      reason: string;
+      price?: number;
+      currency?: string;
+      billingCycle?: string;
+    }) =>
       adminService.approvePlanRequest(
         param.businessId,
-        { reason: param.reason, price: param.price, currency: param.currency },
+        {
+          reason: param.reason,
+          price: param.price,
+          currency: param.currency,
+          billingCycle: param.billingCycle,
+        },
         token!
       ),
     onSuccess: () => {
@@ -133,8 +183,9 @@ export default function AdminPlanRequestsPage() {
     approveMutation.mutate({
       businessId,
       reason,
-      price: approvalPrice !== "" ? Number(approvalPrice) : selectedRequest?.pendingCustomPlan?.price,
-      currency: selectedRequest?.pendingCustomPlan?.currency || "INR",
+      price: approvalPrice !== "" ? Number(approvalPrice) : 0,
+      currency: approvalCurrency,
+      billingCycle: approvalCycle,
     });
   };
 
@@ -159,10 +210,33 @@ export default function AdminPlanRequestsPage() {
               {initial}
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-sm text-foreground truncate max-w-[200px]">
                   {row.name}
                 </span>
+                {(() => {
+                  const countryCode = (row.country || row.detectedCountry || row.countryCode || "IN").toUpperCase();
+                  const countryInfo = COUNTRY_MAP[countryCode] || { name: countryCode, flag: "🌐", defaultCurrency: "USD" };
+                  const isIntl = row.isInternational || countryCode !== "IN";
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                        isIntl
+                          ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30"
+                          : "bg-muted text-muted-foreground border-border/60"
+                      }`}
+                      title={`Country: ${countryInfo.name} (${countryCode})${isIntl ? " - International Client" : " - Domestic Client"}`}
+                    >
+                      <span>{countryInfo.flag}</span>
+                      <span>{countryInfo.name}</span>
+                      {isIntl && (
+                        <span className="font-bold text-[9px] uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                          • INTL
+                        </span>
+                      )}
+                    </span>
+                  );
+                })()}
                 <Link
                   href={`${APP_ROUTES.ADMIN_BUSINESSES}?search=${encodeURIComponent(row.name || "")}`}
                   className="text-muted-foreground hover:text-primary transition-colors p-0.5"
@@ -761,30 +835,83 @@ export default function AdminPlanRequestsPage() {
             )}
 
             {selectedRequest?.action === "approve" && (
-              <div className="space-y-1.5 rounded-xl border border-border bg-muted/20 p-3">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="approvalPrice" className="text-xs font-semibold text-foreground">
-                    Monthly Subscription Price ({selectedRequest.pendingCustomPlan?.currency || "INR"})
-                  </label>
-                  {(!selectedRequest.pendingCustomPlan?.price || selectedRequest.pendingCustomPlan.price === 0) && (
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
-                      Required for Quote Approval
-                    </span>
+              <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3.5">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-foreground">
+                      Billing Currency
+                    </label>
+                    <Select
+                      className="w-full"
+                      size="sm"
+                      value={approvalCurrency}
+                      onValueChange={setApprovalCurrency}
+                      options={[
+                        { value: "INR", label: "₹ INR (India - Domestic)" },
+                        { value: "USD", label: "$ USD (US & Global)" },
+                        { value: "AED", label: "د.إ AED (UAE)" },
+                        { value: "EUR", label: "€ EUR (Eurozone)" },
+                        { value: "GBP", label: "£ GBP (UK)" },
+                        { value: "CAD", label: "$ CAD (Canada)" },
+                        { value: "AUD", label: "$ AUD (Australia)" },
+                        { value: "SGD", label: "$ SGD (Singapore)" },
+                        { value: "SAR", label: "﷼ SAR (Saudi Arabia)" },
+                      ]}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-foreground">
+                      Billing Cycle
+                    </label>
+                    <Select
+                      className="w-full"
+                      size="sm"
+                      value={approvalCycle}
+                      onValueChange={(v) => setApprovalCycle(v as "monthly" | "yearly")}
+                      options={[
+                        { value: "monthly", label: "Monthly" },
+                        { value: "yearly", label: "Yearly" },
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 pt-1 border-t border-border/60">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="approvalPrice" className="text-xs font-semibold text-foreground">
+                      Subscription Price ({approvalCurrency})
+                    </label>
+                    {Number(approvalPrice) === 0 ? (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        Complimentary (₹0 / $0)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-primary font-semibold">
+                        Paid Tier
+                      </span>
+                    )}
+                  </div>
+                  <Input
+                    id="approvalPrice"
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="h-8 text-xs font-mono bg-card"
+                    placeholder="0"
+                    value={approvalPrice}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApprovalPrice(e.target.value)}
+                  />
+                  {Number(approvalPrice) === 0 ? (
+                    <p className="text-[10px] text-emerald-700 dark:text-emerald-300 font-medium">
+                      ✨ Setting price to <strong>0</strong> activates the account immediately for 1 year. The client will not be prompted to pay.
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground">
+                      The client will be billed <strong>{approvalCurrency} {approvalPrice}</strong> per {approvalCycle} via card / online checkout to activate access.
+                    </p>
                   )}
                 </div>
-                <Input
-                  id="approvalPrice"
-                  type="number"
-                  min="0"
-                  step="1"
-                  className="h-8 text-xs font-mono bg-card"
-                  placeholder="e.g. 999"
-                  value={approvalPrice}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApprovalPrice(e.target.value)}
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  The client will be billed this amount monthly on their subscription dashboard to activate or renew.
-                </p>
               </div>
             )}
 

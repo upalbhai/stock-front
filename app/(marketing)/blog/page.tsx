@@ -5,16 +5,17 @@ import { BlogPost } from "@/lib/types";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { APP_ROUTES } from "@/lib/routes";
 import { getAbsoluteApiUrl } from "@/lib/seo";
+import { STATIC_BLOG_POSTS } from "@/config/blog-posts";
 
 export const metadata: Metadata = {
-  title: "Blog - MiniHisab",
-  description: "Read the latest updates, tutorials, and business tips from the MiniHisab team.",
+  title: "Retail & Wholesale Billing Guides, POS Tips | MiniHisab Blog",
+  description: "Practical guides for retail store owners: counter checkout speed, GST compliance, loose carton inventory, and customer credit recovery.",
   alternates: {
     canonical: "/blog",
   },
   openGraph: {
-    title: "Blog - MiniHisab",
-    description: "Read the latest updates, tutorials, and business tips from the MiniHisab team.",
+    title: "Retail & Wholesale Billing Guides, POS Tips | MiniHisab Blog",
+    description: "Practical guides for retail store owners: counter checkout speed, GST compliance, loose carton inventory, and customer credit recovery.",
     url: "/blog",
     type: "website",
   },
@@ -24,13 +25,15 @@ async function getBlogs(): Promise<BlogPost[]> {
   try {
     const url = getAbsoluteApiUrl("/blogs?limit=50");
     const res = await fetch(url, { next: { revalidate: 60 } });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return json.data?.posts || [];
+    if (res.ok) {
+      const json = await res.json();
+      const posts = json.data?.posts || [];
+      if (posts.length > 0) return posts;
+    }
   } catch (error) {
-    console.error("Failed to fetch blogs:", error);
-    return [];
+    // Graceful fallback to static pre-seeded blogs
   }
+  return STATIC_BLOG_POSTS as unknown as BlogPost[];
 }
 
 export default async function BlogIndexPage() {
@@ -79,9 +82,10 @@ export default async function BlogIndexPage() {
                 {post.coverImage ? (
                   <div className="relative aspect-[16/9] w-full sm:aspect-[2/1] lg:aspect-[3/2] rounded-2xl overflow-hidden bg-gray-100">
                     <Image
-                      src={post.coverImage}
+                      src={post.coverImage.replace(/^https?:\/\/minihisab\.com/, "")}
                       alt={post.title}
                       fill
+                      unoptimized
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />

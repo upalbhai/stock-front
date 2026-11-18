@@ -7,6 +7,7 @@ import { BlogPost } from "@/lib/types";
 import { APP_ROUTES } from "@/lib/routes";
 import { breadcrumbSchema } from "@/lib/jsonld";
 import { getAbsoluteApiUrl } from "@/lib/seo";
+import { STATIC_BLOG_POSTS } from "@/config/blog-posts";
 
 interface Props {
   params: { slug: string };
@@ -16,29 +17,41 @@ async function getBlogPost(slug: string): Promise<BlogPost | null> {
   try {
     const url = getAbsoluteApiUrl(`/blogs/${slug}`);
     const res = await fetch(url, { next: { revalidate: 60 } });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.data?.post || null;
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data?.post) return json.data.post;
+    }
   } catch (error) {
-    console.error(`Failed to fetch blog post (${slug}):`, error);
-    return null;
+    // Fallback to static post
   }
+
+  const staticPost = STATIC_BLOG_POSTS.find((p) => p.slug === slug);
+  return (staticPost as unknown as BlogPost) || null;
 }
 
 export async function generateStaticParams() {
+  const staticSlugs = STATIC_BLOG_POSTS.map((p) => ({ slug: p.slug }));
+
   try {
     const url = getAbsoluteApiUrl("/blogs?limit=100");
     const res = await fetch(url);
-    if (!res.ok) return [];
-    const json = await res.json();
-    const posts = json.data?.posts || [];
-    return posts.map((post: any) => ({
-      slug: post.slug,
-    }));
+    if (res.ok) {
+      const json = await res.json();
+      const posts = json.data?.posts || [];
+      const apiSlugs = posts.map((post: any) => ({ slug: post.slug }));
+      const allSlugs = [...staticSlugs];
+      apiSlugs.forEach((item: { slug: string }) => {
+        if (!allSlugs.some((s) => s.slug === item.slug)) {
+          allSlugs.push(item);
+        }
+      });
+      return allSlugs;
+    }
   } catch (error) {
-    console.error("Error generating static params for blog:", error);
-    return [];
+    // Return static slugs
   }
+
+  return staticSlugs;
 }
 
 export async function generateMetadata(
@@ -173,12 +186,14 @@ export default async function BlogPostPage({ params }: Props) {
           </header>
 
           {post.coverImage && (
-            <div className="mb-12 overflow-hidden rounded-2xl shadow-lg relative w-full aspect-[2/1]">
+            <div className="mb-12 overflow-hidden rounded-2xl shadow-lg relative w-full aspect-[16/9] bg-muted/20">
               <Image 
-                src={post.coverImage} 
+                src={post.coverImage.replace(/^https?:\/\/minihisab\.com/, "")} 
                 alt={`${post.title} cover image`}
                 fill
                 priority
+                unoptimized
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
                 className="object-cover"
               />
             </div>

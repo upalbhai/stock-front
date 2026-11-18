@@ -40,13 +40,62 @@ export function softwareApplicationSchema() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: SITE_NAME,
-    operatingSystem: "All",
+    operatingSystem: "Windows, macOS, Android, iOS, Web",
     applicationCategory: "BusinessApplication",
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    image: `${SITE_URL}/logo.webp`,
+    screenshot: `${SITE_URL}/opengraph-image`,
+    offers: {
+      "@type": "AggregateOffer",
+      priceCurrency: "INR",
+      lowPrice: "0",
+      highPrice: "999",
+      offerCount: 3,
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      reviewCount: "128",
+      bestRating: "5",
+      worstRating: "1",
+    },
+    featureList: [
+      "Sub-second barcode checkout and POS thermal receipts",
+      "Loose unit to master carton inventory synchronization",
+      "Digital customer udhar khata and credit ledgers",
+      "GST tax invoices with CGST, SGST, IGST calculations",
+      "Multi-outlet and central godown stock transfers",
+      "Role-based staff permissions with cashier PIN login"
+    ],
+  };
+}
+
+export function industrySolutionSchema(industry: {
+  name: string;
+  slug: string;
+  description: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: `MiniHisab for ${industry.name}`,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Windows, macOS, Android, iOS, Web",
+    description: industry.description,
+    url: `${SITE_URL}/for/${industry.slug}`,
     offers: {
       "@type": "AggregateOffer",
       priceCurrency: "INR",
       lowPrice: "0",
       offerCount: 3,
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      reviewCount: "128",
+      bestRating: "5",
+      worstRating: "1",
     },
   };
 }

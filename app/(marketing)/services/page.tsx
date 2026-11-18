@@ -323,6 +323,36 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* ── WHY OUR PLATFORM BEATS TRADITIONAL BILLING ───────────────────── */}
+      <section className="py-12 md:py-16 border-b border-border/70 bg-muted/10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-primary/20 bg-card p-6 sm:p-8 lg:p-10 shadow-xs">
+            <div className="max-w-3xl space-y-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                Why Switch to MiniHisab
+              </span>
+              <h2 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl text-foreground">
+                Tired of desktop sync crashes, slow checkout lines, and unrecorded udhar?
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Unlike desktop software that traps your data on a single PC, MiniHisab gives you 100% cloud freedom. Check live turnover from your mobile phone, connect any thermal printer without drivers, and transfer stock between outlets with digital challans.
+              </p>
+              <div className="pt-2 flex flex-wrap gap-4 text-xs font-semibold text-primary">
+                <Link href="/for/supermarket" className="hover:underline flex items-center gap-1">
+                  Supermarket &amp; Mart POS <ArrowRight className="h-3 w-3" />
+                </Link>
+                <Link href="/for/hardware-store" className="hover:underline flex items-center gap-1">
+                  Hardware &amp; Electrical POS <ArrowRight className="h-3 w-3" />
+                </Link>
+                <Link href="/features" className="hover:underline flex items-center gap-1">
+                  Explore all features <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── HARDWARE COMPATIBILITY REASSURANCE ───────────────────────────── */}
       <section className="py-12 md:py-16 border-b border-border/70">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

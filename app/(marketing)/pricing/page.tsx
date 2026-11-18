@@ -78,6 +78,39 @@ export default function PricingPage() {
         </Button>
       </div>
 
+      {/* Why MiniHisab Pricing is Better */}
+      <div className="mt-10 rounded-[8px] border border-border bg-muted/20 p-6 sm:p-8">
+        <h2 className="font-heading text-2xl font-bold">Why our pricing beats traditional billing software</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Unlike legacy ERPs and POS vendors that charge extra for every checkout terminal or lock you into proprietary hardware, MiniHisab keeps pricing fair and transparent.
+        </p>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-[8px] border border-border bg-card p-4">
+            <h3 className="font-bold text-sm">Zero Terminal License Fees</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Run multiple cashier registers without paying per-device license penalties.</p>
+          </div>
+          <div className="rounded-[8px] border border-border bg-card p-4">
+            <h3 className="font-bold text-sm">No Proprietary Hardware Lock</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Use any standard 58mm/80mm thermal printer and USB/Bluetooth barcode scanner you already own.</p>
+          </div>
+          <div className="rounded-[8px] border border-border bg-card p-4">
+            <h3 className="font-bold text-sm">Instant Cloud Sync Included</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Real-time multi-branch and godown inventory transfers with zero technician installation charges.</p>
+          </div>
+        </div>
+        <div className="mt-6 pt-4 border-t border-border flex flex-wrap gap-4 text-xs font-semibold text-primary">
+          <Link href="/for/kirana-store" className="hover:underline flex items-center gap-1">
+            Kirana &amp; Grocery Solutions <ArrowRight className="h-3 w-3" />
+          </Link>
+          <Link href="/for/pharmacy" className="hover:underline flex items-center gap-1">
+            Pharmacy &amp; Medical POS <ArrowRight className="h-3 w-3" />
+          </Link>
+          <Link href="/for/wholesale-distributor" className="hover:underline flex items-center gap-1">
+            Wholesale Distribution Features <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </div>
+
       <div className="mt-6 flex flex-col gap-3 rounded-[8px] border border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-heading text-xl font-bold">Have custom requirements?</h2>

@@ -50,7 +50,11 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  experimental: {
+    optimizePackageImports: ["lucide-react", "date-fns", "recharts"],
+  },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'http',
@@ -64,6 +68,17 @@ const nextConfig = {
       }
     ],
   },
+  async rewrites() {
+    const backendOrigin = process.env.INTERNAL_API_URL 
+      || (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, '') : '')
+      || 'http://localhost:4000';
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: `${backendOrigin}/uploads/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -73,11 +88,18 @@ const nextConfig = {
     ];
   },
   async redirects() {
-    return dashboardSections.map((section) => ({
-      source: `/${section}/:path*`,
-      destination: `/dashboard/${section}/:path*`,
-      permanent: true,
-    }));
+    return [
+      ...dashboardSections.map((section) => ({
+        source: `/${section}/:path*`,
+        destination: `/dashboard/${section}/:path*`,
+        permanent: true,
+      })),
+      {
+        source: '/compare/:path*',
+        destination: '/features',
+        permanent: true,
+      },
+    ];
   },
 };
 

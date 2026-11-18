@@ -35,7 +35,11 @@ export default function EditBlogPage({ params }: { params: { id: string } }) {
     mutationFn: (data: Partial<BlogPost>) => blogService.updateBlog(params.id, data, token),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["admin-blogs"] });
-      qc.setQueryData(["admin-blogs", params.id], res.data.post);
+      qc.invalidateQueries({ queryKey: ["admin-blog", params.id] });
+      const post = (res as any)?.data?.post || (res as any)?.post;
+      if (post) {
+        qc.setQueryData(["admin-blog", params.id], post);
+      }
     },
     onError: (err) => toast.error(getErrorMessage(err))
   });
@@ -58,6 +62,7 @@ export default function EditBlogPage({ params }: { params: { id: string } }) {
       
       toast.success("Blog post saved!");
       qc.invalidateQueries({ queryKey: ["admin-blogs"] });
+      qc.invalidateQueries({ queryKey: ["admin-blog", params.id] });
     } catch (err) {
       toast.error(getErrorMessage(err));
     }

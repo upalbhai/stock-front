@@ -37,6 +37,7 @@ export const APP_ROUTES = {
   CONTACT: "/contact",
   BLOG: "/blog",
   blogPost: (slug: string) => `/blog/${slug}`,
+  forIndustry: (slug: string) => `/for/${slug}`,
   LOGIN: "/login",
   REGISTER: "/register",
   DASHBOARD: APP_BASE_ROUTE,

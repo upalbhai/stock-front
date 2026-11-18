@@ -15,6 +15,19 @@ export const PUBLIC_ROUTES = [
   "/pricing",
   "/blog",
   "/contact",
+  // Industry Solutions
+  "/for/kirana-store",
+  "/for/pharmacy",
+  "/for/clothing-store",
+  "/for/grocery-store",
+  "/for/wholesale-distributor",
+  "/for/hardware-store",
+  "/for/electronics-shop",
+  "/for/stationery-shop",
+  "/for/cosmetics-store",
+  "/for/mobile-shop",
+  "/for/bakery",
+  "/for/supermarket",
 ] as const;
 
 export function absoluteUrl(path: string) {

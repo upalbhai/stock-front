@@ -12,7 +12,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
       <footer className="border-t border-border/80 bg-muted/20">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-6">
             {/* Brand column */}
             <div className="lg:col-span-2">
               <Link href={APP_ROUTES.HOME} className="flex items-center gap-2.5">
@@ -35,31 +35,54 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 Retail billing, multi-outlet inventory, GST tax invoices, and customer credit tracking.
               </p>
               <p className="mt-3 text-xs text-muted-foreground">
-                Works on desktop PCs, laptops, Android tablets, and mobile browsers.
+                Works on desktop PCs, laptops, Android tablets, and mobile browsers with zero hardware lock-in.
               </p>
             </div>
 
-            {/* Links column 1: Solutions */}
+            {/* Links column 1: By Industry / Trade */}
             <div className="flex flex-col gap-2 text-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-foreground">Solutions</p>
-              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
-                Fast Counter Billing
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground">By Trade</p>
+              <Link href="/for/kirana-store" className="text-muted-foreground hover:text-primary transition-colors">
+                Kirana Stores
               </Link>
-              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
-                Inventory &amp; Low Stock
+              <Link href="/for/pharmacy" className="text-muted-foreground hover:text-primary transition-colors">
+                Pharmacies &amp; Medical
               </Link>
-              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
-                Customer Udhar Khata
+              <Link href="/for/clothing-store" className="text-muted-foreground hover:text-primary transition-colors">
+                Clothing &amp; Garments
               </Link>
-              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
-                GST Tax Invoices
+              <Link href="/for/wholesale-distributor" className="text-muted-foreground hover:text-primary transition-colors">
+                Wholesale Distributors
               </Link>
-              <Link href={APP_ROUTES.FEATURES} className="text-muted-foreground hover:text-primary transition-colors">
-                Multi-Outlet Sync
+              <Link href="/for/supermarket" className="text-muted-foreground hover:text-primary transition-colors">
+                Supermarkets &amp; Marts
+              </Link>
+              <Link href="/for/hardware-store" className="text-muted-foreground hover:text-primary transition-colors">
+                Hardware &amp; Electrical
               </Link>
             </div>
 
-            {/* Links column 2: Product */}
+            {/* Links column 2: Retail Solutions */}
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground">More Verticals</p>
+              <Link href="/for/clothing-store" className="text-muted-foreground hover:text-primary transition-colors">
+                Garment &amp; Apparel Stores
+              </Link>
+              <Link href="/for/electronics-shop" className="text-muted-foreground hover:text-primary transition-colors">
+                Electronics &amp; Appliances
+              </Link>
+              <Link href="/for/mobile-shop" className="text-muted-foreground hover:text-primary transition-colors">
+                Mobile &amp; Accessories
+              </Link>
+              <Link href="/for/stationery-shop" className="text-muted-foreground hover:text-primary transition-colors">
+                Bookstores &amp; Stationery
+              </Link>
+              <Link href="/for/bakery" className="text-muted-foreground hover:text-primary transition-colors">
+                Bakeries &amp; Sweet Shops
+              </Link>
+            </div>
+
+            {/* Links column 3: Product */}
             <div className="flex flex-col gap-2 text-sm">
               <p className="text-xs font-bold uppercase tracking-wider text-foreground">Product</p>
               <Link href={APP_ROUTES.SERVICES} className="text-muted-foreground hover:text-primary transition-colors">
@@ -79,9 +102,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </Link>
             </div>
 
-            {/* Links column 3: Company & Legal */}
+            {/* Links column 4: Company & Legal */}
             <div className="flex flex-col gap-2 text-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-foreground">Company &amp; Legal</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground">Company</p>
               <Link href={APP_ROUTES.ABOUT} className="text-muted-foreground hover:text-primary transition-colors">
                 About MiniHisab
               </Link>

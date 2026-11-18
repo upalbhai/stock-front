@@ -168,6 +168,11 @@ export default function LoginPage() {
     setSuccess(null);
 
     try {
+      const clientTimezone =
+        typeof Intl !== "undefined"
+          ? Intl.DateTimeFormat().resolvedOptions().timeZone
+          : undefined;
+
       const res = await register({
         name: form.name,
         email: form.email,
@@ -175,6 +180,7 @@ export default function LoginPage() {
         businessName: form.businessName,
         outletName: form.outletName || `${form.businessName} Main`,
         agentCode: form.agentCode || undefined,
+        timezone: clientTimezone,
       });
 
       if ((res as any)?.message) {

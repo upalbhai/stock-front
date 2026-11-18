@@ -69,6 +69,21 @@ function generateSlug(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+function resolveBlogImageUrl(url?: string): string {
+  if (!url) return "";
+  if (url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  const cleanPath = url.startsWith("/") ? url : `/${url}`;
+  if (typeof window !== "undefined" && window.location.origin.includes("localhost:3000")) {
+    const apiHost = process.env.NEXT_PUBLIC_API_URL 
+      ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "")
+      : "http://localhost:4000";
+    return `${apiHost}${cleanPath}`;
+  }
+  return cleanPath;
+}
+
 interface BlogEditorProps {
   initialData?: Partial<BlogPost>;
   onSave: (data: Partial<BlogPost>) => Promise<void>;
@@ -92,6 +107,7 @@ export function BlogEditor({
   const [activeTab, setActiveTab] = React.useState<"write" | "seo" | "preview">("write");
   const [tagInput, setTagInput] = React.useState("");
   const [isUploadingCover, setIsUploadingCover] = React.useState(false);
+  const [localCoverPreview, setLocalCoverPreview] = React.useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = React.useState(false);
 
   const [form, setForm] = React.useState<Partial<BlogPost>>({
@@ -227,17 +243,25 @@ export function BlogEditor({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Cover image size must be under 5MB");
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Cover image size must be under 10MB");
       return;
     }
+
+    // Immediately display local preview so user sees the image with zero delay
+    const objectUrl = URL.createObjectURL(file);
+    setLocalCoverPreview(objectUrl);
+    setForm((f) => ({ ...f, coverImage: objectUrl }));
 
     try {
       setIsUploadingCover(true);
       const formData = new FormData();
       formData.append("image", file);
       const res = await blogService.uploadBlogImage(formData, token);
-      setForm((f) => ({ ...f, coverImage: res.data.url }));
+      const rawUrl = (res as any)?.data?.url || (res as any)?.url || "";
+      // Strip any host prefix (e.g. http://minihisab.com) so it is clean relative /uploads/blog/...
+      const cleanUrl = rawUrl ? rawUrl.replace(/^https?:\/\/[^\/]+/, "") : objectUrl;
+      setForm((f) => ({ ...f, coverImage: cleanUrl }));
       toast.success("Cover image uploaded");
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to upload cover image"));
@@ -253,7 +277,9 @@ export function BlogEditor({
         const formData = new FormData();
         formData.append("image", blobInfo.blob(), blobInfo.filename());
         const res = await blogService.uploadBlogImage(formData, token);
-        resolve(res.data.url);
+        const rawUrl = (res as any)?.data?.url || (res as any)?.url || "";
+        const cleanUrl = rawUrl ? rawUrl.replace(/^https?:\/\/[^\/]+/, "") : "";
+        resolve(cleanUrl || rawUrl);
       } catch (err) {
         reject(getErrorMessage(err, "Image upload failed"));
       }
@@ -685,9 +711,25 @@ export function BlogEditor({
               {form.coverImage && (
                 <div className="w-full aspect-[21/9] rounded-xl overflow-hidden border border-border/60 bg-muted/40">
                   <img
-                    src={form.coverImage}
+                    src={localCoverPreview || resolveBlogImageUrl(form.coverImage)}
                     alt={form.title || "Cover"}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (localCoverPreview) {
+                        target.src = localCoverPreview;
+                        return;
+                      }
+                      const apiHost = process.env.NEXT_PUBLIC_API_URL 
+                        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") 
+                        : "";
+                      if (apiHost && target.src.includes("/uploads/")) {
+                        const rel = "/uploads/" + target.src.split("/uploads/")[1];
+                        if (!target.src.startsWith(apiHost)) {
+                          target.src = `${apiHost}${rel}`;
+                        }
+                      }
+                    }}
                   />
                 </div>
               )}
@@ -768,7 +810,10 @@ export function BlogEditor({
               {form.coverImage && (
                 <button
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, coverImage: "" }))}
+                  onClick={() => {
+                    setLocalCoverPreview(null);
+                    setForm((f) => ({ ...f, coverImage: "" }));
+                  }}
                   className="text-[10px] font-semibold text-destructive hover:underline cursor-pointer"
                 >
                   Remove
@@ -779,9 +824,25 @@ export function BlogEditor({
             {form.coverImage ? (
               <div className="relative rounded-lg overflow-hidden border border-border/60 group aspect-[16/9] bg-muted/30">
                 <img
-                  src={form.coverImage}
+                  src={localCoverPreview || resolveBlogImageUrl(form.coverImage)}
                   alt="Cover Preview"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (localCoverPreview) {
+                      target.src = localCoverPreview;
+                      return;
+                    }
+                    const apiHost = process.env.NEXT_PUBLIC_API_URL 
+                      ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "") 
+                      : "";
+                    if (apiHost && target.src.includes("/uploads/")) {
+                      const rel = "/uploads/" + target.src.split("/uploads/")[1];
+                      if (!target.src.startsWith(apiHost)) {
+                        target.src = `${apiHost}${rel}`;
+                      }
+                    }
+                  }}
                 />
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <label className="cursor-pointer">
