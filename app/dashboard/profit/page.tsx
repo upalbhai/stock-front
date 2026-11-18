@@ -168,7 +168,7 @@ export default function ProfitPage() {
     to: parseAsString.withDefault(defaults.to),
     ledgerSearch: parseAsString.withDefault(""),
     page: parseAsInteger.withDefault(1),
-    limit: parseAsInteger.withDefault(50),
+    limit: parseAsInteger.withDefault(10),
   });
 
   const [activeTab, setActiveTab] = React.useState<"all" | "sales" | "losses" | "inflow">("all");
@@ -307,12 +307,12 @@ export default function ProfitPage() {
     const packagingMeta =
       selectedUnit && selectedUnit.key !== "base"
         ? {
-            soldQty: issueCount,
-            soldUnit: selectedUnit.soldUnit,
-            packagingUnitId: selectedUnit.packagingUnitId,
-            conversionFactor: selectedUnit.conversionFactor,
-            baseUnit,
-          }
+          soldQty: issueCount,
+          soldUnit: selectedUnit.soldUnit,
+          packagingUnitId: selectedUnit.packagingUnitId,
+          conversionFactor: selectedUnit.conversionFactor,
+          baseUnit,
+        }
         : { baseUnit, soldQty: issueCount, soldUnit: selectedUnit?.soldUnit ?? baseUnit };
 
     if (isGoodReturn) {
@@ -369,9 +369,9 @@ export default function ProfitPage() {
             value={
               query.from && query.to
                 ? {
-                    start: parseDate(query.from.split("T")[0]),
-                    end: parseDate(query.to.split("T")[0]),
-                  }
+                  start: parseDate(query.from.split("T")[0]),
+                  end: parseDate(query.to.split("T")[0]),
+                }
                 : null
             }
             onChange={(val) => {
@@ -664,8 +664,8 @@ export default function ProfitPage() {
                     m.isLoss
                       ? "danger"
                       : m.category === "sale"
-                      ? "soft"
-                      : "secondary"
+                        ? "soft"
+                        : "secondary"
                   }
                   className="text-[10px] capitalize font-semibold"
                 >
@@ -744,8 +744,8 @@ export default function ProfitPage() {
                       impact.tone === "profit"
                         ? "text-emerald-600 dark:text-emerald-400"
                         : impact.tone === "loss"
-                        ? "text-rose-600"
-                        : "text-muted-foreground"
+                          ? "text-rose-600"
+                          : "text-muted-foreground"
                     )}
                   >
                     {impact.value === 0

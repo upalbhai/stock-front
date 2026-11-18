@@ -78,7 +78,7 @@ export default function ExpensesPage() {
 
   const [query, setQuery] = useQueryStates({
     page: parseAsInteger.withDefault(1),
-    limit: parseAsInteger.withDefault(50),
+    limit: parseAsInteger.withDefault(10),
     category: parseAsString.withDefault(""),
     status: parseAsStringEnum<RecordFilter>(["active", "voided", "all"]).withDefault("active"),
     from: parseAsString.withDefault(""),
@@ -201,9 +201,9 @@ export default function ExpensesPage() {
             value={
               query.from && query.to
                 ? {
-                    start: parseDate(query.from.split("T")[0]),
-                    end: parseDate(query.to.split("T")[0]),
-                  }
+                  start: parseDate(query.from.split("T")[0]),
+                  end: parseDate(query.to.split("T")[0]),
+                }
                 : null
             }
             onChange={(val) => {

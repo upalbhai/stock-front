@@ -77,7 +77,7 @@ export default function CustomerDetailPage() {
 
   const [query, setQuery] = useQueryStates({
     page: parseAsInteger.withDefault(1),
-    limit: parseAsInteger.withDefault(50),
+    limit: parseAsInteger.withDefault(10),
     from: parseAsString.withDefault(""),
     to: parseAsString.withDefault(""),
   });
@@ -234,9 +234,9 @@ export default function CustomerDetailPage() {
               value={
                 query.from && query.to
                   ? {
-                      start: parseDate(query.from.split("T")[0]),
-                      end: parseDate(query.to.split("T")[0]),
-                    }
+                    start: parseDate(query.from.split("T")[0]),
+                    end: parseDate(query.to.split("T")[0]),
+                  }
                   : null
               }
               onChange={(val) => {

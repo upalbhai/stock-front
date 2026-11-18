@@ -266,7 +266,7 @@ export default function StockPage() {
     from: parseAsString.withDefault(""),
     to: parseAsString.withDefault(""),
     historyPage: parseAsInteger.withDefault(1),
-    historyLimit: parseAsInteger.withDefault(50),
+    historylimit: parseAsInteger.withDefault(10),
   });
 
   const [deleteEntryId, setDeleteEntryId] = React.useState<string | null>(null);

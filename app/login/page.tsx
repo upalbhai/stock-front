@@ -76,6 +76,16 @@ export default function LoginPage() {
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
+    const urlRef = params.get("ref") || params.get("agentCode");
+    const urlMode = params.get("mode");
+
+    if (urlRef) {
+      setForm((prev) => ({ ...prev, agentCode: urlRef.toUpperCase().trim() }));
+      setMode("register");
+    } else if (urlMode === "register") {
+      setMode("register");
+    }
+
     const urlEmail = params.get("email");
     const urlCode = params.get("code");
     if (urlEmail && urlCode) {

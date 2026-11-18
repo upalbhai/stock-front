@@ -38,7 +38,7 @@ export default function TransfersPage() {
   const [query, setQuery] = useQueryStates({
     search: parseAsString.withDefault(""),
     page: parseAsInteger.withDefault(1),
-    limit: parseAsInteger.withDefault(50),
+    limit: parseAsInteger.withDefault(10),
   });
 
   const [showTransferModal, setShowTransferModal] = React.useState(false);

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, DollarSign, Wallet, ArrowRight, Percent } from "lucide-react";
+import { Users, DollarSign, Wallet, ArrowRight, Percent, Copy, Check } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { agentService } from "@/services/agent.service";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export default function AgentRootPage() {
   const [selectedCurrency, setSelectedCurrency] = React.useState<string>("INR");
   const [payoutAmount, setPayoutAmount] = React.useState<string>("");
   const [isPayoutModalOpen, setIsPayoutModalOpen] = React.useState(false);
+  const [copiedRef, setCopiedRef] = React.useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["agent-stats"],
@@ -130,9 +131,27 @@ export default function AgentRootPage() {
             />
           )}
           {stats?.agentCode && (
-            <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-md font-mono text-sm border border-primary/20">
-              Ref Code: <span className="font-bold">{stats.agentCode}</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const origin = typeof window !== "undefined" ? window.location.origin : "https://minihisab.com";
+                const link = `${origin}/login?ref=${stats.agentCode}`;
+                navigator.clipboard.writeText(link);
+                setCopiedRef(true);
+                toast.success("Referral link copied to clipboard!");
+                setTimeout(() => setCopiedRef(false), 2000);
+              }}
+              title="Click to copy your referral link"
+              className="group flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-md font-mono text-sm border border-primary/20 transition-all cursor-pointer"
+            >
+              <span>Ref:</span>
+              <span className="font-bold">{stats.agentCode}</span>
+              {copiedRef ? (
+                <Check className="h-3.5 w-3.5 text-emerald-600 animate-in zoom-in-50" />
+              ) : (
+                <Copy className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100" />
+              )}
+            </button>
           )}
         </div>
       </div>

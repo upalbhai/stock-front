@@ -56,7 +56,7 @@ export default function CustomersPage() {
 
   const [query, setQuery] = useQueryStates({
     page: parseAsInteger.withDefault(1),
-    limit: parseAsInteger.withDefault(50),
+    limit: parseAsInteger.withDefault(10),
     search: parseAsString.withDefault(""),
     balanceFilter: parseAsString.withDefault(""),
     from: parseAsString.withDefault(""),
@@ -217,9 +217,9 @@ export default function CustomersPage() {
             value={
               query.from && query.to
                 ? {
-                    start: parseDate(query.from.split("T")[0]),
-                    end: parseDate(query.to.split("T")[0]),
-                  }
+                  start: parseDate(query.from.split("T")[0]),
+                  end: parseDate(query.to.split("T")[0]),
+                }
                 : null
             }
             onChange={(val) => {

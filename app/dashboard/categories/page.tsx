@@ -106,7 +106,7 @@ export default function CategoriesPage() {
   const [query, setQuery] = useQueryStates({
     search: parseAsString.withDefault(""),
     page: parseAsInteger.withDefault(1),
-    limit: parseAsInteger.withDefault(50),
+    limit: parseAsInteger.withDefault(10),
   });
 
   const [form, setForm] = React.useState({

@@ -28,7 +28,7 @@ export default function UnitsPage() {
   const [query, setQuery] = useQueryStates({
     search: parseAsString.withDefault(""),
     page: parseAsInteger.withDefault(1),
-    limit: parseAsInteger.withDefault(50),
+    limit: parseAsInteger.withDefault(10),
   });
 
   const emptyForm = { name: "", key: "", abbreviation: "", sortOrder: "0" };
