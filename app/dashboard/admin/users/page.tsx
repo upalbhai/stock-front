@@ -29,6 +29,8 @@ import {
   SlidersHorizontal,
   Sparkles,
   Info,
+  LogIn,
+  Briefcase,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -62,11 +64,13 @@ const SYSTEM_MODULES = [
 ];
 
 export default function AdminUsersPage() {
-  const { token, user: currentUser } = useAuth();
+  const { token, user: currentUser, impersonate } = useAuth();
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = React.useState<"users" | "roles">("users");
   const [search, setSearch] = useQueryState("search", parseAsString.withDefault(""));
   const [roleFilter, setRoleFilter] = React.useState<string>("all");
+  const [businessFilter, setBusinessFilter] = React.useState<string>("all");
+  const [impersonatingId, setImpersonatingId] = React.useState<string | null>(null);
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
   // System Admin creation modal state
@@ -106,10 +110,24 @@ export default function AdminUsersPage() {
 
   // Query: Users list
   const { data: usersData, isLoading: isUsersLoading, refetch: refetchUsers } = useQuery({
-    queryKey: ["admin-users", search],
-    queryFn: () => userService.getUsers(token, { search: search || undefined }),
+    queryKey: ["admin-users", search, businessFilter],
+    queryFn: () =>
+      userService.getUsers(token, {
+        search: search || undefined,
+        businessId: businessFilter !== "all" ? businessFilter : undefined,
+        limit: 300,
+      }),
     enabled: Boolean(token),
   });
+
+  // Query: Businesses list for tenant filter
+  const { data: businessesData } = useQuery({
+    queryKey: ["admin-businesses-list"],
+    queryFn: () => adminService.getAdminBusinesses(token, { limit: 100 }),
+    enabled: Boolean(token),
+  });
+
+  const businesses = businessesData?.businesses ?? [];
 
   // Query: Platform Roles
   const { data: rolesResponse, isLoading: isRolesLoading, refetch: refetchRoles } = useQuery({
@@ -320,20 +338,41 @@ export default function AdminUsersPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleImpersonate = async (targetUser: any) => {
+    if (!targetUser?._id) return;
+    if (impersonatingId) return;
+
+    setImpersonatingId(targetUser._id);
+    try {
+      await impersonate(targetUser._id);
+      toast.success(`Logged in as ${targetUser.name}`);
+      if (targetUser.role === "agent") {
+        window.location.href = "/dashboard/agent";
+      } else {
+        window.location.href = APP_ROUTES.DASHBOARD;
+      }
+    } catch (err) {
+      toast.error("Impersonation failed: " + getErrorMessage(err));
+      setImpersonatingId(null);
+    }
+  };
+
   const allUsers = usersData?.users ?? [];
 
   const filteredUsers = React.useMemo(() => {
     if (roleFilter === "all") return allUsers;
-    if (roleFilter === "superadmin") return allUsers.filter((u: any) => u.role === "superadmin");
+    if (roleFilter === "agent") return allUsers.filter((u: any) => u.role === "agent");
     if (roleFilter === "owner") return allUsers.filter((u: any) => u.role === "owner");
-    if (roleFilter === "staff") return allUsers.filter((u: any) => u.role === "manager" || u.role === "staff");
+    if (roleFilter === "staff") return allUsers.filter((u: any) => u.role === "manager" || u.role === "staff" || u.role === "cashier");
+    if (roleFilter === "superadmin") return allUsers.filter((u: any) => u.role === "superadmin");
     return allUsers;
   }, [allUsers, roleFilter]);
 
   const totalCount = allUsers.length;
-  const superadminCount = allUsers.filter((u: any) => u.role === "superadmin").length;
+  const agentCount = allUsers.filter((u: any) => u.role === "agent").length;
   const ownerCount = allUsers.filter((u: any) => u.role === "owner").length;
-  const staffCount = allUsers.filter((u: any) => u.role === "manager" || u.role === "staff").length;
+  const staffCount = allUsers.filter((u: any) => u.role === "manager" || u.role === "staff" || u.role === "cashier").length;
+  const superadminCount = allUsers.filter((u: any) => u.role === "superadmin").length;
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -466,17 +505,17 @@ export default function AdminUsersPage() {
 
             <button
               type="button"
-              onClick={() => setRoleFilter("superadmin")}
+              onClick={() => setRoleFilter("agent")}
               className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-all cursor-pointer shrink-0 ${
-                roleFilter === "superadmin"
-                  ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 font-semibold shadow-2xs ring-1 ring-purple-500/20"
+                roleFilter === "agent"
+                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 font-semibold shadow-2xs ring-1 ring-amber-500/20"
                   : "bg-muted/30 border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
             >
-              <Shield className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-              <span>System Administrators</span>
+              <Briefcase className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Partner Agents</span>
               <span className="rounded-md bg-background px-1.5 py-0.2 text-[10px] font-mono font-bold text-foreground shadow-2xs">
-                {superadminCount}
+                {agentCount}
               </span>
             </button>
 
@@ -511,17 +550,62 @@ export default function AdminUsersPage() {
                 {staffCount}
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setRoleFilter("superadmin")}
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-all cursor-pointer shrink-0 ${
+                roleFilter === "superadmin"
+                  ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 font-semibold shadow-2xs ring-1 ring-purple-500/20"
+                  : "bg-muted/30 border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              }`}
+            >
+              <Shield className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+              <span>System Administrators</span>
+              <span className="rounded-md bg-background px-1.5 py-0.2 text-[10px] font-mono font-bold text-foreground shadow-2xs">
+                {superadminCount}
+              </span>
+            </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search users by name or email..."
+                placeholder="Search users by name, email, phone, or agent code..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8 text-xs h-8"
               />
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-full sm:w-64">
+                <Select
+                  value={businessFilter}
+                  onValueChange={(val) => setBusinessFilter(val)}
+                  size="sm"
+                  options={[
+                    { value: "all", label: "All Businesses & Tenants" },
+                    ...businesses.map((b: any) => ({
+                      value: b._id,
+                      label: `${b.name} (${b.code || "store"})`,
+                    })),
+                  ]}
+                />
+              </div>
+
+              {businessFilter !== "all" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setBusinessFilter("all")}
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground cursor-pointer px-2 shrink-0"
+                  title="Clear business filter"
+                >
+                  Clear Filter
+                </Button>
+              )}
             </div>
           </div>
 
@@ -536,7 +620,10 @@ export default function AdminUsersPage() {
                 render: (u: any) => {
                   const initial = u.name ? u.name.charAt(0).toUpperCase() : "U";
                   const isSuper = u.role === "superadmin";
+                  const isAgent = u.role === "agent";
                   const isPrimary = u.isPrimaryAdmin || u.email === "admin@minihisab.com";
+                  const agentCode = u.agentProfile?.agentCode || u.agentCode;
+
                   return (
                     <div className="flex items-center gap-3 py-1">
                       <div
@@ -545,17 +632,32 @@ export default function AdminUsersPage() {
                             ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/40"
                             : isSuper
                             ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500/30"
+                            : isAgent
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/30"
                             : "bg-primary/10 text-primary ring-1 ring-primary/20"
                         }`}
                       >
-                        {isPrimary ? <Crown className="h-5 w-5 text-amber-500" /> : isSuper ? <Shield className="h-4.5 w-4.5" /> : initial}
+                        {isPrimary ? (
+                          <Crown className="h-5 w-5 text-amber-500" />
+                        ) : isSuper ? (
+                          <Shield className="h-4.5 w-4.5" />
+                        ) : isAgent ? (
+                          <Briefcase className="h-4.5 w-4.5" />
+                        ) : (
+                          initial
+                        )}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-semibold text-sm text-foreground truncate max-w-[200px]">{u.name}</p>
                           {isPrimary && (
                             <span className="inline-flex items-center rounded px-1.5 py-0.2 text-[9px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                               Root Admin
+                            </span>
+                          )}
+                          {isAgent && agentCode && (
+                            <span className="inline-flex items-center rounded px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                              {agentCode}
                             </span>
                           )}
                         </div>
@@ -596,8 +698,10 @@ export default function AdminUsersPage() {
                 render: (u: any) => {
                   const isSuper = u.role === "superadmin";
                   const isOwner = u.role === "owner";
+                  const isAgent = u.role === "agent";
                   const isPrimary = u.isPrimaryAdmin || u.email === "admin@minihisab.com";
                   const roleName = u.roleId?.name;
+
                   return (
                     <div className="flex flex-col gap-1 items-start py-1">
                       {isPrimary ? (
@@ -609,13 +713,24 @@ export default function AdminUsersPage() {
                         <Badge variant="default" className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[11px] font-semibold">
                           {roleName || "System Administrator"}
                         </Badge>
+                      ) : isAgent ? (
+                        <Badge variant="default" className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-semibold gap-1">
+                          <Briefcase className="h-3 w-3 inline text-amber-600 dark:text-amber-400" />
+                          Partner Agent
+                        </Badge>
                       ) : (
                         <Badge
                           variant={isOwner ? "soft" : "outline"}
                           className="capitalize text-[11px] font-semibold"
                         >
-                          {u.role}
+                          {u.role === "owner" ? "Business Owner" : u.role}
                         </Badge>
+                      )}
+
+                      {isAgent && u.agentProfile && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                          {u.agentProfile.commissionPercentage || 0}% Commission Rate
+                        </span>
                       )}
 
                       {roleName && !isPrimary && isSuper && (
@@ -646,12 +761,40 @@ export default function AdminUsersPage() {
                     );
                   }
 
+                  if (u.role === "agent") {
+                    return (
+                      <div className="flex flex-col gap-0.5 py-1 text-xs">
+                        <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
+                          <Briefcase className="h-3.5 w-3.5 shrink-0" />
+                          <span>Affiliate Network</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {u.agentProfile?.agentCode ? `Code: ${u.agentProfile.agentCode}` : "Direct Agent"}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  const bizName = u.businessId?.name || (typeof u.businessId === "string" ? u.businessId : "Unattached Business");
+                  const bizCode = u.businessId?.code;
+                  const outlets = u.outletIds ?? [];
+
                   return (
-                    <div className="flex items-center gap-1.5 py-1 text-xs text-muted-foreground">
-                      <Building2 className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
-                      <span className="truncate max-w-[160px]">
-                        {u.businessId?.name || "Unattached Business"}
-                      </span>
+                    <div className="flex flex-col gap-0.5 py-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Building2 className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
+                        <span className="truncate max-w-[160px]">{bizName}</span>
+                        {bizCode && (
+                          <span className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-1 py-0.2 rounded border">
+                            {bizCode}
+                          </span>
+                        )}
+                      </div>
+                      {outlets.length > 0 && (
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">
+                          {outlets.map((o: any) => o.name || "Outlet").join(", ")}
+                        </span>
+                      )}
                     </div>
                   );
                 },
@@ -681,8 +824,25 @@ export default function AdminUsersPage() {
                 render: (u: any) => {
                   const isSuperAdmin = u.role === "superadmin";
                   const isPrimary = u.isPrimaryAdmin || u.email === "admin@minihisab.com";
+                  const isSelf = u._id === currentUser?.id || u._id === (currentUser as any)?.userId;
+                  const canImpersonate = !isSelf && !isPrimary;
+
                   return (
                     <div className="flex items-center justify-end gap-1.5 pr-3">
+                      {canImpersonate && (
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => handleImpersonate(u)}
+                          disabled={impersonatingId !== null}
+                          className="gap-1 text-xs px-2.5 h-7.5 cursor-pointer border-purple-500/30 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 hover:border-purple-500/50"
+                          title={`Impersonate ${u.name}`}
+                        >
+                          <LogIn className="h-3 w-3" />
+                          <span>{impersonatingId === u._id ? "Logging In..." : "Impersonate"}</span>
+                        </Button>
+                      )}
+
                       {!isSuperAdmin ? (
                         <>
                           <Button

@@ -1,7 +1,7 @@
 import { apiFetch, getJson } from "@/lib/api-client";
 
 export const userService = {
-  getUsers: async (token?: string | null, params?: { search?: string; businessId?: string; page?: number; limit?: number; flat?: boolean }) => {
+  getUsers: async (token?: string | null, params?: { search?: string; businessId?: string; role?: string; isActive?: string | boolean; page?: number; limit?: number; flat?: boolean }) => {
     return getJson<{ users: any[]; meta?: any }>("/users", token, params);
   },
   createUser: async (data: unknown, token?: string | null) => {

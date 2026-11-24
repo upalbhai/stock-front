@@ -313,11 +313,11 @@ export function BillingPaymentModal({
                       dispatch.selectCustomer(
                         c
                           ? {
-                              id: c._id,
-                              name: c.name,
-                              phone: c.phone,
-                              defaultTaxMode: c.defaultTaxMode,
-                            }
+                            id: c._id,
+                            name: c.name,
+                            phone: c.phone,
+                            defaultTaxMode: c.defaultTaxMode,
+                          }
                           : null
                       )
                     }
@@ -425,11 +425,11 @@ export function BillingPaymentModal({
                       dispatch.selectCustomer(
                         c
                           ? {
-                              id: c._id,
-                              name: c.name,
-                              phone: c.phone,
-                              defaultTaxMode: c.defaultTaxMode,
-                            }
+                            id: c._id,
+                            name: c.name,
+                            phone: c.phone,
+                            defaultTaxMode: c.defaultTaxMode,
+                          }
                           : null
                       )
                     }

@@ -1031,6 +1031,8 @@ export default function AdminPlanRequestsPage() {
                         <span className="text-xs font-semibold mt-0.5 text-foreground">
                           {log.action === "agent_plan_change_requested" &&
                             "Agent submitted custom plan proposal"}
+                          {log.action === "direct_plan_change_requested" &&
+                            "Client requested plan upgrade directly"}
                           {log.action === "admin_plan_change_approved" &&
                             "Administrator approved plan change"}
                           {log.action === "admin_plan_change_rejected" &&

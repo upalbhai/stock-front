@@ -18,6 +18,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Clock,
+  Sparkles,
+  Info,
+} from "lucide-react";
 
 const AVAILABLE_FEATURES = [
   { key: "retail_billing", label: "Retail POS Billing", desc: "Quick counter billing, takeaway & dine-in" },
@@ -85,10 +93,14 @@ export default function AgentClientsPage() {
     }
   });
 
-  const handleOpenManagePlan = (client: AgentClient) => {
+  const handleOpenManagePlan = (client: any) => {
     setSelectedClient(client);
     setSelectedFeatures(
-      client.customPlanDetails?.enabledFeatures || AVAILABLE_FEATURES.map(f => f.key)
+      client.pendingCustomPlan?.enabledFeatures?.length
+        ? client.pendingCustomPlan.enabledFeatures
+        : client.customPlanDetails?.enabledFeatures?.length
+        ? client.customPlanDetails.enabledFeatures
+        : AVAILABLE_FEATURES.map((f) => f.key)
     );
   };
 
@@ -109,8 +121,10 @@ export default function AgentClientsPage() {
     updatePlanMutation.mutate({
       price: Number(formData.get("price")),
       currency: formData.get("currency")?.toString() || "INR",
+      billingCycle: formData.get("billingCycle")?.toString() || "monthly",
       maxProducts: Number(formData.get("maxProducts")),
       maxOutlets: Number(formData.get("maxOutlets")),
+      notes: formData.get("notes")?.toString() || undefined,
       enabledFeatures: selectedFeatures,
     });
   };
@@ -157,17 +171,26 @@ export default function AgentClientsPage() {
       header: "Custom Plan",
       render: (client: any) => {
         if (client.pendingCustomPlan) {
+          const isClientDirect = !client.pendingCustomPlan.price || client.pendingCustomPlan.price === 0;
           return (
-            <div className="text-xs space-y-0.5">
-              <Badge variant="warning" className="mb-1">Pending Approval</Badge>
-              <div className="font-semibold text-foreground mt-1">
-                {client.pendingCustomPlan.price != null && client.pendingCustomPlan.price > 0
-                  ? `Requested: ${formatCurrency(client.pendingCustomPlan.price, client.pendingCustomPlan.currency || "INR")} / mo`
-                  : "Upgrade Requested (Quote Pending)"}
+            <div className="text-xs space-y-1">
+              <Badge variant={isClientDirect ? "info" : "warning"} className="gap-1">
+                <Clock className="h-3 w-3" />
+                {isClientDirect ? "Client Upgrade Request" : "Quote Pending Approval"}
+              </Badge>
+              <div className="font-semibold text-foreground">
+                {!isClientDirect
+                  ? `Proposed: ${formatCurrency(client.pendingCustomPlan.price, client.pendingCustomPlan.currency || "INR")} / mo`
+                  : "Awaiting Pricing Quote"}
               </div>
-              <div className="text-muted-foreground">
+              <div className="text-muted-foreground text-[11px]">
                 {client.pendingCustomPlan.maxProducts || 50} Products • {client.pendingCustomPlan.maxOutlets || 1} Outlet(s)
               </div>
+              {client.pendingCustomPlan.notes && (
+                <div className="text-[10px] text-muted-foreground italic bg-muted/40 p-1 rounded border border-border/50">
+                  Note: {client.pendingCustomPlan.notes}
+                </div>
+              )}
             </div>
           );
         }
@@ -178,24 +201,38 @@ export default function AgentClientsPage() {
         const maxOutlets = client.customPlanDetails?.maxOutlets ?? 1;
 
         return (
-          <div className="text-xs space-y-0.5 relative group">
+          <div className="text-xs space-y-1 relative group">
             <div className="font-semibold text-foreground">
               {formatCurrency(price, currency)} / mo
             </div>
-            <div className="text-muted-foreground">
+            <div className="text-muted-foreground text-[11px]">
               {maxProducts} Products • {maxOutlets} Outlet(s)
             </div>
             {!client.pendingCustomPlan && client.lastPlanRequestStatus && (
               <div className="mt-1">
                 {client.lastPlanRequestStatus.status === "rejected" ? (
-                  <div className="text-destructive font-medium">
-                    Last request rejected
-                    {client.lastPlanRequestStatus.reason && `: ${client.lastPlanRequestStatus.reason}`}
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs">
+                    <div className="flex items-center gap-1 font-semibold text-destructive">
+                      <XCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>Request Rejected by Admin</span>
+                    </div>
+                    {(client.lastPlanRequestStatus.reason || client.lastPlanRequestStatus.message) && (
+                      <p className="mt-0.5 text-destructive/90 text-[11px] leading-tight">
+                        Reason: {client.lastPlanRequestStatus.reason || client.lastPlanRequestStatus.message}
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  <div className="text-success font-medium">
-                    Last request approved
-                    {client.lastPlanRequestStatus.reason && `: ${client.lastPlanRequestStatus.reason}`}
+                  <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs">
+                    <div className="flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      <span>Plan Approved by Admin</span>
+                    </div>
+                    {(client.lastPlanRequestStatus.reason || client.lastPlanRequestStatus.message) && (
+                      <p className="mt-0.5 text-emerald-800 dark:text-emerald-200 text-[11px] leading-tight">
+                        Note: {client.lastPlanRequestStatus.reason || client.lastPlanRequestStatus.message}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -215,29 +252,34 @@ export default function AgentClientsPage() {
     },
     {
       header: "Action",
-      render: (client: any) => (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleOpenManagePlan(client)}
-            disabled={!!client.pendingCustomPlan}
-            title={client.pendingCustomPlan ? "A plan change is currently pending admin approval" : "Manage Plan"}
-          >
-            Manage Plan
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSelectedHistoryClient(client);
-              setIsHistoryOpen(true);
-            }}
-          >
-            View History
-          </Button>
-        </div>
-      ),
+      render: (client: any) => {
+        const hasDirectRequest = client.pendingCustomPlan && (!client.pendingCustomPlan.price || client.pendingCustomPlan.price === 0);
+        const hasPendingQuote = client.pendingCustomPlan && client.pendingCustomPlan.price > 0;
+        const wasRejected = !client.pendingCustomPlan && client.lastPlanRequestStatus?.status === "rejected";
+
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant={hasDirectRequest ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleOpenManagePlan(client)}
+              className={hasDirectRequest ? "bg-primary text-primary-foreground font-semibold shadow-xs" : ""}
+            >
+              {hasDirectRequest ? "Set Price Quote" : hasPendingQuote ? "Edit Quote" : wasRejected ? "Re-submit Plan" : "Manage Plan"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedHistoryClient(client);
+                setIsHistoryOpen(true);
+              }}
+            >
+              View History
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -307,13 +349,25 @@ export default function AgentClientsPage() {
           </DialogHeader>
           {selectedClient && (
             <form onSubmit={handleUpdatePlan} className="space-y-4">
+              {selectedClient.pendingCustomPlan?.notes && (
+                <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-2.5 text-xs text-blue-800 dark:text-blue-200">
+                  <span className="font-semibold">Client Upgrade Note:</span> {selectedClient.pendingCustomPlan.notes}
+                </div>
+              )}
+
+              {selectedClient.lastPlanRequestStatus?.status === "rejected" && selectedClient.lastPlanRequestStatus.reason && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive">
+                  <span className="font-semibold">Previous Rejection Reason:</span> {selectedClient.lastPlanRequestStatus.reason}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <label htmlFor="price" className="text-xs font-medium leading-none">Monthly Price</label>
+                  <label htmlFor="price" className="text-xs font-medium leading-none">Monthly Price Quote</label>
                   <div className="flex gap-2">
                     <select
                       name="currency"
-                      defaultValue={selectedClient.customPlanDetails?.currency || "INR"}
+                      defaultValue={selectedClient.pendingCustomPlan?.currency || selectedClient.customPlanDetails?.currency || "INR"}
                       className="flex h-9 w-20 rounded-md border border-input bg-transparent px-2 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     >
                       <option value="INR">INR</option>
@@ -326,7 +380,7 @@ export default function AgentClientsPage() {
                       id="price"
                       name="price"
                       type="number"
-                      defaultValue={selectedClient.customPlanDetails?.price || 0}
+                      defaultValue={selectedClient.pendingCustomPlan?.price || selectedClient.customPlanDetails?.price || 500}
                       required
                       className="flex-1"
                     />
@@ -338,7 +392,7 @@ export default function AgentClientsPage() {
                     id="maxProducts"
                     name="maxProducts"
                     type="number"
-                    defaultValue={selectedClient.customPlanDetails?.maxProducts || 50}
+                    defaultValue={selectedClient.pendingCustomPlan?.maxProducts ?? selectedClient.customPlanDetails?.maxProducts ?? 50}
                     required
                   />
                 </div>
@@ -348,10 +402,15 @@ export default function AgentClientsPage() {
                     id="maxOutlets"
                     name="maxOutlets"
                     type="number"
-                    defaultValue={selectedClient.customPlanDetails?.maxOutlets || 1}
+                    defaultValue={selectedClient.pendingCustomPlan?.maxOutlets ?? selectedClient.customPlanDetails?.maxOutlets ?? 1}
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="notes" className="text-xs font-medium leading-none">Note to Admin (Optional)</label>
+                <Input id="notes" name="notes" placeholder="e.g. Special negotiated rate for client" className="text-xs" />
               </div>
 
               <div className="space-y-2 pt-2">
@@ -444,13 +503,36 @@ export default function AgentClientsPage() {
                         <span className="text-xs text-muted-foreground font-mono">
                           {new Date(log.createdAt).toLocaleString()}
                         </span>
-                        <span className="text-sm font-medium mt-1">
-                          {log.action === "agent_plan_change_requested" && "Agent requested a custom plan change"}
-                          {log.action === "admin_plan_change_approved" && "Admin approved the plan request"}
-                          {log.action === "admin_plan_change_rejected" && "Admin rejected the plan request"}
-                        </span>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {log.action === "agent_plan_change_requested" && (
+                            <Badge variant="outline" className="border-purple-500/30 text-purple-700 dark:text-purple-300 bg-purple-500/10 text-[11px]">
+                              Agent Proposed Custom Quote
+                            </Badge>
+                          )}
+                          {log.action === "direct_plan_change_requested" && (
+                            <Badge variant="outline" className="border-blue-500/30 text-blue-700 dark:text-blue-300 bg-blue-500/10 text-[11px]">
+                              Client Requested Plan Upgrade
+                            </Badge>
+                          )}
+                          {(log.action === "admin_plan_change_approved" || log.action === "admin_approved_plan") && (
+                            <Badge variant="outline" className="border-emerald-500/30 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 text-[11px]">
+                              Admin Approved Plan
+                            </Badge>
+                          )}
+                          {(log.action === "admin_plan_change_rejected" || log.action === "admin_rejected_plan") && (
+                            <Badge variant="outline" className="border-destructive/30 text-destructive bg-destructive/10 text-[11px]">
+                              Admin Rejected Plan
+                            </Badge>
+                          )}
+                        </div>
                         {log.message && (
-                          <div className="text-sm text-muted-foreground mt-1 bg-muted/30 p-2 rounded border border-border/50">
+                          <div className={`text-xs mt-1.5 p-2.5 rounded-lg border leading-relaxed ${
+                            log.action === "admin_plan_change_rejected" || log.action === "admin_rejected_plan"
+                              ? "bg-destructive/10 border-destructive/25 text-destructive font-medium"
+                              : log.action === "admin_plan_change_approved" || log.action === "admin_approved_plan"
+                              ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-800 dark:text-emerald-200"
+                              : "bg-muted/30 border-border/50 text-muted-foreground"
+                          }`}>
                             {log.message}
                           </div>
                         )}

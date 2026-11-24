@@ -24,6 +24,22 @@ export interface AgentClient {
     maxOutlets?: number;
     enabledFeatures?: string[];
   };
+  pendingCustomPlan?: {
+    price?: number;
+    currency?: string;
+    billingCycle?: string;
+    maxProducts?: number;
+    maxOutlets?: number;
+    enabledFeatures?: string[];
+    notes?: string;
+    requestedAt?: string;
+    requestedBy?: { _id: string; name: string; email?: string } | string;
+  };
+  lastPlanRequestStatus?: {
+    status: "approved" | "rejected";
+    reason?: string;
+    date?: string;
+  };
   createdAt: string;
 }
 
